@@ -171,6 +171,26 @@ header {
     z-index: 100;
 }
 
+#triage-hud {
+    position: fixed; /* 🏛️ Ensures it stays pinned even if you drag the map */
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999; /* 🏛️ Higher than everything else */
+    display: flex;
+    flex-wrap: wrap; /* 🏛️ Allows buttons to stack on narrow phone screens */
+    justify-content: center;
+    gap: 10px;
+    width: 90%;
+}
+
+/* Ensure the buttons are big enough for human fingers */
+.triage-btn {
+    padding: 12px 15px;
+    font-size: 14px;
+    touch-action: manipulation; /* 🏛️ Faster response to taps */
+}
+
 /* --- CONTROLS --- */
 #controls { 
     padding: 15px; 

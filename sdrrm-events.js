@@ -18,7 +18,7 @@ let lastMouse = { x: 0, y: 0 };
 let needleRot = 45;
 
 // MOBILE ZOOM STATE
-let initialTouchDist = null;
+let initialDist = 0;
 let initialZoom = 1;
 
 // --- PERSISTENCE ENGINE ---
@@ -50,7 +50,6 @@ function loadState() {
     }
     if (savedDots) {
         savedDots.forEach(d => {
-            // isSilent = true so we don't double-count them
             createDot(d.x, d.y, d.type, d.agent, d.time, true);
         });
         console.log("ORACLE: Tactical Data Restored.");
@@ -155,7 +154,6 @@ viewport.addEventListener('dblclick', e => {
     createDot((mouseX - 8) + 'px', (mouseY - 8) + 'px', currentType, agentData, timestamp);
 });
 
-// Navigation & Zoom logic here (already correct in your previous version)
 viewport.addEventListener('wheel', e => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED;
@@ -186,10 +184,34 @@ viewport.addEventListener('pointerup', () => {
     viewport.style.cursor = 'crosshair';
 });
 
-// 🏛️ BOOT SEQUENCE & INITIALIZATION
+// 📱 MOBILE PINCH-TO-ZOOM LOGIC
+viewport.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+        initialDist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+        initialZoom = zoom;
+    }
+}, { passive: false }); // 🏛️ Required for mobile preventDefault()
+
+viewport.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+        e.preventDefault(); 
+        const currentDist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+        const scale = currentDist / initialDist;
+        zoom = Math.min(Math.max(0.4, initialZoom * scale), 4);
+        updateMapTransform();
+    }
+}, { passive: false });
+
+// 🏛️ BOOT SEQUENCE
 window.addEventListener('load', () => {
     updateMapTransform();
-    loadState(); // 1. Load the bunker data
+    loadState();
 
     const bootText = document.querySelector('.boot-text');
     const message = "INITIALIZING ORACLE SYSTEM... ACCESSING CMSHS SECURE GRID...";
@@ -214,14 +236,9 @@ window.addEventListener('load', () => {
     }, 2800); 
 });
 
-// 🏛️ OFFLINE PROTOCOL (SERVICE WORKER)
+// 🏛️ SERVICE WORKER
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('ORACLE: Offline Protocol Active'))
+      .then(() => console.log('ORACLE: Offline Protocol Active'))
       .catch(err => console.log('ORACLE: Offline Protocol Failed', err));
-  });
 }
-
-// Initialize
-updateMapTransform();
