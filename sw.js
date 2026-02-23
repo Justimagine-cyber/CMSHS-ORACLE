@@ -5,7 +5,7 @@ const assets = [
   './sdrrm-design.css',
   './sdrrm-events.js',
   './CMSHS_LOGO.png',
-  './CMSHS SDRRM PLAN.png',
+  './CMSHS-SDRRM-PLAN.png',
   './CMSHS_ORACLE.png'
 ];
 
@@ -46,3 +46,4 @@ self.addEventListener('fetch', evt => {
   );
 
 });
+
