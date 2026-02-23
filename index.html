@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CMSHS ORACLE | OPERATIONAL READINESS</title>
+    <link rel="stylesheet" href="sdrrm-design.css">
+    <link rel="icon" type="image/png" href="CMSHS_LOGO.png">
+</head>
+<body>
+
+<div id="boot-overlay">
+    <div class="hologram-container">
+        <img src="CMSHS_LOGO.png" id="boot-logo"> <div class="boot-text">INITIALIZING ORACLE SYSTEM...</div>
+        <div class="scanline"></div>
+    </div>
+</div>
+
+<div id="app">
+    <header>
+        <div class="brand-container">
+            <img src="CMSHS_LOGO.png" class="header-logo">
+            <div class="brand">CMSHS ORACLE: OPERATIONAL READINESS</div>
+        </div>
+        <div class="status">STANDALONE MODE: SECURE</div>
+    </header>
+
+    <div id="viewport">
+        <div id="map-img"></div>
+        
+        <div id="stats-hud">
+            [ CASUALTY COUNTS ]<br>
+            IMMEDIATE: <span id="r-c" class="r-text">0</span><br>
+            DELAYED:   <span id="y-c" class="y-text">0</span><br>
+            MINOR:     <span id="g-c" class="g-text">0</span><br>
+            DECEASED:  <span id="b-c" class="b-text">0</span>
+        </div>
+
+        <div id="compass"><div id="needle"></div></div>
+    </div>
+
+    <div id="controls">
+        <div class="btn g" onclick="setStatus(0)">MINOR</div>
+        <div class="btn y" onclick="setStatus(1)">DELAYED</div>
+        <div class="btn r" onclick="setStatus(2)">IMMEDIATE</div>
+        <div class="btn b" onclick="setStatus(3)">DECEASED</div>
+        <div class="btn reset-btn" onclick="clearMap()">[ RESET OPERATIONAL DATA ]</div>
+    </div>
+</div>
+
+<script src="sdrrm-events.js"></script>
+</body>
+</html>

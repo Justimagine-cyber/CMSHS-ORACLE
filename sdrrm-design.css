@@ -1,0 +1,236 @@
+body { 
+    margin: 0; 
+    background: #000b00; /* Deep tactical green-black */
+    color: #00ff66; /* Neon tactical green */
+    font-family: 'Courier New', Courier, monospace; 
+    overflow: hidden; 
+    touch-action: none; 
+}
+
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+/* --- HEADER & LOGO LAYOUT --- */
+header { 
+    padding: 10px 15px; 
+    background: rgba(0, 40, 0, 0.9); 
+    border-bottom: 2px solid #00ff66; 
+    display: flex; 
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
+    z-index: 100;
+}
+
+.brand-container { display: flex; align-items: center; gap: 12px; }
+
+.header-logo { 
+    width: 35px; 
+    height: 35px; 
+    filter: drop-shadow(0 0 5px #00ff66) brightness(1.2); 
+}
+
+.brand { letter-spacing: 2px; font-weight: bold; text-shadow: 0 0 10px #00ff66; font-size: 0.9em; }
+.status { font-size: 0.65em; color: #00ff66; opacity: 0.8; text-align: right; }
+
+/* --- HOLOGRAPHIC BOOT OVERLAY --- */
+/* --- HOLOGRAPHIC BOOT OVERLAY FIX --- */
+#boot-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100vw; height: 100vh;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    transition: opacity 1s ease-out;
+}
+
+.hologram-container { 
+    display: flex;
+    flex-direction: column; /* Stacks Logo on top of Text */
+    align-items: center;
+    position: relative; 
+    max-width: 80%; /* Prevents text from hitting screen edges */
+}
+
+#boot-logo {
+    width: 180px;
+    filter: sepia(100%) hue-rotate(80deg) brightness(1.2) drop-shadow(0 0 15px #00ff66);
+    animation: holo-flicker 3s infinite ease-in-out;
+    margin-bottom: 30px; /* Space between logo and text */
+}
+
+.boot-text {
+    letter-spacing: 2px;
+    font-size: 0.8em;
+    color: #00ff66;
+    text-shadow: 0 0 8px #00ff66;
+    text-align: center; /* Keeps typewriter text centered */
+    white-space: pre-wrap; /* Honors the spaces in your JS string */
+    min-height: 1.5em;
+    border-right: 2px solid #00ff66;
+    animation: cursor-blink 0.6s step-end infinite;
+}
+
+.scanline {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 10px;
+    background: linear-gradient(to bottom, transparent, rgba(0, 255, 102, 0.2), transparent);
+    box-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+    animation: scan 4s linear infinite;
+    pointer-events: none;
+}
+
+/* --- THE MAP VIEWPORT --- */
+#viewport { 
+    flex: 1; 
+    position: relative; 
+    overflow: hidden; 
+    background-color: #000; 
+}
+
+#map-img { 
+    position: absolute; 
+    width: 2500px; 
+    height: 1800px; 
+    background-color: #050505;
+    transform-origin: 0 0; 
+    transition: transform 0.1s ease-out;
+    z-index: 1; 
+}
+
+#map-img::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: 
+        linear-gradient(rgba(0, 255, 102, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 102, 0.1) 1px, transparent 1px),
+        url('CMSHS SDRRM PLAN.png'); 
+    background-size: 40px 40px, 40px 40px, contain;
+    background-repeat: no-repeat;
+    
+    /* REMOVED SEPIA: Keeping only brightness and contrast for tactical clarity */
+    filter: brightness(0.8) contrast(1.1); 
+    
+    transform: translateZ(-1px);
+    z-index: -1; 
+}
+
+/* --- HUD & COMPASS --- */
+#stats-hud { 
+    position: absolute; 
+    top: 20px; left: 20px; 
+    background: rgba(0, 20, 0, 0.85); 
+    padding: 15px; 
+    border: 1px solid #00ff66;
+    border-left: 8px solid #00ff66;
+    font-size: 0.75em; 
+    z-index: 10;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+#compass { 
+    width: 60px; height: 60px; 
+    border: 2px solid #00ff66; 
+    border-radius: 50%; 
+    position: absolute; bottom: 120px; right: 20px; 
+    background: rgba(0, 20, 0, 0.7); 
+    display: flex; align-items: center; justify-content: center; 
+    z-index: 10;
+}
+
+#needle { 
+    width: 2px; height: 25px; 
+    background: #ff3333; 
+    box-shadow: 0 0 8px #ff3333; 
+    transform-origin: bottom center; 
+    transition: 0.1s; margin-top: -25px; 
+}
+
+/* --- DOTS & LABELS --- */
+.triage-dot { z-index: 99; pointer-events: none; }
+
+.triage-dot div {
+    transform: scale(calc(1 / var(--zoom-level, 1)));
+    transition: transform 0.1s;
+}
+
+.triage-label {
+    position: absolute;
+    transform: translateY(-35px) scale(calc(1 / var(--zoom-level, 1)));
+    transform-origin: bottom center;
+    background: #00ff66;
+    color: #000;
+    padding: 2px 8px;
+    font-size: 0.55em;
+    font-weight: 900;
+    white-space: nowrap;
+    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); 
+    z-index: 100;
+}
+
+/* --- CONTROLS --- */
+#controls { 
+    padding: 15px; 
+    background: #001100; 
+    display: grid; 
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 10px; 
+    border-top: 2px solid #00ff66; 
+    z-index: 10;
+}
+
+.btn { 
+    padding: 12px 5px; 
+    border: 1px solid #00ff66; 
+    background: rgba(0, 255, 102, 0.05);
+    text-align: center; font-size: 0.65em; font-weight: bold; 
+    color: #00ff66; cursor: pointer;
+}
+
+.btn:active { background: #00ff66; color: #000; }
+.r { border-color: #ff3333; color: #ff3333; }
+.y { border-color: #ffff00; color: #ffff00; }
+.b { border-color: #888; color: #888; }
+
+.reset-btn { grid-column: span 4; border-color: #fff; color: #fff; font-size: 0.6em; margin-top: 5px; }
+
+/* --- AGENT INTEL OVERLAY --- */
+#intel-overlay {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 20, 0, 0.95);
+    border: 2px solid #00ff66;
+    padding: 20px;
+    color: #00ff66;
+    z-index: 2000;
+    display: none; /* Hidden by default */
+    box-shadow: 0 0 30px rgba(0, 255, 102, 0.4);
+    min-width: 250px;
+    clip-path: polygon(0 0, 90% 0, 100% 10%, 100% 100%, 10% 100%, 0 90%);
+}
+
+#intel-overlay h3 { margin: 0 0 10px 0; border-bottom: 1px solid #00ff66; padding-bottom: 5px; font-size: 1em; }
+#intel-overlay p { margin: 5px 0; font-size: 0.8em; }
+.close-intel { 
+    margin-top: 15px; 
+    font-size: 0.7em; 
+    color: #ff3333; 
+    cursor: pointer; 
+    text-align: right; 
+    text-decoration: underline; 
+}
+
+/* --- KEYFRAMES --- */
+@keyframes holo-flicker {
+    0%, 100% { opacity: 0.8; transform: scale(1); filter: brightness(1.1) sepia(100%) hue-rotate(80deg) drop-shadow(0 0 10px #00ff66); }
+    50% { opacity: 1; transform: scale(1.02); filter: brightness(1.4) sepia(100%) hue-rotate(80deg) drop-shadow(0 0 20px #00ff66); }
+    98% { opacity: 1; transform: scale(1.02); }
+    99% { opacity: 0.4; transform: scale(1.05) skewX(5deg); } /* Glitch Frame */
+}
+
+@keyframes text-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+@keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
+@keyframes blink { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
