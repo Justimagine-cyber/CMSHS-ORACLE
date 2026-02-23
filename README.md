@@ -1,4 +1,4 @@
-# 🏛️ ORACLE: CMSHS FIELD COMMAND
+# 🏛️ CMSHS ORACLE: DISASTER READINESS IN OPERATIONa
 
 ## 📡 PROJECT OVERVIEW
 CMSHS ORACLE is a simple yet specialized **Progressive Web App (PWA)** developed for emergencies in **CMSHS**. It provides a high-visibility, tactical interface for real-time triage tracking and personnel location within the school campus during emergency drills or actual incidents.
