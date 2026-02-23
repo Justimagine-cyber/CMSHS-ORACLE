@@ -8,10 +8,14 @@ const needle = document.getElementById('needle');
 // WORLD STATE
 let mapPos = { x: -400, y: -300 };
 let zoom = 1;
-const ZOOM_SPEED = 0.08; // Slightly snappier zoom
+const ZOOM_SPEED = 0.08; 
 let isDragging = false;
 let lastMouse = { x: 0, y: 0 };
 let needleRot = 45;
+
+// MOBILE ZOOM STATE
+let initialTouchDist = null;
+let initialZoom = 1;
 
 function setStatus(s) { currentType = s; }
 
@@ -33,13 +37,41 @@ function clearMap() {
     }
 }
 
-// 🏛️ ZOOM LOGIC (MOUSE WHEEL)
+// 🏛️ ZOOM LOGIC (MOUSE WHEEL - PC)
 viewport.addEventListener('wheel', e => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED;
-    zoom = Math.min(Math.max(0.4, zoom + delta), 4); // Limits: 0.4x to 4x
+    zoom = Math.min(Math.max(0.4, zoom + delta), 4);
     updateMapTransform();
 }, { passive: false });
+
+// 🏛️ MOBILE PINCH-TO-ZOOM
+viewport.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+        initialTouchDist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+        initialZoom = zoom;
+    }
+}, { passive: false });
+
+viewport.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && initialTouchDist) {
+        e.preventDefault();
+        const currentDist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX,
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+        const zoomFactor = currentDist / initialTouchDist;
+        zoom = Math.min(Math.max(0.4, initialZoom * zoomFactor), 4);
+        updateMapTransform();
+    }
+}, { passive: false });
+
+viewport.addEventListener('touchend', () => {
+    initialTouchDist = null;
+});
 
 // NAVIGATION (DRAG TO PAN)
 viewport.addEventListener('pointerdown', e => {
@@ -58,7 +90,6 @@ viewport.addEventListener('pointermove', e => {
     
     updateMapTransform();
     
-    // COMPASS SYNC
     needleRot += dx * 0.4;
     needle.style.transform = `rotate(${needleRot}deg)`;
     lastMouse = { x: e.clientX, y: e.clientY };
@@ -69,7 +100,6 @@ viewport.addEventListener('pointerup', () => {
     viewport.style.cursor = 'crosshair';
 });
 
-// Add this near the top with your other constants
 const intelOverlay = document.createElement('div');
 intelOverlay.id = 'intel-overlay';
 document.body.appendChild(intelOverlay);
@@ -78,9 +108,8 @@ document.body.appendChild(intelOverlay);
 viewport.addEventListener('dblclick', e => {
     const rect = viewport.getBoundingClientRect();
     
-    // Identity is now optional (defaults to Unknown)
     let agentData = prompt("AGENT IDENTIFICATION (Optional)\nInput name & location of incident (e.g. D. Cruz - 42)");
-    if (agentData === null) return; // Only cancel if they hit "Cancel"
+    if (agentData === null) return; 
     if (agentData.trim() === "") agentData = "UNKNOWN AGENT";
 
     const mouseX = (e.clientX - rect.left - mapPos.x) / zoom;
@@ -91,7 +120,6 @@ viewport.addEventListener('dblclick', e => {
     dotContainer.style.position = 'absolute';
     dotContainer.style.left = (mouseX - 8) + 'px';
     dotContainer.style.top = (mouseY - 8) + 'px';
-    // Allow clicks on the dot for the new feature
     dotContainer.style.pointerEvents = 'auto'; 
 
     const dot = document.createElement('div');
@@ -102,11 +130,9 @@ viewport.addEventListener('dblclick', e => {
     dot.style.boxShadow = `0 0 15px ${colors[currentType]}`;
     dot.style.cursor = 'pointer';
     
-    // Store data for the popup
     const timestamp = new Date().toLocaleTimeString();
     const triageStatus = ["MINIMAL", "DELAYED", "IMMEDIATE", "EXPECTANT"][currentType];
 
-    // Show Intel on click
     dot.onclick = (event) => {
         event.stopPropagation();
         showIntel(agentData, triageStatus, timestamp);
@@ -117,18 +143,16 @@ viewport.addEventListener('dblclick', e => {
 
     const label = document.createElement('div');
     label.className = 'triage-label';
-    label.innerText = agentData.split('-')[0]; // Short version for label
+    label.innerText = agentData.split('-')[0]; 
     dotContainer.appendChild(label);
 
     map.appendChild(dotContainer);
 
-    // Update Counter HUD
     counts[currentType]++;
     const ids = ['g-c', 'y-c', 'r-c', 'b-c'];
     document.getElementById(ids[currentType]).innerText = counts[currentType];
 });
 
-// 🏛️ COMPREHENSIVE INTEL POPUP
 function showIntel(name, status, time) {
     intelOverlay.innerHTML = `
         <h3>AGENT PROFILE</h3>
@@ -141,7 +165,7 @@ function showIntel(name, status, time) {
     intelOverlay.style.display = 'block';
 }
 
-// 🏛️ BOOT SEQUENCE (OUTSIDE ALL OTHER FUNCTIONS)
+// 🏛️ BOOT SEQUENCE
 window.addEventListener('load', () => {
     const bootText = document.querySelector('.boot-text');
     const message = "INITIALIZING  ORACLE  SYSTEM... ACCESSING  CMSHS  SECURE  GRID...";
@@ -152,13 +176,12 @@ window.addEventListener('load', () => {
         if (charIndex < message.length) {
             bootText.innerText += message.charAt(charIndex);
             charIndex++;
-            setTimeout(typeWriter, 40); // Typing speed
+            setTimeout(typeWriter, 40); 
         }
     }
     
     typeWriter();
 
-    // Hide overlay after text finishes + small delay
     setTimeout(() => {
         const overlay = document.getElementById('boot-overlay');
         if (overlay) {
@@ -168,7 +191,7 @@ window.addEventListener('load', () => {
     }, 2800); 
 });
 
-// Register Service Worker for Offline Capability
+// 🏛️ OFFLINE PROTOCOL (SERVICE WORKER)
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('./sw.js')
