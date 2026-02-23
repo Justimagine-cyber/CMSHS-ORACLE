@@ -2,8 +2,7 @@
 > **STATUS:** OPERATIONAL // **SECTOR:** MANDALUYONG // **PROTOCOL:** WATCHTOWER
 
 ## 📡 PROJECT OVERVIEW
-ORACLE is a specialized **Progressive Web App (PWA)** developed for the **CMSHS SDRRM Team**. It provides a high-visibility, tactical interface for real-time triage tracking and personnel location within the school campus during emergency drills or actual incidents.
-
+CMSHS ORACLE is a simple yet specialized **Progressive Web App (PWA)** developed for emergencies in **CMSHS**. It provides a high-visibility, tactical interface for real-time triage tracking and personnel location within the school campus during emergency drills or actual incidents.
 
 
 ## 🛠️ CORE CAPABILITIES
@@ -19,7 +18,7 @@ ORACLE is a specialized **Progressive Web App (PWA)** developed for the **CMSHS 
 
 ---
 
-## ⚖️ STOIC PHILOSOPHY
+## ⚖️ PHILOSOPHY
 *"Objective judgment, now at this very moment. Unselfish action, now at this very moment. Willing acceptance—now at this very moment—of all external events. That’s all you need."* — Marcus Aurelius
 
 **ORACLE** was built on the principle of providing clarity in chaos. It is a tool for the disciplined, designed to facilitate calm, effective action when it matters most.
