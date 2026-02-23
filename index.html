@@ -48,6 +48,14 @@
     </div>
 </div>
 
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log("ORACLE: Offline Protocol Active"))
+      .catch(err => console.log("Shield Failure:", err));
+  }
+</script>
+
 <script src="sdrrm-events.js"></script>
 </body>
 </html>

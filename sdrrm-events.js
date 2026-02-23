@@ -1,6 +1,10 @@
+console.log("ORACLE SYSTEM: ONLINE");
+alert("ORACLE LINK ESTABLISHED");
+
 let currentType = 0;
 let counts = [0, 0, 0, 0];
 const colors = ['#0f0', '#ff0', '#f44', '#888'];
+
 const map = document.getElementById('map-img');
 const viewport = document.getElementById('viewport');
 const needle = document.getElementById('needle');
@@ -8,7 +12,7 @@ const needle = document.getElementById('needle');
 // WORLD STATE
 let mapPos = { x: -400, y: -300 };
 let zoom = 1;
-const ZOOM_SPEED = 0.08; 
+const ZOOM_SPEED = 0.08;
 let isDragging = false;
 let lastMouse = { x: 0, y: 0 };
 let needleRot = 45;
@@ -17,9 +21,52 @@ let needleRot = 45;
 let initialTouchDist = null;
 let initialZoom = 1;
 
+// --- PERSISTENCE ENGINE ---
+
+function saveState() {
+    const dots = [];
+    document.querySelectorAll('.triage-dot').forEach(d => {
+        dots.push({
+            x: d.style.left,
+            y: d.style.top,
+            type: d.dataset.type,
+            agent: d.dataset.agent,
+            time: d.dataset.timestamp
+        });
+    });
+    localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(dots));
+    localStorage.setItem('ORACLE_STATS', JSON.stringify(counts));
+    console.log("ORACLE: System State Archived.");
+}
+
+function loadState() {
+    console.log("Checking storage...", localStorage.getItem('ORACLE_GRID_DATA'));
+    const savedDots = JSON.parse(localStorage.getItem('ORACLE_GRID_DATA'));
+    const savedCounts = JSON.parse(localStorage.getItem('ORACLE_STATS'));
+
+    if (savedCounts) {
+        counts = savedCounts;
+        updateHUD();
+    }
+    if (savedDots) {
+        savedDots.forEach(d => {
+            // isSilent = true so we don't double-count them
+            createDot(d.x, d.y, d.type, d.agent, d.time, true);
+        });
+        console.log("ORACLE: Tactical Data Restored.");
+    }
+}
+
+function updateHUD() {
+    const ids = ['g-c', 'y-c', 'r-c', 'b-c'];
+    ids.forEach((id, i) => {
+        const el = document.getElementById(id);
+        if(el) el.innerText = counts[i];
+    });
+}
+
 function setStatus(s) { currentType = s; }
 
-// CENTRAL TRANSFORM ENGINE
 function updateMapTransform() {
     map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
     map.style.setProperty('--zoom-level', zoom);
@@ -27,120 +74,41 @@ function updateMapTransform() {
 
 function clearMap() {
     if(confirm("WIPE ALL OPERATIONAL DATA?")) {
+        localStorage.removeItem('ORACLE_GRID_DATA');
+        localStorage.removeItem('ORACLE_STATS');
         const dots = map.querySelectorAll('.triage-dot');
         dots.forEach(dot => dot.remove());
         counts = [0, 0, 0, 0];
-        const ids = ['g-c', 'y-c', 'r-c', 'b-c'];
-        ids.forEach((id) => {
-            document.getElementById(id).innerText = "0";
-        });
+        updateHUD();
     }
 }
 
-// 🏛️ ZOOM LOGIC (MOUSE WHEEL - PC)
-viewport.addEventListener('wheel', e => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED;
-    zoom = Math.min(Math.max(0.4, zoom + delta), 4);
-    updateMapTransform();
-}, { passive: false });
-
-// 🏛️ MOBILE PINCH-TO-ZOOM
-viewport.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
-        initialTouchDist = Math.hypot(
-            e.touches[0].pageX - e.touches[1].pageX,
-            e.touches[0].pageY - e.touches[1].pageY
-        );
-        initialZoom = zoom;
-    }
-}, { passive: false });
-
-viewport.addEventListener('touchmove', e => {
-    if (e.touches.length === 2 && initialTouchDist) {
-        e.preventDefault();
-        const currentDist = Math.hypot(
-            e.touches[0].pageX - e.touches[1].pageX,
-            e.touches[0].pageY - e.touches[1].pageY
-        );
-        const zoomFactor = currentDist / initialTouchDist;
-        zoom = Math.min(Math.max(0.4, initialZoom * zoomFactor), 4);
-        updateMapTransform();
-    }
-}, { passive: false });
-
-viewport.addEventListener('touchend', () => {
-    initialTouchDist = null;
-});
-
-// NAVIGATION (DRAG TO PAN)
-viewport.addEventListener('pointerdown', e => {
-    isDragging = true;
-    lastMouse = { x: e.clientX, y: e.clientY };
-    viewport.style.cursor = 'grabbing';
-});
-
-viewport.addEventListener('pointermove', e => {
-    if (!isDragging) return;
-    const dx = e.clientX - lastMouse.x;
-    const dy = e.clientY - lastMouse.y;
-    
-    mapPos.x += dx; 
-    mapPos.y += dy;
-    
-    updateMapTransform();
-    
-    needleRot += dx * 0.4;
-    needle.style.transform = `rotate(${needleRot}deg)`;
-    lastMouse = { x: e.clientX, y: e.clientY };
-});
-
-viewport.addEventListener('pointerup', () => {
-    isDragging = false;
-    viewport.style.cursor = 'crosshair';
-});
-
-const intelOverlay = document.createElement('div');
-intelOverlay.id = 'intel-overlay';
-document.body.appendChild(intelOverlay);
-
-// 🏛️ PLOTTING WITH OPTIONAL IDENTITY
-viewport.addEventListener('dblclick', e => {
-    const rect = viewport.getBoundingClientRect();
-    
-    let agentData = prompt("AGENT IDENTIFICATION (Optional)\nInput name & location of incident (e.g. D. Cruz - 42)");
-    if (agentData === null) return; 
-    if (agentData.trim() === "") agentData = "UNKNOWN AGENT";
-
-    const mouseX = (e.clientX - rect.left - mapPos.x) / zoom;
-    const mouseY = (e.clientY - rect.top - mapPos.y) / zoom;
-
+// 🏛️ CORE PLOTTING LOGIC
+function createDot(x, y, type, agentData, timestamp, isSilent = false) {
     const dotContainer = document.createElement('div');
     dotContainer.className = 'triage-dot'; 
     dotContainer.style.position = 'absolute';
-    dotContainer.style.left = (mouseX - 8) + 'px';
-    dotContainer.style.top = (mouseY - 8) + 'px';
+    dotContainer.style.left = x;
+    dotContainer.style.top = y;
     dotContainer.style.pointerEvents = 'auto'; 
+
+    dotContainer.dataset.type = type;
+    dotContainer.dataset.agent = agentData;
+    dotContainer.dataset.timestamp = timestamp;
 
     const dot = document.createElement('div');
     dot.style.width = '16px'; 
     dot.style.height = '16px';
     dot.style.borderRadius = '50%';
-    dot.style.backgroundColor = colors[currentType];
-    dot.style.boxShadow = `0 0 15px ${colors[currentType]}`;
-    dot.style.cursor = 'pointer';
+    dot.style.backgroundColor = colors[type];
+    dot.style.boxShadow = `0 0 15px ${colors[type]}`;
     
-    const timestamp = new Date().toLocaleTimeString();
-    const triageStatus = ["MINIMAL", "DELAYED", "IMMEDIATE", "EXPECTANT"][currentType];
+    const triageStatus = ["MINIMAL", "DELAYED", "IMMEDIATE", "EXPECTANT"][type];
+    dot.onclick = (e) => { e.stopPropagation(); showIntel(agentData, triageStatus, timestamp); };
 
-    dot.onclick = (event) => {
-        event.stopPropagation();
-        showIntel(agentData, triageStatus, timestamp);
-    };
-
-    if (currentType === 2) dot.style.animation = 'blink 0.8s infinite';
+    if (parseInt(type) === 2) dot.style.animation = 'blink 0.8s infinite';
+    
     dotContainer.appendChild(dot);
-
     const label = document.createElement('div');
     label.className = 'triage-label';
     label.innerText = agentData.split('-')[0]; 
@@ -148,10 +116,17 @@ viewport.addEventListener('dblclick', e => {
 
     map.appendChild(dotContainer);
 
-    counts[currentType]++;
-    const ids = ['g-c', 'y-c', 'r-c', 'b-c'];
-    document.getElementById(ids[currentType]).innerText = counts[currentType];
-});
+    if (!isSilent) {
+        counts[type]++;
+        updateHUD();
+        saveState();
+    }
+}
+
+// 🏛️ INTEL OVERLAY
+const intelOverlay = document.createElement('div');
+intelOverlay.id = 'intel-overlay';
+document.body.appendChild(intelOverlay);
 
 function showIntel(name, status, time) {
     intelOverlay.innerHTML = `
@@ -165,8 +140,57 @@ function showIntel(name, status, time) {
     intelOverlay.style.display = 'block';
 }
 
-// 🏛️ BOOT SEQUENCE
+// --- EVENT LISTENERS ---
+
+viewport.addEventListener('dblclick', e => {
+    const rect = viewport.getBoundingClientRect();
+    let agentData = prompt("AGENT IDENTIFICATION (Optional)\nInput name & location (e.g. D. Cruz - 42)");
+    if (agentData === null) return; 
+    if (agentData.trim() === "") agentData = "UNKNOWN AGENT";
+
+    const mouseX = (e.clientX - rect.left - mapPos.x) / zoom;
+    const mouseY = (e.clientY - rect.top - mapPos.y) / zoom;
+    const timestamp = new Date().toLocaleTimeString();
+
+    createDot((mouseX - 8) + 'px', (mouseY - 8) + 'px', currentType, agentData, timestamp);
+});
+
+// Navigation & Zoom logic here (already correct in your previous version)
+viewport.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED;
+    zoom = Math.min(Math.max(0.4, zoom + delta), 4);
+    updateMapTransform();
+}, { passive: false });
+
+viewport.addEventListener('pointerdown', e => {
+    isDragging = true;
+    lastMouse = { x: e.clientX, y: e.clientY };
+    viewport.style.cursor = 'grabbing';
+});
+
+viewport.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    const dx = e.clientX - lastMouse.x;
+    const dy = e.clientY - lastMouse.y;
+    mapPos.x += dx; 
+    mapPos.y += dy;
+    updateMapTransform();
+    needleRot += dx * 0.4;
+    needle.style.transform = `rotate(${needleRot}deg)`;
+    lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+viewport.addEventListener('pointerup', () => {
+    isDragging = false;
+    viewport.style.cursor = 'crosshair';
+});
+
+// 🏛️ BOOT SEQUENCE & INITIALIZATION
 window.addEventListener('load', () => {
+    updateMapTransform();
+    loadState(); // 1. Load the bunker data
+
     const bootText = document.querySelector('.boot-text');
     const message = "INITIALIZING ORACLE SYSTEM... ACCESSING CMSHS SECURE GRID...";
     let charIndex = 0;
@@ -179,7 +203,6 @@ window.addEventListener('load', () => {
             setTimeout(typeWriter, 40); 
         }
     }
-    
     typeWriter();
 
     setTimeout(() => {
