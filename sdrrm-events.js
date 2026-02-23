@@ -168,7 +168,7 @@ function showIntel(name, status, time) {
 // 🏛️ BOOT SEQUENCE
 window.addEventListener('load', () => {
     const bootText = document.querySelector('.boot-text');
-    const message = "INITIALIZING  ORACLE  SYSTEM... ACCESSING  CMSHS  SECURE  GRID...";
+    const message = "INITIALIZING ORACLE SYSTEM... ACCESSING CMSHS SECURE GRID...";
     let charIndex = 0;
     bootText.innerText = "";
 
