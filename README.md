@@ -24,5 +24,7 @@ CMSHS ORACLE is a simple yet specialized **Progressive Web App (PWA)** developed
 
 ---
 **DEVELOPED BY:** Mark Justin L. Castillo, 12 - Planck 
+
 **INSTITUTION:** City of Mandaluyong Science High School (CMSHS)  
+
 **YEAR:** 2026
