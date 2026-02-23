@@ -2,10 +2,11 @@ const CACHE_NAME = 'oracle-cmshs-v1';
 const assets = [
   './',
   './index.html',
-  './styles.css',
-  './script.js',
+  './sdrrm-design.css',
+  './sdrrm-events.js',
   './CMSHS_LOGO.png',
-  './CMSHS SDRRM PLAN.png'
+  './CMSHS SDRRM PLAN.png',
+  './CMSHS_ORACLE.png'
 ];
 
 // 🏛️ INSTALL: Pre-caching the system files
@@ -43,4 +44,5 @@ self.addEventListener('fetch', evt => {
       });
     })
   );
+
 });
