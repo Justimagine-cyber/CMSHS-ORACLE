@@ -1,9 +1,13 @@
-console.log("ORACLE SYSTEM: ONLINE");
-alert("ORACLE LINK ESTABLISHED");
+/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V8.0
+    Decentralized Emergency Mapping System
+*/
 
+console.log("ORACLE SYSTEM: ONLINE");
+
+// --- INITIAL STATE ---
 let currentType = 0;
 let counts = [0, 0, 0, 0];
-const colors = ['#0f0', '#ff0', '#f44', '#888'];
+const colors = ['#00ff66', '#ffff00', '#ff3333', '#888888']; // Minor, Delayed, Immediate, Deceased
 
 const map = document.getElementById('map-img');
 const viewport = document.getElementById('viewport');
@@ -36,11 +40,10 @@ function saveState() {
     });
     localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(dots));
     localStorage.setItem('ORACLE_STATS', JSON.stringify(counts));
-    console.log("ORACLE: System State Archived.");
+    console.log("ORACLE: Tactical State Archived.");
 }
 
 function loadState() {
-    console.log("Checking storage...", localStorage.getItem('ORACLE_GRID_DATA'));
     const savedDots = JSON.parse(localStorage.getItem('ORACLE_GRID_DATA'));
     const savedCounts = JSON.parse(localStorage.getItem('ORACLE_STATS'));
 
@@ -64,7 +67,10 @@ function updateHUD() {
     });
 }
 
-function setStatus(s) { currentType = s; }
+function setStatus(s) { 
+    currentType = s; 
+    console.log(`ORACLE: Mode set to ${["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][s]}`);
+}
 
 function updateMapTransform() {
     map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
@@ -75,8 +81,7 @@ function clearMap() {
     if(confirm("WIPE ALL OPERATIONAL DATA?")) {
         localStorage.removeItem('ORACLE_GRID_DATA');
         localStorage.removeItem('ORACLE_STATS');
-        const dots = map.querySelectorAll('.triage-dot');
-        dots.forEach(dot => dot.remove());
+        document.querySelectorAll('.triage-dot').forEach(dot => dot.remove());
         counts = [0, 0, 0, 0];
         updateHUD();
     }
@@ -84,39 +89,50 @@ function clearMap() {
 
 // 🏛️ CORE PLOTTING LOGIC
 function createDot(x, y, type, agentData, timestamp, isSilent = false) {
+    const typeInt = parseInt(type);
+    
     const dotContainer = document.createElement('div');
     dotContainer.className = 'triage-dot'; 
+    
+    // Assign Tactical Class for CSS Animation (Blinking)
+    const classMap = ['green', 'yellow', 'red', 'black'];
+    dotContainer.classList.add(classMap[typeInt]);
+
     dotContainer.style.position = 'absolute';
     dotContainer.style.left = x;
     dotContainer.style.top = y;
     dotContainer.style.pointerEvents = 'auto'; 
 
-    dotContainer.dataset.type = type;
+    dotContainer.dataset.type = typeInt;
     dotContainer.dataset.agent = agentData;
     dotContainer.dataset.timestamp = timestamp;
 
-    const dot = document.createElement('div');
-    dot.style.width = '16px'; 
-    dot.style.height = '16px';
-    dot.style.borderRadius = '50%';
-    dot.style.backgroundColor = colors[type];
-    dot.style.boxShadow = `0 0 15px ${colors[type]}`;
+    const dotInner = document.createElement('div');
+    dotInner.style.width = '16px'; 
+    dotInner.style.height = '16px';
+    dotInner.style.borderRadius = '50%';
+    dotInner.style.backgroundColor = colors[typeInt];
+    dotInner.style.boxShadow = `0 0 15px ${colors[typeInt]}`;
     
-    const triageStatus = ["MINIMAL", "DELAYED", "IMMEDIATE", "DECEASED"][type];
-    dot.onclick = (e) => { e.stopPropagation(); showIntel(agentData, triageStatus, timestamp); };
+    const triageStatus = ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][typeInt];
+    
+    // Intel Trigger
+    dotInner.onclick = (e) => { 
+        e.stopPropagation(); 
+        showIntel(agentData, triageStatus, timestamp); 
+    };
 
-    if (parseInt(type) === 2) dot.style.animation = 'blink 0.8s infinite';
-    
-    dotContainer.appendChild(dot);
+    dotContainer.appendChild(dotInner);
+
     const label = document.createElement('div');
     label.className = 'triage-label';
-    label.innerText = agentData.split('-')[0]; 
+    label.innerText = agentData.split(' - ')[0]; // Show name only on map
     dotContainer.appendChild(label);
 
     map.appendChild(dotContainer);
 
     if (!isSilent) {
-        counts[type]++;
+        counts[typeInt]++;
         updateHUD();
         saveState();
     }
@@ -131,7 +147,7 @@ function showIntel(name, status, time) {
     intelOverlay.innerHTML = `
         <h3>AGENT PROFILE</h3>
         <p><strong>ID:</strong> ${name}</p>
-        <p><strong>STATUS:</strong> <span style="color:${status === 'IMMEDIATE' ? '#f44' : '#00ff66'}">${status}</span></p>
+        <p><strong>STATUS:</strong> <span style="color:${colors[["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"].indexOf(status)]}">${status}</span></p>
         <p><strong>LAST SEEN:</strong> ${time}</p>
         <p><strong>SECTOR:</strong> CMSHS MAIN GRID</p>
         <div class="close-intel" onclick="this.parentElement.style.display='none'">[ DISMISS ]</div>
@@ -139,11 +155,12 @@ function showIntel(name, status, time) {
     intelOverlay.style.display = 'block';
 }
 
-// --- EVENT LISTENERS ---
+// --- NAVIGATION & INTERACTION ---
 
 viewport.addEventListener('dblclick', e => {
     const rect = viewport.getBoundingClientRect();
-    let agentData = prompt("AGENT IDENTIFICATION (Optional)\nInput name & location (e.g. D. Cruz - 42)");
+    let agentData = prompt("AGENT IDENTIFICATION\n(Name - Location/Room Number)");
+    
     if (agentData === null) return; 
     if (agentData.trim() === "") agentData = "UNKNOWN AGENT";
 
@@ -174,8 +191,11 @@ viewport.addEventListener('pointermove', e => {
     mapPos.x += dx; 
     mapPos.y += dy;
     updateMapTransform();
+    
+    // Compass logic
     needleRot += dx * 0.4;
     needle.style.transform = `rotate(${needleRot}deg)`;
+    
     lastMouse = { x: e.clientX, y: e.clientY };
 });
 
@@ -184,7 +204,7 @@ viewport.addEventListener('pointerup', () => {
     viewport.style.cursor = 'crosshair';
 });
 
-// 📱 MOBILE PINCH-TO-ZOOM LOGIC
+// 📱 MOBILE PINCH-TO-ZOOM
 viewport.addEventListener('touchstart', e => {
     if (e.touches.length === 2) {
         initialDist = Math.hypot(
@@ -193,7 +213,7 @@ viewport.addEventListener('touchstart', e => {
         );
         initialZoom = zoom;
     }
-}, { passive: false }); // 🏛️ Required for mobile preventDefault()
+}, { passive: false });
 
 viewport.addEventListener('touchmove', e => {
     if (e.touches.length === 2) {
@@ -208,24 +228,25 @@ viewport.addEventListener('touchmove', e => {
     }
 }, { passive: false });
 
-// 🏛️ BOOT SEQUENCE
+// 🏛️ SYSTEM BOOT
 window.addEventListener('load', () => {
     updateMapTransform();
     loadState();
 
     const bootText = document.querySelector('.boot-text');
-    const message = "INITIALIZING ORACLE SYSTEM... ACCESSING CMSHS SECURE GRID...";
+    const message = "INITIALIZING CMSHS ORACLE...         CMSHS SECURE GRID";
     let charIndex = 0;
-    bootText.innerText = "";
-
-    function typeWriter() {
-        if (charIndex < message.length) {
-            bootText.innerText += message.charAt(charIndex);
-            charIndex++;
-            setTimeout(typeWriter, 40); 
+    if(bootText) {
+        bootText.innerText = "";
+        function typeWriter() {
+            if (charIndex < message.length) {
+                bootText.innerText += message.charAt(charIndex);
+                charIndex++;
+                setTimeout(typeWriter, 40); 
+            }
         }
+        typeWriter();
     }
-    typeWriter();
 
     setTimeout(() => {
         const overlay = document.getElementById('boot-overlay');
@@ -236,10 +257,9 @@ window.addEventListener('load', () => {
     }, 2800); 
 });
 
-// 🏛️ SERVICE WORKER
+// 🏛️ PWA PROTOCOL
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then(() => console.log('ORACLE: Offline Protocol Active'))
       .catch(err => console.log('ORACLE: Offline Protocol Failed', err));
-
 }
