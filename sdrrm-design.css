@@ -215,4 +215,23 @@ header {
     50% { opacity: 1; transform: scale(1.02); filter: brightness(1.5); }
     99% { opacity: 0.5; skew: 5deg; }
 }
-@keyframes cursor-blink { 50% { border-color: transparent; } }
+
+/* --- EMERGENCY PULSE ANIMATION --- */
+.triage-dot.red div {
+    animation: emergency-pulse 1s infinite alternate ease-in-out;
+    box-shadow: 0 0 15px #ff3333;
+}
+
+@keyframes emergency-pulse {
+    0% { 
+        opacity: 0.4; 
+        transform: scale(0.9) scale(calc(1 / var(--zoom-level, 1))); 
+    }
+    100% { 
+        opacity: 1; 
+        transform: scale(1.2) scale(calc(1 / var(--zoom-level, 1))); 
+        box-shadow: 0 0 25px #ff3333;
+    }
+        }
+
+@keyframes cursor-blink { 50% { border-color: transparent; } 
