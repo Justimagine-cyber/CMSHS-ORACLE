@@ -102,7 +102,7 @@ function createDot(x, y, type, agentData, timestamp, isSilent = false) {
     dot.style.backgroundColor = colors[type];
     dot.style.boxShadow = `0 0 15px ${colors[type]}`;
     
-    const triageStatus = ["MINIMAL", "DELAYED", "IMMEDIATE", "EXPECTANT"][type];
+    const triageStatus = ["MINIMAL", "DELAYED", "IMMEDIATE", "DECEASED"][type];
     dot.onclick = (e) => { e.stopPropagation(); showIntel(agentData, triageStatus, timestamp); };
 
     if (parseInt(type) === 2) dot.style.animation = 'blink 0.8s infinite';
@@ -241,4 +241,5 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then(() => console.log('ORACLE: Offline Protocol Active'))
       .catch(err => console.log('ORACLE: Offline Protocol Failed', err));
+
 }
