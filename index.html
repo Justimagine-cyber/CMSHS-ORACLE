@@ -39,15 +39,14 @@
         <div id="compass"><div id="needle"></div></div>
     </div>
 
-    <div id="controls">
-        <div class="btn g" onclick="setStatus(0)">MINOR</div>
-        <div class="btn y" onclick="setStatus(1)">DELAYED</div>
-        <div class="btn r" onclick="setStatus(2)">IMMEDIATE</div>
-        <div class="btn b" onclick="setStatus(3)">DECEASED</div>
-        <div class="btn reset-btn" onclick="clearMap()">[ RESET OPERATIONAL DATA ]</div>
-    </div>
+<div id="triage-hud">
+    <button class="triage-btn green" onclick="setStatus(0)">MINOR <span id="g-c">0</span></button>
+    <button class="triage-btn yellow" onclick="setStatus(1)">DELAYED <span id="y-c">0</span></button>
+    <button class="triage-btn red" onclick="setStatus(2)">IMMEDIATE <span id="r-c">0</span></button>
+    <button class="triage-btn black" onclick="setStatus(3)">DECEASED <span id="b-c">0</span></button>
+    <button class="triage-btn reset" onclick="clearMap()">[ RESET OPERATIONAL DATA ]</button>
 </div>
-
+    
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
@@ -58,4 +57,5 @@
 
 <script src="sdrrm-events.js"></script>
 </body>
+
 </html>
