@@ -236,4 +236,11 @@ header {
     }
 }
 
+/* Force any element with a red background to blink */
+[style*="background-color: rgb(255, 51, 51)"], 
+[style*="background: #ff3333"] {
+    animation: emergency-pulse 0.8s infinite alternate ease-in-out !important;
+}
+
 @keyframes cursor-blink { 50% { border-color: transparent; } 
+
