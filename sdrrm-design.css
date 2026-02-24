@@ -96,6 +96,190 @@ header {
 
 #needle { width: 2px; height: 20px; background: #ff3333; transform-origin: bottom center; }
 
+/* --- UNIVERSAL TACTICAL FOOTER --- */
+#triage-hud {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(0, 10, 0, 0.95);
+    border-top: 2px solid #00ff66;
+    display: grid;
+    /* 2 columns on phones, 5 columns on tablets */
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 8px;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); 
+    z-index: 10000;
+    box-sizing: border-box;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.8);
+}
+
+/* TABLET & LANDSCAPE OPTIMIZATION */
+@media (min-width: 700px) or (orientation: landscape) {
+    #triage-hud {
+        grid-template-columns: repeat(5, 1fr);
+        padding: 15px;
+    }
+}
+
+.triage-btn {
+    appearance: none;
+    background: rgba(0, 40, 0, 0.6);
+    border: 1px solid #00ff66;
+    color: #00ff66;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 15px 5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+/* Visual Feedback for Selected Status */
+.triage-btn:active {
+    background: #00ff66;
+    color: #000;
+}
+
+/* Reset button styling to span full width on small phones */
+.triage-btn.reset {
+    grid-column: span 2; 
+    border-color: #fff;
+    color: #fff;
+    font-size: 10px;
+    margin-top: 5px;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+@media (min-width: 700px) or (orientation: landscape) {
+    .triage-btn.reset {
+        grid-column: span 1;
+        margin-top: 0;
+    }
+}
+
+/* Specific Triage Colors */
+.triage-btn.green { border-color: #0f0; color: #0f0; }
+.triage-btn.yellow { border-color: #ff0; color: #ff0; }
+.triage-btn.red { border-color: #f44; color: #f44; }
+.triage-btn.black { border-color: #888; color: #888; }
+    
+
+/* --- DOTS & INTEL --- */
+.triage-dot { position: absolute; z-index: 99; pointer-events: auto; }
+.triage-label {
+    position: absolute;
+    transform: translateY(-35px) scale(calc(1 / var(--zoom-level, 1)));
+    transform-origin: bottom center;
+    background: #00ff66;
+    color: #000;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 900;
+    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+}
+
+#intel-overlay {
+    position: fixed;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 10, 0, 0.98);
+    border: 2px solid #00ff66;
+    padding: 25px;
+    z-index: 20000;
+    display: none;
+    min-width: 280px;
+    box-shadow: 0 0 50px rgba(0,0,0,1);
+}
+
+/* --- BOOT ANIMATIONS --- */
+#boot-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+    transition: opacity 1s;
+}
+.hologram-container { display: flex; flex-direction: column; align-items: center; }
+#boot-logo { width: 150px; filter: brightness(1.2) sepia(100%) hue-rotate(80deg); animation: holo-flicker 3s infinite; margin-bottom: 20px; }
+.boot-text { font-size: 0.8em; color: #00ff66; text-align: center; border-right: 2px solid #00ff66; animation: cursor-blink 0.6s step-end infinite; }
+
+@keyframes holo-flicker {
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.02); filter: brightness(1.5); }
+    99% { opacity: 0.5; skew: 5deg; }
+}
+@keyframes cursor-blink { 50% { border-color: transparent; } }.status { font-size: 0.65em; color: #00ff66; opacity: 0.8; text-align: right; }
+
+/* --- THE VIEWPORT --- */
+#viewport { 
+    flex: 1; 
+    position: relative; 
+    overflow: hidden; 
+    background-color: #000; 
+    touch-action: none;
+    /* Adjust height to account for the larger mobile footer */
+    height: calc(100vh - 140px); 
+}
+
+#map-img { 
+    position: absolute; 
+    width: 2500px; 
+    height: 1800px; 
+    transform-origin: 0 0; 
+    transition: transform 0.1s ease-out;
+    z-index: 1; 
+}
+
+#map-img::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: 
+        linear-gradient(rgba(0, 255, 102, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 102, 0.1) 1px, transparent 1px),
+        url('CMSHS-SDRRM-PLAN.png'); 
+    background-size: 40px 40px, 40px 40px, contain;
+    background-repeat: no-repeat;
+    filter: brightness(0.8) contrast(1.1); 
+    z-index: -1; 
+}
+
+/* --- TACTICAL HUD OVERLAYS --- */
+#stats-hud { 
+    position: absolute; 
+    top: 20px; left: 20px; 
+    background: rgba(0, 20, 0, 0.9); 
+    padding: 12px; 
+    border: 1px solid #00ff66;
+    border-left: 6px solid #00ff66;
+    font-size: 0.7em; 
+    z-index: 50;
+    pointer-events: none; /* Allows clicking through to the map */
+}
+
+#compass { 
+    width: 50px; height: 50px; 
+    border: 2px solid #00ff66; 
+    border-radius: 50%; 
+    position: absolute; 
+    bottom: 20px; right: 20px; 
+    background: rgba(0, 20, 0, 0.7); 
+    display: flex; align-items: center; justify-content: center; 
+    z-index: 50;
+}
+
+#needle { width: 2px; height: 20px; background: #ff3333; transform-origin: bottom center; }
+
 /* --- DECENTRALIZED TRIAGE CONTROL (FOOTER) --- */
 #triage-hud {
     background: rgba(0, 15, 0, 0.95);
