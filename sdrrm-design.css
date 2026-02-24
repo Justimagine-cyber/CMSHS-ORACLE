@@ -1,18 +1,28 @@
-body { 
+/* --- GLOBAL PROTOCOLS --- */
+body, html { 
     margin: 0; 
-    background: #000b00; /* Deep tactical green-black */
-    color: #00ff66; /* Neon tactical green */
+    padding: 0;
+    background: #000b00; 
+    color: #00ff66; 
     font-family: 'Courier New', Courier, monospace; 
     overflow: hidden; 
+    width: 100%;
+    height: 100%;
+    position: fixed; /* Prevents "pull-to-refresh" on mobile */
     touch-action: none; 
 }
 
-#app { display: flex; flex-direction: column; height: 100vh; }
+#app { 
+    display: flex; 
+    flex-direction: column; 
+    height: 100vh; 
+    width: 100vw;
+}
 
-/* --- HEADER & LOGO LAYOUT --- */
+/* --- HEADER & LOGO --- */
 header { 
     padding: 10px 15px; 
-    background: rgba(0, 40, 0, 0.9); 
+    background: rgba(0, 40, 0, 0.95); 
     border-bottom: 2px solid #00ff66; 
     display: flex; 
     justify-content: space-between;
@@ -22,79 +32,25 @@ header {
 }
 
 .brand-container { display: flex; align-items: center; gap: 12px; }
-
-.header-logo { 
-    width: 35px; 
-    height: 35px; 
-    filter: drop-shadow(0 0 5px #00ff66) brightness(1.2); 
-}
-
+.header-logo { width: 35px; height: 35px; filter: drop-shadow(0 0 5px #00ff66); }
 .brand { letter-spacing: 2px; font-weight: bold; text-shadow: 0 0 10px #00ff66; font-size: 0.9em; }
 .status { font-size: 0.65em; color: #00ff66; opacity: 0.8; text-align: right; }
 
-/* --- HOLOGRAPHIC BOOT OVERLAY --- */
-/* --- HOLOGRAPHIC BOOT OVERLAY FIX --- */
-#boot-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100vw; height: 100vh;
-    background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    transition: opacity 1s ease-out;
-}
-
-.hologram-container { 
-    display: flex;
-    flex-direction: column; /* Stacks Logo on top of Text */
-    align-items: center;
-    position: relative; 
-    max-width: 80%; /* Prevents text from hitting screen edges */
-}
-
-#boot-logo {
-    width: 180px;
-    filter: sepia(100%) hue-rotate(80deg) brightness(1.2) drop-shadow(0 0 15px #00ff66);
-    animation: holo-flicker 3s infinite ease-in-out;
-    margin-bottom: 30px; /* Space between logo and text */
-}
-
-.boot-text {
-    letter-spacing: 2px;
-    font-size: 0.8em;
-    color: #00ff66;
-    text-shadow: 0 0 8px #00ff66;
-    text-align: center; /* Keeps typewriter text centered */
-    white-space: pre-wrap; /* Honors the spaces in your JS string */
-    min-height: 1.5em;
-    border-right: 2px solid #00ff66;
-    animation: cursor-blink 0.6s step-end infinite;
-}
-
-.scanline {
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 10px;
-    background: linear-gradient(to bottom, transparent, rgba(0, 255, 102, 0.2), transparent);
-    box-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
-    animation: scan 4s linear infinite;
-    pointer-events: none;
-}
-
-/* --- THE MAP VIEWPORT --- */
+/* --- THE VIEWPORT --- */
 #viewport { 
     flex: 1; 
     position: relative; 
     overflow: hidden; 
     background-color: #000; 
     touch-action: none;
+    /* Adjust height to account for the larger mobile footer */
+    height: calc(100vh - 140px); 
 }
 
 #map-img { 
     position: absolute; 
     width: 2500px; 
     height: 1800px; 
-    background-color: #050505;
     transform-origin: 0 0; 
     transition: transform 0.1s ease-out;
     z-index: 1; 
@@ -110,53 +66,84 @@ header {
         url('CMSHS-SDRRM-PLAN.png'); 
     background-size: 40px 40px, 40px 40px, contain;
     background-repeat: no-repeat;
-    
-    /* REMOVED SEPIA: Keeping only brightness and contrast for tactical clarity */
     filter: brightness(0.8) contrast(1.1); 
-    
-    transform: translateZ(-1px);
     z-index: -1; 
 }
 
-/* --- HUD & COMPASS --- */
+/* --- TACTICAL HUD OVERLAYS --- */
 #stats-hud { 
     position: absolute; 
     top: 20px; left: 20px; 
-    background: rgba(0, 20, 0, 0.85); 
-    padding: 15px; 
+    background: rgba(0, 20, 0, 0.9); 
+    padding: 12px; 
     border: 1px solid #00ff66;
-    border-left: 8px solid #00ff66;
-    font-size: 0.75em; 
-    z-index: 10;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    border-left: 6px solid #00ff66;
+    font-size: 0.7em; 
+    z-index: 50;
+    pointer-events: none; /* Allows clicking through to the map */
 }
 
 #compass { 
-    width: 60px; height: 60px; 
+    width: 50px; height: 50px; 
     border: 2px solid #00ff66; 
     border-radius: 50%; 
-    position: absolute; bottom: 120px; right: 20px; 
+    position: absolute; 
+    bottom: 20px; right: 20px; 
     background: rgba(0, 20, 0, 0.7); 
     display: flex; align-items: center; justify-content: center; 
-    z-index: 10;
+    z-index: 50;
 }
 
-#needle { 
-    width: 2px; height: 25px; 
-    background: #ff3333; 
-    box-shadow: 0 0 8px #ff3333; 
-    transform-origin: bottom center; 
-    transition: 0.1s; margin-top: -25px; 
+#needle { width: 2px; height: 20px; background: #ff3333; transform-origin: bottom center; }
+
+/* --- DECENTRALIZED TRIAGE CONTROL (FOOTER) --- */
+#triage-hud {
+    background: rgba(0, 15, 0, 0.95);
+    border-top: 2px solid #00ff66;
+    padding: 10px 10px env(safe-area-inset-bottom); /* iOS/Android Notch Support */
+    display: flex;
+    flex-wrap: wrap; 
+    justify-content: center;
+    gap: 8px;
+    z-index: 10000;
 }
 
-/* --- DOTS & LABELS --- */
-.triage-dot { z-index: 99; pointer-events: none; }
-
-.triage-dot div {
-    transform: scale(calc(1 / var(--zoom-level, 1)));
-    transition: transform 0.1s;
+.triage-btn {
+    flex: 1 1 45%; /* Two per row on mobile */
+    min-width: 100px;
+    padding: 14px 5px;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: bold;
+    font-size: 11px;
+    background: rgba(0, 255, 102, 0.05);
+    color: #00ff66;
+    border: 1px solid #00ff66;
+    cursor: pointer;
+    text-transform: uppercase;
+    touch-action: manipulation;
 }
 
+/* Tablet Override: 5 in a row */
+@media (min-width: 768px) {
+    .triage-btn { flex: 1; }
+}
+
+.triage-btn.green { border-color: #0f0; color: #0f0; }
+.triage-btn.yellow { border-color: #ffff00; color: #ffff00; }
+.triage-btn.red { border-color: #ff3333; color: #ff3333; }
+.triage-btn.black { border-color: #888; color: #888; }
+.triage-btn.reset { 
+    flex: 1 1 100%; /* Full width on bottom */
+    border-color: #fff; 
+    color: #fff; 
+    opacity: 0.7;
+    margin-top: 2px;
+}
+
+.triage-btn:active { background: #00ff66; color: #000; }
+
+/* --- DOTS & INTEL --- */
+.triage-dot { position: absolute; z-index: 99; pointer-events: auto; }
 .triage-label {
     position: absolute;
     transform: translateY(-35px) scale(calc(1 / var(--zoom-level, 1)));
@@ -164,94 +151,42 @@ header {
     background: #00ff66;
     color: #000;
     padding: 2px 8px;
-    font-size: 0.55em;
+    font-size: 10px;
     font-weight: 900;
-    white-space: nowrap;
-    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); 
-    z-index: 100;
+    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
 }
 
-#triage-hud {
-    position: fixed; /* 🏛️ Ensures it stays pinned even if you drag the map */
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 9999; /* 🏛️ Higher than everything else */
-    display: flex;
-    flex-wrap: wrap; /* 🏛️ Allows buttons to stack on narrow phone screens */
-    justify-content: center;
-    gap: 10px;
-    width: 90%;
-}
-
-/* Ensure the buttons are big enough for human fingers */
-.triage-btn {
-    padding: 12px 15px;
-    font-size: 14px;
-    touch-action: manipulation; /* 🏛️ Faster response to taps */
-}
-
-/* --- CONTROLS --- */
-#controls { 
-    padding: 15px; 
-    background: #001100; 
-    display: grid; 
-    grid-template-columns: repeat(4, 1fr); 
-    gap: 10px; 
-    border-top: 2px solid #00ff66; 
-    z-index: 10;
-}
-
-.btn { 
-    padding: 12px 5px; 
-    border: 1px solid #00ff66; 
-    background: rgba(0, 255, 102, 0.05);
-    text-align: center; font-size: 0.65em; font-weight: bold; 
-    color: #00ff66; cursor: pointer;
-}
-
-.btn:active { background: #00ff66; color: #000; }
-.r { border-color: #ff3333; color: #ff3333; }
-.y { border-color: #ffff00; color: #ffff00; }
-.b { border-color: #888; color: #888; }
-
-.reset-btn { grid-column: span 4; border-color: #fff; color: #fff; font-size: 0.6em; margin-top: 5px; }
-
-/* --- AGENT INTEL OVERLAY --- */
 #intel-overlay {
-    position: absolute;
+    position: fixed;
     top: 50%; left: 50%;
     transform: translate(-50%, -50%);
-    background: rgba(0, 20, 0, 0.95);
+    background: rgba(0, 10, 0, 0.98);
     border: 2px solid #00ff66;
-    padding: 20px;
-    color: #00ff66;
-    z-index: 2000;
-    display: none; /* Hidden by default */
-    box-shadow: 0 0 30px rgba(0, 255, 102, 0.4);
-    min-width: 250px;
-    clip-path: polygon(0 0, 90% 0, 100% 10%, 100% 100%, 10% 100%, 0 90%);
+    padding: 25px;
+    z-index: 20000;
+    display: none;
+    min-width: 280px;
+    box-shadow: 0 0 50px rgba(0,0,0,1);
 }
 
-#intel-overlay h3 { margin: 0 0 10px 0; border-bottom: 1px solid #00ff66; padding-bottom: 5px; font-size: 1em; }
-#intel-overlay p { margin: 5px 0; font-size: 0.8em; }
-.close-intel { 
-    margin-top: 15px; 
-    font-size: 0.7em; 
-    color: #ff3333; 
-    cursor: pointer; 
-    text-align: right; 
-    text-decoration: underline; 
+/* --- BOOT ANIMATIONS --- */
+#boot-overlay {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 99999;
+    transition: opacity 1s;
 }
+.hologram-container { display: flex; flex-direction: column; align-items: center; }
+#boot-logo { width: 150px; filter: brightness(1.2) sepia(100%) hue-rotate(80deg); animation: holo-flicker 3s infinite; margin-bottom: 20px; }
+.boot-text { font-size: 0.8em; color: #00ff66; text-align: center; border-right: 2px solid #00ff66; animation: cursor-blink 0.6s step-end infinite; }
 
-/* --- KEYFRAMES --- */
 @keyframes holo-flicker {
-    0%, 100% { opacity: 0.8; transform: scale(1); filter: brightness(1.1) sepia(100%) hue-rotate(80deg) drop-shadow(0 0 10px #00ff66); }
-    50% { opacity: 1; transform: scale(1.02); filter: brightness(1.4) sepia(100%) hue-rotate(80deg) drop-shadow(0 0 20px #00ff66); }
-    98% { opacity: 1; transform: scale(1.02); }
-    99% { opacity: 0.4; transform: scale(1.05) skewX(5deg); } /* Glitch Frame */
+    0%, 100% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.02); filter: brightness(1.5); }
+    99% { opacity: 0.5; skew: 5deg; }
 }
-
-@keyframes text-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
-@keyframes scan { 0% { top: -10%; } 100% { top: 110%; } }
-@keyframes blink { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes cursor-blink { 50% { border-color: transparent; } }
