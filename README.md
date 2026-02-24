@@ -7,7 +7,7 @@ CMSHS ORACLE is a simple yet specialized **Progressive Web App (PWA)** developed
 ## 🛠️ CORE CAPABILITIES
 * **OFFLINE-FIRST:** Engineered to function in "Air-Gapped" environments where Wi-Fi or Cellular data is unavailable.
 * **TACTICAL PLOTTING:** Precision coordinate placement on the CMSHS floor plan with color-coded triage status (Minimal, Delayed, Immediate, Expectant).
-* **AGEMT DOSSIERS:** Interactive labels and tap-to-view intelligence popups for rapid agent identification.
+* **AGENT DOSSIERS:** Interactive labels and tap-to-view intelligence popups for rapid agent identification.
 * **GEOSPATIAL SYNC:** Real-time compass and zoom-calibrated scaling for accurate sector analysis.
 
 ## 🚀 DEPLOYMENT
@@ -26,4 +26,4 @@ CMSHS ORACLE is a simple yet specialized **Progressive Web App (PWA)** developed
 **DEVELOPED BY:** Mark Justin L. Castillo, 12 - Planck
 
 **INSTITUTION:** City of Mandaluyong Science High School (CMSHS)  
-**YEAR:** 2026
+**SCHOOL YEAR:** 2025–2026
