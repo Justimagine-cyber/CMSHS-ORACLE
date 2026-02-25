@@ -1,246 +1,186 @@
+/* 🏛️ FONT IMPORT: CINZEL & MONTSERRAT */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@400;700;900&display=swap');
+
 /* --- GLOBAL PROTOCOLS --- */
 body, html { 
-    margin: 0; 
-    padding: 0;
+    margin: 0; padding: 0;
     background: #000b00; 
     color: #00ff66; 
-    font-family: 'Courier New', Courier, monospace; 
-    overflow: hidden; 
-    width: 100%;
-    height: 100%;
-    position: fixed; 
-    touch-action: none; 
+    font-family: 'Montserrat', sans-serif; 
+    overflow: hidden; width: 100%; height: 100%;
+    position: fixed; touch-action: none; 
 }
 
-#app { 
-    display: flex; 
-    flex-direction: column; 
-    height: 100vh; 
-    width: 100vw;
-}
+#app { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
 
 /* --- HEADER & LOGO --- */
 header { 
     padding: 10px 15px; 
-    background: rgba(0, 40, 0, 0.95); 
+    background: rgba(0, 20, 0, 0.95); 
     border-bottom: 2px solid #00ff66; 
-    display: flex; 
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
-    z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 0 20px rgba(0, 255, 102, 0.2); z-index: 100;
 }
 
 .brand-container { display: flex; align-items: center; gap: 12px; }
 .header-logo { width: 35px; height: 35px; filter: drop-shadow(0 0 5px #00ff66); }
-.brand { letter-spacing: 2px; font-weight: bold; text-shadow: 0 0 10px #00ff66; font-size: 0.9em; }
-.status { font-size: 0.65em; color: #00ff66; opacity: 0.8; text-align: right; }
+.brand { 
+    font-family: 'Cinzel', serif;
+    letter-spacing: 2px; 
+    font-weight: bold; 
+    text-shadow: 0 0 10px #00ff66; 
+    font-size: 1em; 
+}
+.status { font-size: 0.7em; color: #00ff66; opacity: 0.8; font-weight: 700; }
 
 /* --- THE VIEWPORT --- */
 #viewport { 
-    flex: 1; 
-    position: relative; 
-    overflow: hidden; 
-    background-color: #000; 
-    touch-action: none;
-    /* This calculation leaves exact space for the tactical footer */
+    flex: 1; position: relative; overflow: hidden; 
+    background-color: #000; touch-action: none;
     height: calc(100vh - 160px); 
 }
 
 #map-img { 
-    position: absolute; 
-    width: 2500px; 
-    height: 1800px; 
-    transform-origin: 0 0; 
-    transition: transform 0.1s ease-out;
-    z-index: 1; 
+    position: absolute; width: 2500px; height: 1800px; 
+    transform-origin: 0 0; transition: transform 0.1s ease-out; z-index: 1; 
 }
 
 #map-img::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     background: 
-        linear-gradient(rgba(0, 255, 102, 0.1) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 255, 102, 0.1) 1px, transparent 1px),
+        linear-gradient(rgba(0, 255, 102, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 102, 0.05) 1px, transparent 1px),
         url('CMSHS-SDRRM-PLAN.png'); 
-    background-size: 40px 40px, 40px 40px, contain;
+    background-size: 50px 50px, 50px 50px, contain;
     background-repeat: no-repeat;
-    filter: brightness(0.8) contrast(1.1); 
-    z-index: -1; 
+    filter: brightness(0.7) contrast(1.2) saturate(1.2); z-index: -1; 
 }
 
 /* --- TACTICAL HUD OVERLAYS --- */
 #stats-hud { 
-    position: absolute; 
-    top: 20px; left: 20px; 
-    background: rgba(0, 20, 0, 0.9); 
-    padding: 12px; 
-    border: 1px solid #00ff66;
-    border-left: 6px solid #00ff66;
-    font-size: 0.7em; 
-    z-index: 50;
-    pointer-events: none; 
+    position: absolute; top: 20px; left: 20px; 
+    background: rgba(0, 15, 0, 0.9); padding: 15px; 
+    border: 1px solid #00ff66; border-left: 8px solid #00ff66;
+    font-size: 0.75em; z-index: 50; pointer-events: none; 
+    font-weight: 900; letter-spacing: 1px;
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
 }
 
-#compass { 
-    width: 50px; height: 50px; 
-    border: 2px solid #00ff66; 
-    border-radius: 50%; 
-    position: absolute; 
-    bottom: 20px; right: 20px; 
-    background: rgba(0, 20, 0, 0.7); 
-    display: flex; align-items: center; justify-content: center; 
-    z-index: 50;
-}
+#compass { display: none !important; }
 
-#needle { width: 2px; height: 20px; background: #ff3333; transform-origin: bottom center; }
-
-/* --- UNIVERSAL TACTICAL FOOTER (GRID SYSTEM) --- */
+/* --- UNIVERSAL TACTICAL FOOTER (7-BUTTON GRID) --- */
 #triage-hud {
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: rgba(0, 10, 0, 0.95);
-    border-top: 2px solid #00ff66;
+    position: fixed; bottom: 0; left: 0; width: 100%;
+    background: rgba(0, 5, 0, 0.98); border-top: 2px solid #00ff66;
     display: grid;
-    /* Mobile First: 2 columns */
-    grid-template-columns: repeat(2, 1fr); 
-    gap: 8px;
-    padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); 
-    z-index: 10000;
-    box-sizing: border-box;
+    grid-template-columns: repeat(4, 1fr); 
+    gap: 6px;
+    padding: 10px;
+    z-index: 10000; box-sizing: border-box;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
 }
 
-/* Tablet & Landscape Orientation Optimization */
 @media (min-width: 768px) or (orientation: landscape) {
-    #triage-hud {
-        grid-template-columns: repeat(5, 1fr);
-        padding: 15px;
-    }
+    #triage-hud { grid-template-columns: repeat(7, 1fr); }
 }
 
 .triage-btn {
-    background: rgba(0, 40, 0, 0.6);
-    border: 1px solid #00ff66;
-    color: #00ff66;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 11px;
-    font-weight: bold;
-    padding: 15px 5px;
-    text-transform: uppercase;
-    cursor: pointer;
-    transition: all 0.2s;
-    touch-action: manipulation;
+    background: rgba(0, 30, 0, 0.5); border: 1px solid #00ff66;
+    color: #00ff66; font-family: 'Montserrat', sans-serif;
+    font-size: 10px; font-weight: 900; padding: 14px 2px;
+    text-transform: uppercase; cursor: pointer; transition: 0.1s ease;
 }
 
-.triage-btn:active { background: #00ff66; color: #000; }
+.triage-btn:active { background: #00ff66; color: #000; transform: scale(0.95); }
+.triage-btn.green { border-color: #0f0; color: #0f0; }
+.triage-btn.yellow { border-color: #ffff00; color: #ffff00; }
+.triage-btn.red { border-color: #ff3333; color: #ff3333; }
+.triage-btn.black { border-color: #888; color: #888; }
+.triage-btn.sync-qr { border-color: #00aaff; color: #00aaff; }
+.triage-btn.intel-report { border-color: #ffa500; color: #ffa500; }
 
-/* Reset button styling */
 .triage-btn.reset {
-    grid-column: span 2; 
-    border-color: #fff;
-    color: #fff;
-    background: rgba(255, 255, 255, 0.1);
+    grid-column: span 4;
+    border-color: #ff3333; color: #ff3333; background: rgba(255, 0, 0, 0.1);
 }
 
 @media (min-width: 768px) or (orientation: landscape) {
     .triage-btn.reset { grid-column: span 1; }
 }
 
-.triage-btn.green { border-color: #0f0; color: #0f0; }
-.triage-btn.yellow { border-color: #ffff00; color: #ffff00; }
-.triage-btn.red { border-color: #ff3333; color: #ff3333; }
-.triage-btn.black { border-color: #888; color: #888; }
-
-/* --- DOTS & INTEL --- */
+/* --- DOTS & LABELS --- */
 .triage-dot { position: absolute; z-index: 99; pointer-events: auto; }
+
 .triage-label {
-    position: absolute;
-    transform: translateY(-35px) scale(calc(1 / var(--zoom-level, 1)));
-    transform-origin: bottom center;
-    background: #00ff66;
-    color: #000;
-    padding: 2px 8px;
-    font-size: 10px;
-    font-weight: 900;
-    clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%);
+    position: absolute; left: 50%; transform: translateX(-50%) translateY(-35px) scale(calc(1 / var(--zoom-level, 1)));
+    transform-origin: bottom center; background: #00ff66; color: #000; padding: 3px 10px;
+    font-size: 11px; font-weight: 900; white-space: nowrap;
+    clip-path: polygon(12% 0, 100% 0, 88% 100%, 0 100%);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.4);
 }
 
+@keyframes emergency-flicker {
+    0%, 100% { filter: brightness(1); opacity: 1; }
+    50% { filter: brightness(2.5); opacity: 0.8; }
+}
+
+.triage-dot.red div { 
+    animation: emergency-flicker 1s infinite ease-in-out !important; 
+    border: none !important; 
+    box-shadow: 0 0 15px #ff3333 !important;
+}
+
+/* --- AGENT PROFILE POPUP (TACTICAL MENU) --- */
 #intel-overlay {
-    position: fixed;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 10, 0, 0.98);
-    border: 2px solid #00ff66;
-    padding: 25px;
-    z-index: 20000;
-    display: none;
-    min-width: 280px;
-    box-shadow: 0 0 50px rgba(0,0,0,1);
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: rgba(0, 10, 0, 0.98); border: 2px solid #00ff66;
+    padding: 20px; z-index: 20000; display: none; 
+    width: 320px; max-height: 85vh; overflow-y: auto;
+    box-shadow: 0 0 100px #000, inset 0 0 20px rgba(0, 255, 102, 0.2);
+    text-align: center;
 }
 
-/* --- BOOT ANIMATIONS --- */
+#intel-overlay h3 { font-family: 'Cinzel', serif; margin-top: 0; color: #00ff66; }
+#intel-overlay p { margin: 8px 0; font-size: 0.9em; letter-spacing: 0.5px; }
+
+/* Multi-button Layout Support for Intel/QR Overlay */
+#intel-overlay .close-intel {
+    margin-top: 5px;
+    padding: 12px;
+    background: rgba(0,0,0,0.5);
+}
+
+/* Dismiss Button Styling */
+.close-intel {
+    margin-top: 25px;
+    padding: 10px;
+    border: 1px solid #ff3333;
+    color: #ff3333;
+    font-weight: 900;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: 0.2s;
+    font-size: 0.8em;
+    pointer-events: auto;
+    display: block;
+}
+
+.close-intel:hover { background: #ff3333; color: #000; }
+
+/* --- BOOT OVERLAY --- */
 #boot-overlay {
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 99999;
-    transition: opacity 1s;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; display: flex; justify-content: center; align-items: center;
+    z-index: 99999; transition: opacity 1s;
 }
 
 .hologram-container { display: flex; flex-direction: column; align-items: center; }
-#boot-logo { width: 150px; filter: brightness(1.2) sepia(100%) hue-rotate(80deg); animation: holo-flicker 3s infinite; margin-bottom: 20px; }
-.boot-text {
-    letter-spacing: 2px;
-    font-size: 0.8em;
-    color: #00ff66;
-    text-shadow: 0 0 8px #00ff66;
-    text-align: center; 
-    /* 🏛️ THIS IS THE CRITICAL LINE */
-    white-space: pre; 
-    /* 🏛️ ------------------------ */
-    min-height: 1.5em;
-    border-right: 2px solid #00ff66;
+#boot-logo { width: 180px; filter: brightness(1.2) drop-shadow(0 0 20px #0f6); animation: holo-flicker 2.5s infinite; margin-bottom: 25px; }
+.boot-text { 
+    font-family: 'Courier New', monospace; letter-spacing: 2px; font-size: 0.85em; 
+    color: #00ff66; white-space: pre; border-right: 2px solid #00ff66; 
     animation: cursor-blink 0.6s step-end infinite;
-    display: inline-block; /* Helps with the centering logic */
 }
 
-@keyframes holo-flicker {
-    0%, 100% { opacity: 0.8; transform: scale(1); }
-    50% { opacity: 1; transform: scale(1.02); filter: brightness(1.5); }
-    99% { opacity: 0.5; skew: 5deg; }
-}
-
-/* --- EMERGENCY PULSE ANIMATION --- */
-.triage-dot.red div {
-    animation: emergency-pulse 0.8s infinite alternate ease-in-out !important;
-    background-color: #ff3333 !important;
-    box-shadow: 0 0 15px #ff3333, 0 0 30px rgba(255, 51, 51, 0.5);
-    border: 2px solid white;
-}
-
-@keyframes emergency-pulse {
-    0% { 
-        transform: scale(0.8) scale(calc(1 / var(--zoom-level, 1))); 
-        filter: brightness(1);
-    }
-    100% { 
-        transform: scale(1.3) scale(calc(1 / var(--zoom-level, 1))); 
-        filter: brightness(1.5);
-        box-shadow: 0 0 25px #ff3333, 0 0 40px #ff3333;
-    }
-}
-
-/* Force any element with a red background to blink */
-[style*="background-color: rgb(255, 51, 51)"], 
-[style*="background: #ff3333"] {
-    animation: emergency-pulse 0.8s infinite alternate ease-in-out !important;
-}
-
-@keyframes cursor-blink { 50% { border-color: transparent; } 
-
+@keyframes holo-flicker { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; transform: scale(1.03); } }
+@keyframes cursor-blink { 50% { border-color: transparent; } }

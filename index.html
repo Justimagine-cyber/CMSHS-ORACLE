@@ -6,12 +6,19 @@
     <title>CMSHS ORACLE | OPERATIONAL READINESS</title>
     <link rel="stylesheet" href="sdrrm-design.css">
     <link rel="icon" type="image/png" href="CMSHS_ORACLE.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 </head>
 <body>
 
 <div id="boot-overlay">
     <div class="hologram-container">
-        <img src="CMSHS_LOGO.png" id="boot-logo"> <div class="boot-text">INITIALIZING ORACLE SYSTEM...</div>
+        <img src="CMSHS_LOGO.png" id="boot-logo"> 
+        <div class="boot-text">INITIALIZING ORACLE SYSTEM...</div>
         <div class="scanline"></div>
     </div>
 </div>
@@ -35,19 +42,26 @@
             MINOR:     <span id="g-c" class="g-text">0</span><br>
             DECEASED:  <span id="b-c" class="b-text">0</span>
         </div>
+        
+        </div>
 
-        <div id="compass"><div id="needle"></div></div>
+    <div id="triage-hud">
+        <button class="triage-btn green" onclick="setStatus(0)">MINOR</button>
+        <button class="triage-btn yellow" onclick="setStatus(1)">DELAYED</button>
+        <button class="triage-btn red" onclick="setStatus(2)">IMMEDIATE</button>
+        <button class="triage-btn black" onclick="setStatus(3)">DECEASED</button>
+        
+        <button class="triage-btn sync-qr" onclick="generateTacticalQR()">SHARE REPORT</button>
+        <button class="triage-btn intel-report" onclick="showIntelligenceReport()">SYSTEM UPDATES</button>
+        
+        <button class="triage-btn reset" onclick="clearMap()">[ RESET OPERATIONAL DATA ]</button>
     </div>
-
-<div id="triage-hud">
-    <button class="triage-btn green" onclick="setStatus(0)">MINOR <span id="g-c"></span></button>
-    <button class="triage-btn yellow" onclick="setStatus(1)">DELAYED <span id="y-c"></span></button>
-    <button class="triage-btn red" onclick="setStatus(2)">IMMEDIATE <span id="r-c"></span></button>
-    <button class="triage-btn black" onclick="setStatus(3)">DECEASED <span id="b-c"></span></button>
-    <button class="triage-btn reset" onclick="clearMap()">[ RESET OPERATIONAL DATA ]</button>
 </div>
+
+<div id="intel-overlay"></div>
     
 <script>
+  // 🏛️ OFFLINE SHIELD PROTOCOL
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then(() => console.log("ORACLE: Offline Protocol Active"))
@@ -57,8 +71,4 @@
 
 <script src="sdrrm-events.js"></script>
 </body>
-
 </html>
-
-
-
