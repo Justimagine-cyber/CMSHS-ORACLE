@@ -14,12 +14,12 @@ body, html {
 #app { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
 
 /* --- HEADER & LOGO --- */
-header { 
-    padding: 10px 15px; 
-    background: rgba(0, 20, 0, 0.95); 
-    border-bottom: 2px solid #00ff66; 
-    display: flex; justify-content: space-between; align-items: center;
-    box-shadow: 0 0 20px rgba(0, 255, 102, 0.2); z-index: 100;
+.header-logo { 
+    width: 45px; 
+    height: 45px; 
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 8px rgba(0, 255, 102, 0.5)); 
 }
 
 .brand { 
@@ -66,7 +66,7 @@ header {
     #triage-hud { grid-template-columns: repeat(8, 1fr); }
 }
 
-/* 🔵 BLUE CIRCLE: Montserrat Bold (Weight 900) */
+/* Montserrat Bold (Weight 900) */
 .triage-btn, button[onclick="showHelp()"] {
     background: rgba(0, 30, 0, 0.5); border: 1px solid #00ff66;
     color: #00ff66; font-family: 'Montserrat', sans-serif;
@@ -110,9 +110,9 @@ header {
     backdrop-filter: blur(10px);
 }
 
-/* ⚪ WHITE CIRCLE: Headers back to Cinzel */
+/* Headers back to Cinzel */
 #intel-overlay h3, .modal-content h3 { 
-    font-family: 'Cinzel', serif !important; 
+    font-family: 'Cinzel', sans-serif !important; 
     font-weight: 700; text-transform: uppercase;
     margin-top: 0; color: #00ff66; text-align: center;
     border-bottom: 1px solid rgba(0, 255, 102, 0.3); padding-bottom: 10px;
@@ -1069,3 +1069,4 @@ button[onclick="showHelp()"]:active {
     box-shadow: 0 0 15px rgba(255, 165, 0, 0.5);
     transform: translateY(-1px);
 }
+
