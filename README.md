@@ -6,14 +6,14 @@ CMSHS ORACLE is a simple yet specialized **Progressive Web App (PWA)** developed
 
 ## 🛠️ CORE CAPABILITIES
 * **OFFLINE-FIRST:** Engineered to function in "Air-Gapped" environments where Wi-Fi or Cellular data is unavailable.
-* **TACTICAL PLOTTING:** Precision coordinate placement on the CMSHS floor plan with color-coded triage status (Minimal, Delayed, Immediate, Expectant).
+* **AGENT PLOTTING:** Precision coordinate placement on the CMSHS floor plan with color-coded triage status (Minor, Delayed, Immediate, Deceased).
 * **AGENT DOSSIERS:** Interactive labels and tap-to-view intelligence popups for rapid agent identification.
 * **GEOSPATIAL SYNC:** Real-time compass and zoom-calibrated scaling for accurate sector analysis.
 
 ## 🚀 DEPLOYMENT
 1. **Scan the QR Code** provided by the administrator.
 2. **Boot the System:** Wait for the ORACLE initialization sequence.
-3. **Install:** Use "Add to Home Screen" to install the app natively on any mobile device.
+3. **Install:** Use "Add to Home Screen" to install the app natively on any device.
 
 ---
 
