@@ -256,3 +256,23 @@ header {
 
 .modal-actions { display: flex; gap: 15px; width: 85%; justify-content: center; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* Custom Styling for the Copy Button in the Overlay */
+.sync-copy-btn {
+    background: rgba(0, 170, 255, 0.1) !important;
+    border: 1px solid #00aaff !important;
+    color: #00aaff !important;
+    margin-bottom: 15px;
+    width: 100%;
+    padding: 12px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 0.75em;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.sync-copy-btn:hover {
+    background: #00aaff !important;
+    color: #000 !important;
+}

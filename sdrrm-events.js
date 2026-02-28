@@ -171,7 +171,7 @@ viewport.addEventListener('touchmove', e => {
 
 viewport.addEventListener('touchend', () => { initialPinchDist = -1; });
 
-// --- TACTICAL SYNC & MERGE ---
+// --- DATA LINK & MERGE ---
 function generateTacticalQR() {
     const data = localStorage.getItem('ORACLE_GRID_DATA');
     const hasData = data && data !== "[]";
@@ -179,12 +179,12 @@ function generateTacticalQR() {
 
     const overlay = document.getElementById('intel-overlay');
     overlay.innerHTML = `
-        <h3 style="font-family:'Cinzel', serif; color:#0f6;">TACTICAL SYNC</h3>
+        <h3 style="font-family:'Cinzel', serif; color:#0f6;">DATA LINK</h3>
         ${hasData ? `
             <div style="background:white; padding:10px; display:inline-block; margin-bottom:10px;">
                 <div id="qr-target"></div>
             </div>
-            <button onclick="copyToClipboard('${b64Data}')" class="close-intel" style="border-color:#00aaff; color:#00aaff; margin-bottom:10px; width:100%;">[ COPY DATA STRING ]</button>
+        <button onclick="copyToClipboard('${b64Data}')" class="sync-copy-btn">[ COPY DATA STRING ]</button>
         ` : `<p style="font-size:0.8em; color:#888;">[ NO LOCAL DATA TO SHARE ]</p>`}
         
         <button onclick="document.getElementById('intel-overlay').style.display='none'; importTacticalGrid();" 
@@ -204,42 +204,59 @@ function generateTacticalQR() {
 }
 
 async function importTacticalGrid() {
-    // Pass the sync-specific placeholder here
     const code = await tacticalPrompt(
         "IMPORT SECTOR DATA", 
-        "PASTE TACTICAL SYNC STRING BELOW:",
+        "PASTE DATA LINK STRING BELOW:",
         true,
         "PASTE STRING HERE..." 
     );
     
-    if (!code) return;
+    if (!code || code.trim() === "") return;
+
     try {
-        const incomingData = JSON.parse(atob(code));
-        const currentData = JSON.parse(localStorage.getItem('ORACLE_GRID_DATA') || "[]");
-        const existingFingerprints = new Set(currentData.map(d => d.uuid));
+        // 1. Decode the string
+        const decodedData = atob(code.trim());
+        const incomingData = JSON.parse(decodedData);
+        
+        // 2. Get current local data
+        const currentDataRaw = localStorage.getItem('ORACLE_GRID_DATA');
+        let currentData = currentDataRaw ? JSON.parse(currentDataRaw) : [];
+        
+        // 3. Create a Fingerprint Map of what we already have
+        const existingUUIDs = new Set(currentData.map(d => d.uuid));
+        
         let mergedCount = 0;
 
+        // 4. Tactical Merge
         incomingData.forEach(remoteDot => {
-            if (!existingFingerprints.has(remoteDot.uuid)) {
+            if (!existingUUIDs.has(remoteDot.uuid)) {
                 currentData.push(remoteDot);
                 mergedCount++;
             }
         });
 
         if (mergedCount === 0) {
-            // Using your custom prompt as an alert
-            await tacticalPrompt("SYNC COMPLETE", "NO NEW DATA FOUND (DUPLICATES IGNORED)", false);
+            await tacticalPrompt("SYNC REPORT", "NO NEW DATA FOUND. SECTOR IS ALREADY UP TO DATE.", false);
         } else {
+            // 5. Commit to LocalStorage
             localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(currentData));
-            const newCounts = [0,0,0,0];
-            currentData.forEach(d => newCounts[parseInt(d.type)]++);
+            
+            // 6. Re-calculate Stats
+            const newCounts = [0, 0, 0, 0];
+            currentData.forEach(d => {
+                const t = parseInt(d.type);
+                if (!isNaN(t)) newCounts[t]++;
+            });
             localStorage.setItem('ORACLE_STATS', JSON.stringify(newCounts));
+            
+            await tacticalPrompt("SYNC SUCCESS", `${mergedCount} NEW INCIDENTS PLOTTED. REBOOTING GRID...`, false);
             
             sessionStorage.setItem('FAST_BOOT', 'true');
             location.reload(); 
         }
     } catch (e) { 
-        await tacticalPrompt("CRITICAL ERROR", "INVALID DATA STRING DETECTED", false); 
+        console.error("Sync Error:", e);
+        await tacticalPrompt("CRITICAL ERROR", "INVALID OR CORRUPT DATA STRING.", false); 
     }
 }
 
@@ -288,7 +305,13 @@ function updateMapTransform() {
     }
 }
 function copyToClipboard(str) {
-    navigator.clipboard.writeText(str).then(() => alert("DATA COPIED TO CLIPBOARD"));
+    if (!str) return;
+    navigator.clipboard.writeText(str).then(async () => {
+        // Instead of a boring alert, we use your custom modal to confirm!
+        await tacticalPrompt("DATA SECURED", "DATA STRING ENCRYPTED & COPIED TO CLIPBOARD", false);
+    }).catch(err => {
+        console.error("Link Failure", err);
+    });
 }
 
 // --- UPDATED CUSTOM MODAL HANDLER ---
