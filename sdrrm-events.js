@@ -1,11 +1,11 @@
-/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V18.4 
-    - Cinematic Boot & Typing Animation Restored
-    - Instant Data Wipe Protocol (Bypass Boot)
-    - Pinch-to-Zoom (Redmi Pad/Mobile Optimized)
-    - Smart Merge & Fingerprinting
+/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V18.7 
+    - One-Time Cinematic Boot (Session Persistence)
+    - Lead Locator Merge Logic (Responder 1 + Responder 2)
+    - Simplified Tactical Reports (Confirm Only / No Cancel)
+    - Re-Engineered True Merge & Fingerprinting
 */
 
-console.log("ORACLE SYSTEM: V18.4 ONLINE");
+console.log("ORACLE SYSTEM: V18.7 ONLINE");
 
 // --- INITIAL STATE ---
 let currentType = 0;
@@ -24,14 +24,25 @@ let initialPinchDist = -1; // Mobile Zoom tracking
 
 // --- 🛡️ BULLETPROOF BOOT SEQUENCE ---
 function initializeSystem() {
-    console.log("STARTING BOOT PROTOCOL...");
-    
-    const bootText = document.getElementById('boot-text');
     const bootOverlay = document.getElementById('boot-overlay');
+    const isSessionActive = sessionStorage.getItem('INITIAL_BOOT_COMPLETE');
+
+    // IF SESSION IS ALREADY ACTIVE: Kill the boot screen instantly
+    if (isSessionActive) {
+        if (bootOverlay) {
+            bootOverlay.style.display = 'none';
+        }
+        loadState(); 
+        updateMapTransform();
+        return; // EXIT EARLY
+    }
+
+    // NORMAL STARTUP (First time opening the tab)
+    console.log("STARTING MASTER BOOT PROTOCOL...");
+    const bootText = document.getElementById('boot-text');
     const fullText = "INITIALIZING TACTICAL GRID...\nACCESSING CMSHS ORACLE...\nSTATUS: ONLINE";
     let i = 0;
 
-    // 1. Typing Animation with Safety Check
     function typeWriter() {
         if (bootText && i < fullText.length) {
             bootText.innerHTML += fullText.charAt(i);
@@ -43,30 +54,21 @@ function initializeSystem() {
     if (bootText) {
         bootText.innerHTML = "";
         typeWriter();
-    } else {
-        console.warn("ORACLE: boot-text element not found. Skipping animation.");
     }
-
-    // 2. The "Emergency Exit" (Ensures overlay ALWAYS disappears)
-    const isFastBoot = sessionStorage.getItem('FAST_BOOT');
-    const delay = isFastBoot ? 500 : 3500; 
 
     setTimeout(() => {
         if (bootOverlay) {
-            console.log("BOOT COMPLETE. DEPLOYING INTERFACE.");
             bootOverlay.style.opacity = '0';
-            bootOverlay.style.pointerEvents = 'none'; // So you can click through it
-            
-            // Remove from DOM after fade
+            bootOverlay.style.pointerEvents = 'none'; 
             setTimeout(() => {
                 bootOverlay.style.display = 'none';
-                sessionStorage.removeItem('FAST_BOOT');
+                // SET THE FLAG: No more boot screens until the tab is closed
+                sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
             }, 600);
         }
-        
         loadState(); 
         updateMapTransform();
-    }, delay);
+    }, 3500);
 }
 
 // --- PERSISTENCE & MERGE ENGINE ---
@@ -123,7 +125,9 @@ function createDot(x, y, type, agentData, timestamp, isSilent = false, existingU
     dotContainer.dataset.type = typeInt;
     dotContainer.dataset.agent = agentData || "UNKNOWN AGENT";
     dotContainer.dataset.timestamp = timestamp || new Date().toLocaleTimeString();
-    dotContainer.dataset.uuid = existingUUID || btoa(timestamp + agentData).substring(0, 12);
+    
+    // Generate UUID if it doesn't exist
+    dotContainer.dataset.uuid = existingUUID || btoa(timestamp + agentData + Math.random()).substring(0, 16);
 
     const dotInner = document.createElement('div');
     dotInner.style.cssText = `width:16px; height:16px; border-radius:50%; background-color:${colors[typeInt]}; box-shadow: 0 0 15px ${colors[typeInt]}; cursor:pointer;`;
@@ -171,7 +175,7 @@ viewport.addEventListener('touchmove', e => {
 
 viewport.addEventListener('touchend', () => { initialPinchDist = -1; });
 
-// --- DATA LINK & MERGE ---
+// --- DATA LINK & TRUE MERGE ENGINE ---
 function generateTacticalQR() {
     const data = localStorage.getItem('ORACLE_GRID_DATA');
     const hasData = data && data !== "[]";
@@ -184,7 +188,7 @@ function generateTacticalQR() {
             <div style="background:white; padding:10px; display:inline-block; margin-bottom:10px;">
                 <div id="qr-target"></div>
             </div>
-        <button onclick="copyToClipboard('${b64Data}')" class="sync-copy-btn">[ COPY DATA STRING ]</button>
+            <button onclick="copyToClipboard('${b64Data}')" class="sync-copy-btn">[ COPY DATA STRING ]</button>
         ` : `<p style="font-size:0.8em; color:#888;">[ NO LOCAL DATA TO SHARE ]</p>`}
         
         <button onclick="document.getElementById('intel-overlay').style.display='none'; importTacticalGrid();" 
@@ -205,8 +209,8 @@ function generateTacticalQR() {
 
 async function importTacticalGrid() {
     const code = await tacticalPrompt(
-        "IMPORT SECTOR DATA", 
-        "PASTE DATA LINK STRING BELOW:",
+        "IMPORT NEW DATA", 
+        "PASTE DATA STRING:",
         true,
         "PASTE STRING HERE..." 
     );
@@ -214,49 +218,40 @@ async function importTacticalGrid() {
     if (!code || code.trim() === "") return;
 
     try {
-        // 1. Decode the string
-        const decodedData = atob(code.trim());
-        const incomingData = JSON.parse(decodedData);
+        const incomingData = JSON.parse(atob(code.trim()));
+        const masterDataRaw = localStorage.getItem('ORACLE_GRID_DATA');
+        let masterData = masterDataRaw ? JSON.parse(masterDataRaw) : [];
+        const masterUUIDs = new Set(masterData.map(dot => dot.uuid));
         
-        // 2. Get current local data
-        const currentDataRaw = localStorage.getItem('ORACLE_GRID_DATA');
-        let currentData = currentDataRaw ? JSON.parse(currentDataRaw) : [];
-        
-        // 3. Create a Fingerprint Map of what we already have
-        const existingUUIDs = new Set(currentData.map(d => d.uuid));
-        
-        let mergedCount = 0;
-
-        // 4. Tactical Merge
-        incomingData.forEach(remoteDot => {
-            if (!existingUUIDs.has(remoteDot.uuid)) {
-                currentData.push(remoteDot);
-                mergedCount++;
+        let integratedPlots = 0;
+        incomingData.forEach(responderDot => {
+            if (!masterUUIDs.has(responderDot.uuid)) {
+                masterData.push(responderDot);
+                integratedPlots++;
             }
         });
 
-        if (mergedCount === 0) {
-            await tacticalPrompt("SYNC REPORT", "NO NEW DATA FOUND. SECTOR IS ALREADY UP TO DATE.", false);
+        if (integratedPlots === 0) {
+            // Confirm Only report
+            await tacticalPrompt("DATA INTEGRATION REPORT", "NO NEW UNIQUE PLOTS DETECTED. CMSHS GRID IS CURRENT.", false, "", true);
         } else {
-            // 5. Commit to LocalStorage
-            localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(currentData));
-            
-            // 6. Re-calculate Stats
-            const newCounts = [0, 0, 0, 0];
-            currentData.forEach(d => {
+            localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(masterData));
+            const masterCounts = [0, 0, 0, 0];
+            masterData.forEach(d => {
                 const t = parseInt(d.type);
-                if (!isNaN(t)) newCounts[t]++;
+                if (!isNaN(t)) masterCounts[t]++;
             });
-            localStorage.setItem('ORACLE_STATS', JSON.stringify(newCounts));
+            localStorage.setItem('ORACLE_STATS', JSON.stringify(masterCounts));
             
-            await tacticalPrompt("SYNC SUCCESS", `${mergedCount} NEW INCIDENTS PLOTTED. REBOOTING GRID...`, false);
+            // Confirm Only report
+            await tacticalPrompt("CMSHS GRID UPDATED", `${integratedPlots} NEW PLOTS INTEGRATED INTO CMSHS GRID.`, false, "", true);
             
             sessionStorage.setItem('FAST_BOOT', 'true');
             location.reload(); 
         }
     } catch (e) { 
-        console.error("Sync Error:", e);
-        await tacticalPrompt("CRITICAL ERROR", "INVALID OR CORRUPT DATA STRING.", false); 
+        console.error("LEAD UPLINK ERROR:", e);
+        await tacticalPrompt("CRITICAL ERROR", "DATA STRING CORRUPT OR INCOMPATIBLE.", false, "", true); 
     }
 }
 
@@ -267,8 +262,8 @@ function showAbout() {
         <h3 style="font-family:'Cinzel', serif; color:#00aaff; border-bottom:1px solid #88ff00; padding-bottom:5px;">ABOUT CMSHS ORACLE</h3>
         <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.5;">
             <p><strong>PHILOSOPHY:</strong> Developed under Stoic principles—composure under pressure.</p>
-            <p><strong>PURPOSE:</strong> Offline-first tactical grid for CMSHS SDRRM. Zero reliance on external servers.</p>
-            <p><strong>ENGINE:</strong> TACTICAL ENGINE V18.4 (Smart Merge Enabled).</p>
+            <p><strong>PURPOSE:</strong> Offline-first tactical grid for CMSHS SDRRM.</p>
+            <p><strong>ENGINE:</strong> TACTICAL ENGINE V18.7 (Session persistence enabled).</p>
             <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
             <p style="font-style:italic; color:#888; font-size:0.8em;">"We cannot control the disaster, but we can master our response."</p>
         </div>
@@ -282,9 +277,9 @@ function showIntelligenceReport() {
     overlay.innerHTML = `
         <h3 style="font-family:'Cinzel', serif; color:#0f6;">SYSTEM UPDATES</h3>
         <div style="text-align:left; font-size:0.8em; font-family:'Montserrat', sans-serif;">
-            <p><b>[v18.4]</b> Smart Merge Engine active.</p>
-            <p><b>[v18.4]</b> Vertical Reporting Protocol enabled.</p>
-            <p><b>[v18.3]</b> Plotting Positioning Fix verified.</p>
+            <p><b>[v18.7]</b> Report Protocol: "Confirm Only" modals active.</p>
+            <p><b>[v18.7]</b> Persistence: One-time cinematic boot per session.</p>
+            <p><b>[v18.6]</b> True Merge Logic: Combine data without wiping.</p>
         </div>
         <div class="close-intel" onclick="this.parentElement.style.display='none'">[ DISMISS ]</div>
     `;
@@ -300,37 +295,34 @@ function updateHUD() {
 function updateMapTransform() {
     if (map) {
         map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
-        // This line syncs the zoom to your CSS labels!
         viewport.style.setProperty('--zoom-level', zoom); 
     }
 }
 function copyToClipboard(str) {
     if (!str) return;
     navigator.clipboard.writeText(str).then(async () => {
-        // Instead of a boring alert, we use your custom modal to confirm!
-        await tacticalPrompt("DATA SECURED", "DATA STRING ENCRYPTED & COPIED TO CLIPBOARD", false);
-    }).catch(err => {
-        console.error("Link Failure", err);
-    });
+        await tacticalPrompt("DATA SECURED", "DATA STRING ENCRYPTED & COPIED TO CLIPBOARD", false, "", true);
+    }).catch(err => { console.error("Link Failure", err); });
 }
 
-// --- UPDATED CUSTOM MODAL HANDLER ---
-function tacticalPrompt(title, desc, showsInput = true, customPlaceholder = "Enter data...") {
-    // 🛡️ SHIELD: Hide the intel-overlay automatically before showing the prompt
+// UPDATED: Added hideCancel parameter
+function tacticalPrompt(title, desc, showsInput = true, customPlaceholder = "Enter data...", hideCancel = false) {
     const intelOverlay = document.getElementById('intel-overlay');
     if (intelOverlay) intelOverlay.style.display = 'none';
     
     return new Promise((resolve) => {
         const modal = document.getElementById('custom-modal');
         const input = document.getElementById('modal-input');
+        const cancelBtn = document.getElementById('modal-cancel');
         
         document.getElementById('modal-title').innerText = title;
         document.getElementById('modal-desc').innerText = desc;
-        
-        // 🏛️ Dynamic Placeholder logic
         input.placeholder = customPlaceholder; 
-        
         input.style.display = showsInput ? 'block' : 'none';
+        
+        // Modal Button Logic
+        cancelBtn.style.display = hideCancel ? 'none' : 'block';
+        
         input.value = ""; 
         modal.style.display = 'flex';
         
@@ -341,54 +333,36 @@ function tacticalPrompt(title, desc, showsInput = true, customPlaceholder = "Ent
             resolve(showsInput ? input.value : true);
         };
 
-        document.getElementById('modal-cancel').onclick = () => {
+        cancelBtn.onclick = () => {
             modal.style.display = 'none';
             resolve(null);
         };
     });
 }
 
-// Instant Data Wipe
 async function clearMap() {
-    const confirmed = await tacticalPrompt(
-        "DATA WIPE WARNING",
-        "ARE YOU SURE YOU WANT TO ERASE ALL PLOTTED INCIDENTS?",
-        false // No input box for confirmation
-    );
-
+    const confirmed = await tacticalPrompt("DATA WIPE WARNING", "ERASE ALL PLOTTED INCIDENTS?", false);
     if(confirmed) {
         localStorage.clear();
         counts = [0, 0, 0, 0];
         document.querySelectorAll('.triage-dot').forEach(dot => dot.remove());
         updateHUD();
+        location.reload();
     }
 }
 
 // --- INPUT HANDLERS ---
 viewport.addEventListener('dblclick', async (e) => {
     const rect = viewport.getBoundingClientRect();
-    
-    // Pass the specific placeholder as the 4th argument
-    const agentData = await tacticalPrompt(
-        "AGENT IDENTIFICATION",
-        "ENTER NAME & SECTOR",
-        true,
-        "e.g. JUAN - GYM" 
-    );
+    const agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
 
     if (!agentData) return;
 
     const mouseX = (e.clientX - rect.left - mapPos.x) / zoom;
     const mouseY = (e.clientY - rect.top - mapPos.y) / zoom;
-    const tacticalTimestamp = new Date().toLocaleDateString('en-US', { 
-    month: 'short', 
-    day: 'numeric' 
-}) + ", " + new Date().toLocaleTimeString([], { 
-    hour: '2-digit', 
-    minute: '2-digit' 
-});
+    const tacticalTimestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ", " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-createDot((mouseX - 8) + 'px', (mouseY - 8) + 'px', currentType, agentData, tacticalTimestamp);
+    createDot((mouseX - 8) + 'px', (mouseY - 8) + 'px', currentType, agentData, tacticalTimestamp);
 });
 
 viewport.addEventListener('wheel', e => {
