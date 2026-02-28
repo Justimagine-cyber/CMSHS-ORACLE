@@ -22,38 +22,48 @@ let isDragging = false;
 let lastMouse = { x: 0, y: 0 };
 let initialPinchDist = -1; // Mobile Zoom tracking
 
-// --- 🛡️ BOOT SEQUENCE ---
+// --- 🛡️ BULLETPROOF BOOT SEQUENCE ---
 function initializeSystem() {
+    console.log("STARTING BOOT PROTOCOL...");
+    
     const bootText = document.getElementById('boot-text');
+    const bootOverlay = document.getElementById('boot-overlay');
     const fullText = "INITIALIZING TACTICAL GRID...\nACCESSING CMSHS ORACLE...\nSTATUS: ONLINE";
     let i = 0;
 
-    // Restored Typing Animation logic
+    // 1. Typing Animation with Safety Check
     function typeWriter() {
         if (bootText && i < fullText.length) {
             bootText.innerHTML += fullText.charAt(i);
             i++;
-            setTimeout(typeWriter, 40);
+            setTimeout(typeWriter, 30);
         }
     }
 
     if (bootText) {
         bootText.innerHTML = "";
         typeWriter();
+    } else {
+        console.warn("ORACLE: boot-text element not found. Skipping animation.");
     }
-    
+
+    // 2. The "Emergency Exit" (Ensures overlay ALWAYS disappears)
     const isFastBoot = sessionStorage.getItem('FAST_BOOT');
     const delay = isFastBoot ? 500 : 3500; 
 
     setTimeout(() => {
-        const bootOverlay = document.getElementById('boot-overlay');
         if (bootOverlay) {
+            console.log("BOOT COMPLETE. DEPLOYING INTERFACE.");
             bootOverlay.style.opacity = '0';
+            bootOverlay.style.pointerEvents = 'none'; // So you can click through it
+            
+            // Remove from DOM after fade
             setTimeout(() => {
-                bootOverlay.remove();
+                bootOverlay.style.display = 'none';
                 sessionStorage.removeItem('FAST_BOOT');
-            }, 500);
+            }, 600);
         }
+        
         loadState(); 
         updateMapTransform();
     }, delay);
@@ -177,7 +187,10 @@ function generateTacticalQR() {
             <button onclick="copyToClipboard('${b64Data}')" class="close-intel" style="border-color:#00aaff; color:#00aaff; margin-bottom:10px; width:100%;">[ COPY DATA STRING ]</button>
         ` : `<p style="font-size:0.8em; color:#888;">[ NO LOCAL DATA TO SHARE ]</p>`}
         
-        <button onclick="importTacticalGrid()" class="close-intel" style="border-color:#ffa500; color:#ffa500; width:100%; margin-bottom:10px;">[ IMPORT SECTOR DATA ]</button>
+        <button onclick="document.getElementById('intel-overlay').style.display='none'; importTacticalGrid();" 
+        class="close-intel" 
+        style="border-color:#ffa500; color:#ffa500; width:100%; margin-bottom:10px;">
+        [ IMPORT SECTOR DATA ]</button>
         <button onclick="document.getElementById('intel-overlay').style.display='none'" class="close-intel" style="width:100%;">[ DISMISS ]</button>
     `;
     overlay.style.display = 'block';
@@ -190,8 +203,15 @@ function generateTacticalQR() {
     }
 }
 
-function importTacticalGrid() {
-    const code = prompt("INPUT TACTICAL SYNC CODE (SMART MERGE):");
+async function importTacticalGrid() {
+    // Pass the sync-specific placeholder here
+    const code = await tacticalPrompt(
+        "IMPORT SECTOR DATA", 
+        "PASTE TACTICAL SYNC STRING BELOW:",
+        true,
+        "PASTE STRING HERE..." 
+    );
+    
     if (!code) return;
     try {
         const incomingData = JSON.parse(atob(code));
@@ -207,7 +227,8 @@ function importTacticalGrid() {
         });
 
         if (mergedCount === 0) {
-            alert("SYNC: NO NEW DATA FOUND (DUPLICATES IGNORED)");
+            // Using your custom prompt as an alert
+            await tacticalPrompt("SYNC COMPLETE", "NO NEW DATA FOUND (DUPLICATES IGNORED)", false);
         } else {
             localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(currentData));
             const newCounts = [0,0,0,0];
@@ -217,7 +238,9 @@ function importTacticalGrid() {
             sessionStorage.setItem('FAST_BOOT', 'true');
             location.reload(); 
         }
-    } catch (e) { alert("ERROR: INVALID DATA STRING"); }
+    } catch (e) { 
+        await tacticalPrompt("CRITICAL ERROR", "INVALID DATA STRING DETECTED", false); 
+    }
 }
 
 // --- SYSTEM OVERLAYS ---
@@ -258,31 +281,91 @@ function updateHUD() {
     ids.forEach((id, i) => { if(document.getElementById(id)) document.getElementById(id).innerText = counts[i]; });
 }
 function updateMapTransform() {
-    if (map) map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
+    if (map) {
+        map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
+        // This line syncs the zoom to your CSS labels!
+        viewport.style.setProperty('--zoom-level', zoom); 
+    }
 }
 function copyToClipboard(str) {
     navigator.clipboard.writeText(str).then(() => alert("DATA COPIED TO CLIPBOARD"));
 }
 
-// Fixed Instant Data Wipe
-function clearMap() {
-    if(confirm("WIPE ALL OPERATIONAL DATA?")) {
+// --- UPDATED CUSTOM MODAL HANDLER ---
+function tacticalPrompt(title, desc, showsInput = true, customPlaceholder = "Enter data...") {
+    // 🛡️ SHIELD: Hide the intel-overlay automatically before showing the prompt
+    const intelOverlay = document.getElementById('intel-overlay');
+    if (intelOverlay) intelOverlay.style.display = 'none';
+    
+    return new Promise((resolve) => {
+        const modal = document.getElementById('custom-modal');
+        const input = document.getElementById('modal-input');
+        
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-desc').innerText = desc;
+        
+        // 🏛️ Dynamic Placeholder logic
+        input.placeholder = customPlaceholder; 
+        
+        input.style.display = showsInput ? 'block' : 'none';
+        input.value = ""; 
+        modal.style.display = 'flex';
+        
+        if(showsInput) setTimeout(() => input.focus(), 100);
+
+        document.getElementById('modal-confirm').onclick = () => {
+            modal.style.display = 'none';
+            resolve(showsInput ? input.value : true);
+        };
+
+        document.getElementById('modal-cancel').onclick = () => {
+            modal.style.display = 'none';
+            resolve(null);
+        };
+    });
+}
+
+// Instant Data Wipe
+async function clearMap() {
+    const confirmed = await tacticalPrompt(
+        "DATA WIPE WARNING",
+        "ARE YOU SURE YOU WANT TO ERASE ALL PLOTTED INCIDENTS?",
+        false // No input box for confirmation
+    );
+
+    if(confirmed) {
         localStorage.clear();
         counts = [0, 0, 0, 0];
-        document.querySelectorAll('.triage-dot').forEach(dot => dot.remove()); // Instant wipe
+        document.querySelectorAll('.triage-dot').forEach(dot => dot.remove());
         updateHUD();
-        // Removed location.reload() to bypass loading screen
     }
 }
 
 // --- INPUT HANDLERS ---
-viewport.addEventListener('dblclick', e => {
+viewport.addEventListener('dblclick', async (e) => {
     const rect = viewport.getBoundingClientRect();
-    let agentData = prompt("AGENT IDENTIFICATION\n(Name - Location)");
-    if (!agentData) return; 
+    
+    // Pass the specific placeholder as the 4th argument
+    const agentData = await tacticalPrompt(
+        "AGENT IDENTIFICATION",
+        "ENTER NAME & SECTOR",
+        true,
+        "e.g. JUAN - GYM" 
+    );
+
+    if (!agentData) return;
+
     const mouseX = (e.clientX - rect.left - mapPos.x) / zoom;
     const mouseY = (e.clientY - rect.top - mapPos.y) / zoom;
-    createDot((mouseX - 8) + 'px', (mouseY - 8) + 'px', currentType, agentData, new Date().toLocaleTimeString());
+    const tacticalTimestamp = new Date().toLocaleDateString('en-US', { 
+    month: 'short', 
+    day: 'numeric' 
+}) + ", " + new Date().toLocaleTimeString([], { 
+    hour: '2-digit', 
+    minute: '2-digit' 
+});
+
+createDot((mouseX - 8) + 'px', (mouseY - 8) + 'px', currentType, agentData, tacticalTimestamp);
 });
 
 viewport.addEventListener('wheel', e => {
@@ -311,7 +394,10 @@ function showIntel(name, status, time) {
     const overlay = document.getElementById('intel-overlay');
     overlay.innerHTML = `
         <h3 style="font-family:'Cinzel', serif; color:#0f6;">AGENT PROFILE</h3>
-        <p style="text-align:left; font-size:0.9em;"><strong>ID:</strong> ${name}<br><strong>STATUS:</strong> ${status}<br><strong>TIME:</strong> ${time}</p>
+        <p style="text-align:left; font-size:0.9em;">
+            <strong>ID:</strong> ${name}<br>
+            <strong>STATUS:</strong> ${status}<br>
+            <strong>LAST SEEN:</strong> ${time} </p>
         <div class="close-intel" onclick="document.getElementById('intel-overlay').style.display='none'">[ DISMISS ]</div>
     `;
     overlay.style.display = 'block';
