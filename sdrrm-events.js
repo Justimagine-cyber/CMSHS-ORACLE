@@ -405,12 +405,12 @@ function showIntel(name, status, time) {
 function showHelp() {
     const overlay = document.getElementById('intel-overlay');
     overlay.innerHTML = `
-        <h3 style="font-family:'Cinzel', serif; color:#ffa500; border-bottom:1px solid #ffa500; padding-bottom:5px;">FIELD MANUAL v18.7</h3>
+        <h3 style="font-family:'Cinzel', serif; color:#ffa500; border-bottom:1px solid #ffa500; padding-bottom:5px;">ORACLE MANUAL</h3>
         <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.4; max-height:300px; overflow-y:auto; padding-right:5px;">
             <p style="color:#0f6; font-weight:bold;">[ USAGE ]</p>
             <ul style="padding-left:15px;">
                 <li><b>Plot Incident:</b> Double-click/tap on the map.</li>
-                <li><b>Change Triage:</b> Use the bottom HUD (Green, Yellow, Red, Black) before plotting.</li>
+                <li><b>Change Triage:</b> Use the bottom HUD (Minor, Delayed, Immediate, Deceased) before plotting.</li>
                 <li><b>Move Map:</b> Drag with one finger/mouse.</li>
                 <li><b>Zoom:</b> Pinch-to-zoom (mobile) or Scroll wheel (desktop).</li>
             </ul>
@@ -418,19 +418,20 @@ function showHelp() {
             <p style="color:#0f6; font-weight:bold;">[ SYNCING ]</p>
             <ul style="padding-left:15px;">
                 <li><b>Exporting:</b> Click [SHARE REPORT] to get your unique string or QR.</li>
-                <li><b>Importing:</b> Click [IMPORT SECTOR DATA] and paste the string from another agent. The system will only add <i>new</i> plots.</li>
+                <li><b>Importing:</b> Click [IMPORT SECTOR DATA] and paste the string from another responder. The system will only add <i>new</i> plots.</li>
             </ul>
 
             <p style="color:#ff3333; font-weight:bold;">[ TROUBLESHOOTING ]</p>
             <ul style="padding-left:15px;">
                 <li><b>Lost on Map:</b> If you can't find the building, refresh the page. The position resets to the default grid.</li>
-                <li><b>Merge Failed:</b> Ensure you copied the entire string. If it looks "cut off," the merge engine will reject it.</li>
+                <li><b>Merge Failed:</b> Ensure you copied the entire string. If it looks "cut off", the merge engine will reject it.</li>
                 <li><b>Dots Not Showing:</b> Check if your browser is in "Incognito." ORACLE needs LocalStorage to save your work.</li>
-                <li><b>Merge Conflict:</b> If plots won't merge, perform [RESET OPERATIONAL DATA], re-paste, and Confirm.</li>
-                <li><b>System Lag:</b> Use [RESET OPERATIONAL DATA] if you have 100+ old incidents slowing down your device.</li>
+                <li><b>Merge Conflict:</b> If plots won't merge, perform RESET OPERATIONAL DATA, re-paste, and Confirm.</li>
+                <li><b>System Lag:</b> Perform RESET OPERATIONAL DATA if you have multiple old incidents slowing down your device.</li>
             </ul>
         </div>
         <div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px;">[ DISMISS ]</div>
     `;
     overlay.style.display = 'block';
 }
+
