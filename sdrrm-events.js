@@ -417,17 +417,17 @@ function showHelp() {
 
             <p style="color:#0f6; font-weight:bold;">[ SYNCING ]</p>
             <ul style="padding-left:15px;">
-                <li><b>Export:</b> Click [DATA LINK] to get your unique string or QR.</li>
-                <li><b>Import:</b> Click [IMPORT SECTOR DATA] and paste the string from another agent. The system will only add <i>new</i> plots.</li>
+                <li><b>Exporting:</b> Click [SHARE REPORT] to get your unique string or QR.</li>
+                <li><b>Importing:</b> Click [IMPORT SECTOR DATA] and paste the string from another agent. The system will only add <i>new</i> plots.</li>
             </ul>
 
             <p style="color:#ff3333; font-weight:bold;">[ TROUBLESHOOTING ]</p>
             <ul style="padding-left:15px;">
                 <li><b>Lost on Map:</b> If you can't find the building, refresh the page. The position resets to the default grid.</li>
-                <li><b>Merge Failing:</b> Ensure you copied the entire string. If it looks "cut off," the merge engine will reject it.</li>
+                <li><b>Merge Failed:</b> Ensure you copied the entire string. If it looks "cut off," the merge engine will reject it.</li>
                 <li><b>Dots Not Showing:</b> Check if your browser is in "Incognito." ORACLE needs LocalStorage to save your work.</li>
                 <li><b>Merge Conflict:</b> If plots won't merge, perform [RESET OPERATIONAL DATA], re-paste, and Confirm.</li>
-                <li><b>System Lag:</b> Use [RESET OPERATIONAL DATA] if you have 100+ old incidents slowing down the Redmi Pad.</li>
+                <li><b>System Lag:</b> Use [RESET OPERATIONAL DATA] if you have 100+ old incidents slowing down your device.</li>
             </ul>
         </div>
         <div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px;">[ DISMISS ]</div>
