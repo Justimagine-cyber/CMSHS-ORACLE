@@ -41,7 +41,8 @@ header {
 /* --- THE VIEWPORT --- */
 #viewport { 
     flex: 1; position: relative; overflow: hidden; 
-    background-color: #000; height: calc(100vh - 160px); 
+    background-color: #000; touch-action: none;
+    height: calc(100vh - 160px); 
 }
 
 #map-img { 
@@ -69,53 +70,56 @@ header {
     padding: 14px 2px; text-transform: uppercase; cursor: pointer;
 }
 
-/* 🟡 YELLOW CIRCLE & 🔦 ORANGE CIRCLE POSITIONS */
+/* 🔦 ORANGE/YELLOW POSITIONING LOGIC */
 .triage-btn.yellow { border-color: #ffff00; color: #ffff00; }
-
-.triage-btn.oracle-manual, 
-.triage-btn.field-manual, 
-button[onclick="showHelp()"] { 
-    border-color: #ffa500 !important; 
-    color: #ffa500 !important; 
+.triage-btn.oracle-manual, .triage-btn.field-manual, button[onclick="showHelp()"] { 
+    border-color: #ffa500 !important; color: #ffa500 !important; 
     background: rgba(255, 165, 0, 0.05) !important;
 }
 
-/* --- OVERLAY POPUPS (WHITE CIRCLE) --- */
-#intel-overlay, .modal-content {
-    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-    background: rgba(0, 10, 0, 0.98); border: 2px solid #00ff66;
-    border-left: 10px solid #00ff66; padding: 25px; z-index: 20000; 
-    width: 320px; max-height: 85vh; overflow-y: auto; backdrop-filter: blur(10px);
+/* ⚪ RESET BUTTON: WHITEOUT */
+.triage-btn.reset { grid-column: span 4; border-color: #FFF; color: #FFF; background: rgba(255,255,255,0.1); }
+
+/* --- 🏛️ ORACLE UI/UX INPUT BOX --- */
+#modal-input {
+    width: 90%; background: rgba(0, 20, 0, 0.8) !important; 
+    border: 1px solid #00ff66 !important;
+    color: #00ff66 !important; 
+    padding: 15px; margin: 20px auto;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 700; text-align: center;
+    text-transform: uppercase; outline: none;
+    box-shadow: inset 0 0 15px rgba(0, 255, 102, 0.2);
 }
 
-/* ⚪ WHITE CIRCLE: Headers back to Cinzel */
+/* --- DATA LINK: BLACKOUT PROTOCOL --- */
+.sync-copy-btn {
+    background: #000 !important; /* Switched to Black */
+    border: 1px solid #00ff66 !important;
+    color: #00ff66 !important; 
+    width: 100%; padding: 12px; font-weight: 900;
+}
+
+/* Centered Dismiss Button */
+.close-intel {
+    display: block; margin: 20px auto 0 auto !important; /* Centered */
+    width: 80%; background: #000 !important; /* Switched to Black */
+    color: #ff3333 !important; border: 1px solid #ff3333 !important;
+    font-weight: 900; padding: 10px; text-transform: uppercase;
+}
+
+/* --- OVERLAY HEADERS (CINZEL) --- */
 #intel-overlay h3, .modal-content h3 { 
     font-family: 'Cinzel', serif !important; 
-    font-weight: 700; text-transform: uppercase; color: #00ff66;
-    text-align: center; border-bottom: 1px solid rgba(0, 255, 102, 0.3);
+    color: #00ff66; text-align: center; border-bottom: 1px solid rgba(0,255,102,0.3);
     padding-bottom: 10px; letter-spacing: 2px;
 }
 
-/* --- ⌨️ TACTICAL INPUT BOX (ORACLE UI MATCH) --- */
-#modal-input {
-    width: 90%; 
-    background: #000; 
-    border: 1px solid #00ff66;
-    color: #000 !important; /* SWITCHED TO BLACK FOR CONTRAST */
-    background-color: #00ff66 !important; /* IMPORT STRING BACKGROUND */
-    padding: 15px; 
-    margin: 20px auto;
-    font-family: 'Montserrat', sans-serif; 
-    font-weight: 900;
-    text-align: center;
-    box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
-    outline: none;
-}
-
-/* --- 🛡️ ADVANCED HOLOGRAPHIC BOOT LOGIC --- */
+/* --- 🛡️ ADVANCED HOLOGRAPHIC BOOT OVERLAY (RESTORED) --- */
 #boot-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #000; display: flex; justify-content: center; align-items: center; z-index: 99999;
+    background: #000; display: flex; justify-content: center; align-items: center;
+    z-index: 99999; overflow: hidden;
 }
 
 #boot-logo {
@@ -137,29 +141,9 @@ button[onclick="showHelp()"] {
     91% { transform: scale(1.1) skewX(-10deg); opacity: 0.5; }
 }
 
-/* --- 🔳 DISMISS BUTTON: CENTERED & BLACK --- */
-.close-intel {
-    display: block;
-    margin: 20px auto 0 auto !important; /* POSITIONED AT CENTER */
-    width: 80%; 
-    padding: 12px; 
-    background: #00ff66 !important; /* SWITCH FROM WHITE TO BLACK THEME */
-    color: #000 !important; 
-    border: none;
-    font-family: 'Montserrat', sans-serif;
-    font-weight: 900; 
-    text-transform: uppercase; 
-    cursor: pointer;
-    box-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+/* --- EMERGENCY FLICKER --- */
+@keyframes emergency-flicker {
+    0%, 100% { filter: brightness(1); box-shadow: 0 0 5px #ff3333; }
+    50% { filter: brightness(2.2); box-shadow: 0 0 25px #ff3333; }
 }
-
-.close-intel:active { transform: scale(0.95); filter: brightness(0.8); }
-
-/* SYNC BUTTONS */
-.sync-copy-btn {
-    background: rgba(0, 170, 255, 0.1) !important;
-    border: 1px solid #00aaff !important;
-    color: #00aaff !important;
-    width: 100%; padding: 12px; font-family: 'Montserrat', sans-serif;
-    font-weight: 900; cursor: pointer;
-}
+.triage-dot.red div { animation: emergency-flicker 0.8s infinite ease-in-out !important; }
