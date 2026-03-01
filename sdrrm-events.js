@@ -188,14 +188,14 @@ function generateTacticalQR() {
             <div style="background:white; padding:10px; display:inline-block; margin-bottom:10px;">
                 <div id="qr-target"></div>
             </div>
-            <button onclick="copyToClipboard('${b64Data}')" class="sync-copy-btn">[ COPY DATA STRING ]</button>
+            <button onclick="copyToClipboard('${b64Data}')" class="sync-copy-btn">COPY DATA STRING</button>
         ` : `<p style="font-size:0.8em; color:#888;">[ NO LOCAL DATA TO SHARE ]</p>`}
         
         <button onclick="document.getElementById('intel-overlay').style.display='none'; importTacticalGrid();" 
         class="close-intel" 
         style="border-color:#ffa500; color:#ffa500; width:100%; margin-bottom:10px;">
-        [ IMPORT SECTOR DATA ]</button>
-        <button onclick="document.getElementById('intel-overlay').style.display='none'" class="close-intel" style="width:100%;">[ DISMISS ]</button>
+        IMPORT SECTOR DATA</button>
+        <button onclick="document.getElementById('intel-overlay').style.display='none'" class="close-intel" style="width:100%;">DISMISS</button>
     `;
     overlay.style.display = 'block';
 
@@ -259,15 +259,42 @@ async function importTacticalGrid() {
 function showAbout() {
     const overlay = document.getElementById('intel-overlay');
     overlay.innerHTML = `
-        <h3 style="font-family:'Cinzel', serif; color:#00aaff; border-bottom:1px solid #88ff00; padding-bottom:5px;">ABOUT CMSHS ORACLE</h3>
-        <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.5;">
-            <p><strong>PHILOSOPHY:</strong> Developed under Stoic principles—composure under pressure.</p>
-            <p><strong>PURPOSE:</strong> Offline-first tactical grid for CMSHS SDRRM.</p>
-            <p><strong>ENGINE:</strong> TACTICAL ENGINE V18.7 (Session persistence enabled).</p>
-            <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
-            <p style="font-style:italic; color:#888; font-size:0.8em;">"We cannot control the disaster, but we can master our response."</p>
+        <h3 style="font-family:'Cinzel', serif; color:#00ff66; border-bottom:1px solid #00ff66; padding-bottom:10px; margin-bottom:15px; letter-spacing:2px;">SYSTEM OVERVIEW</h3>
+        
+        <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.6; color:#0f6; max-height:60vh; overflow-y:auto; padding-right:5px;">
+            <p style="margin-bottom:15px;"><strong>CMSHS ORACLE</strong> is a specialized <strong>Progressive Web App (PWA)</strong> developed for emergencies in CMSHS. It provides a high-visibility, tactical interface for real-time triage tracking and personnel location within the school campus.</p>
+            
+            <p style="color:#ffff00; font-weight:900; letter-spacing:1px; margin-top:20px;">CORE CAPABILITIES</p>
+            <ul style="list-style:none; padding-left:0; margin-bottom:15px;">
+                <li><strong>OFFLINE-FIRST:</strong> Engineered for "Air-Gapped" environments where data is unavailable.</li>
+                <li><strong>AGENT PLOTTING:</strong> Precision coordinate placement with color-coded triage status.</li>
+                <li><strong>AGENT DOSSIERS:</strong> Interactive labels and tap-to-view intelligence popups.</li>
+                <li><strong>GEOSPATIAL SYNC:</strong> Zoom-calibrated scaling for accurate sector analysis.</li>
+            </ul>
+
+            <p style="color:#00aaff; font-weight:900; letter-spacing:1px; margin-top:20px;">DEPLOYMENT</p>
+            <ol style="padding-left:15px; margin-bottom:15px;">
+                <li><strong>Scan QR Code</strong> provided by the administrator.</li>
+                <li><strong>Boot System:</strong> Wait for the ORACLE initialization sequence.</li>
+                <li><strong>Install:</strong> "Add to Home Screen" to run natively on any device.</li>
+            </ol>
+
+            <p style="color:#ffa500; font-weight:900; letter-spacing:1px; margin-top:20px;">PHILOSOPHY</p>
+            <p style="font-style:italic; border-left: 2px solid #ffa500; padding-left: 10px; margin-bottom:10px; color:#ccc;">
+                "Objective judgment, now at this very moment. Unselfish action, now at this very moment. Willing acceptance—now at this very moment—of all external events. That’s all you need." — Marcus Aurelius
+            </p>
+            <p style="font-size:0.8em; opacity:0.8;">ORACLE was built to provide clarity in chaos—a tool for the disciplined, designed for effective action when it matters most.</p>
+            
+            <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
+            
+            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:1px; color:#888;">
+                <p><strong>DEVELOPED BY:</strong> Mark Justin L. Castillo, 12 - Planck</p>
+                <p><strong>INSTITUTION:</strong> City of Mandaluyong Science High School</p>
+                <p><strong>SCHOOL YEAR:</strong> 2025–2026</p>
+            </div>
         </div>
-        <div class="close-intel" onclick="this.parentElement.style.display='none'">[ DISMISS ]</div>
+        
+        <div class="close-intel" onclick="this.parentElement.style.display='none'">DISMISS</div>
     `;
     overlay.style.display = 'block';
 }
@@ -281,7 +308,7 @@ function showIntelligenceReport() {
             <p><b>[v18.7]</b> Persistence: One-time cinematic boot per session.</p>
             <p><b>[v18.6]</b> True Merge Logic: Combine data without wiping.</p>
         </div>
-        <div class="close-intel" onclick="this.parentElement.style.display='none'">[ DISMISS ]</div>
+        <div class="close-intel" onclick="this.parentElement.style.display='none'">DISMISS</div>
     `;
     overlay.style.display = 'block';
 }
@@ -395,7 +422,7 @@ function showIntel(name, status, time) {
             <strong>ID:</strong> ${name}<br>
             <strong>STATUS:</strong> ${status}<br>
             <strong>LAST SEEN:</strong> ${time} </p>
-        <div class="close-intel" onclick="document.getElementById('intel-overlay').style.display='none'">[ DISMISS ]</div>
+        <div class="close-intel" onclick="document.getElementById('intel-overlay').style.display='none'">DISMISS</div>
     `;
     overlay.style.display = 'block';
 
@@ -417,8 +444,8 @@ function showHelp() {
 
             <p style="color:#0f6; font-weight:bold;">[ SYNCING ]</p>
             <ul style="padding-left:15px;">
-                <li><b>Exporting:</b> Click [SHARE REPORT] to get your unique string or QR.</li>
-                <li><b>Importing:</b> Click [IMPORT SECTOR DATA] and paste the string from another responder. The system will only add <i>new</i> plots.</li>
+                <li><b>Exporting:</b> Click SHARE REPORT to get your unique string or QR.</li>
+                <li><b>Importing:</b> Click IMPORT SECTOR DATA and paste the string from another responder. The system will only add <i>new</i> plots.</li>
             </ul>
 
             <p style="color:#ff3333; font-weight:bold;">[ TROUBLESHOOTING ]</p>
@@ -430,7 +457,7 @@ function showHelp() {
                 <li><b>System Lag:</b> Perform RESET OPERATIONAL DATA if you have multiple old incidents slowing down your device.</li>
             </ul>
         </div>
-        <div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px;">[ DISMISS ]</div>
+        <div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px;">DISMISS</div>
     `;
     overlay.style.display = 'block';
 }
