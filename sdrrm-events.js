@@ -40,7 +40,7 @@ function initializeSystem() {
     // NORMAL STARTUP (First time opening the tab)
     console.log("STARTING MASTER BOOT PROTOCOL...");
     const bootText = document.getElementById('boot-text');
-    const fullText = "INITIALIZING TACTICAL GRID...\nACCESSING CMSHS ORACLE...\nSTATUS: ONLINE";
+    const fullText = "INITIALIZING CMSHS GRID...\nACCESSING CMSHS ORACLE...\nSUCCESSFUL INITIALIZATION!";
     let i = 0;
 
     function typeWriter() {
@@ -461,4 +461,5 @@ function showHelp() {
     `;
     overlay.style.display = 'block';
 }
+
 
