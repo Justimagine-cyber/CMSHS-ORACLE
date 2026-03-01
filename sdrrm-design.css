@@ -13,9 +13,9 @@ body, html {
 
 #app { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
 
-/* --- 🛡️ HEADER & LOGO (FIXED) --- */
+/* --- HEADER & LOGO (LOCKDOWN APPLIED) --- */
 header { 
-    padding: 8px 15px; 
+    padding: 10px 15px; 
     background: rgba(0, 20, 0, 0.95); 
     border-bottom: 2px solid #00ff66; 
     display: flex; justify-content: space-between; align-items: center;
@@ -28,8 +28,8 @@ header {
     width: 45px !important; 
     height: 45px !important; 
     object-fit: contain;
-    flex-shrink: 0; 
-    filter: drop-shadow(0 0 5px #00ff66); 
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 8px rgba(0, 255, 102, 0.5)); 
 }
 
 .brand { 
@@ -50,52 +50,91 @@ header {
     transform-origin: 0 0; transition: transform 0.1s ease-out; z-index: 1; 
 }
 
-/* --- UNIVERSAL TACTICAL FOOTER (8-BUTTON GRID) --- */
+#map-img::before {
+    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background: 
+        linear-gradient(rgba(0, 255, 102, 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 102, 0.05) 1px, transparent 1px),
+        url('CMSHS-SDRRM-PLAN.png'); 
+    background-size: 50px 50px, 50px 50px, contain;
+    background-repeat: no-repeat;
+    filter: brightness(0.7) contrast(1.2) saturate(1.2); z-index: -1; 
+}
+
+/* --- TACTICAL HUD OVERLAYS --- */
+#stats-hud { 
+    position: absolute; top: 20px; left: 20px; 
+    background: rgba(0, 15, 0, 0.9); padding: 15px; 
+    border: 1px solid #00ff66; border-left: 8px solid #00ff66;
+    font-size: 0.75em; z-index: 50; pointer-events: none; 
+    font-weight: 900; letter-spacing: 1px;
+    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+}
+
+#compass { display: none !important; }
+
+/* --- UNIVERSAL TACTICAL FOOTER (GRID LOGIC) --- */
 #triage-hud {
     position: fixed; bottom: 0; left: 0; width: 100%;
     background: rgba(0, 5, 0, 0.98); border-top: 2px solid #00ff66;
     display: grid; grid-template-columns: repeat(4, 1fr); 
-    gap: 6px; padding: 10px; z-index: 10000; box-sizing: border-box;
+    gap: 6px; padding: 10px;
+    z-index: 10000; box-sizing: border-box;
+    box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
 }
 
 @media (min-width: 768px) or (orientation: landscape) {
     #triage-hud { grid-template-columns: repeat(8, 1fr); }
 }
 
-/* 🔵 BLUE CIRCLE: Montserrat Bold (Weight 900) */
-.triage-btn, button[onclick="showHelp()"] {
+/* 🔵 BLUE CIRCLE: MONTSERRAT 900 */
+.triage-btn {
     background: rgba(0, 30, 0, 0.5); border: 1px solid #00ff66;
     color: #00ff66; font-family: 'Montserrat', sans-serif;
-    font-size: 10px; font-weight: 900 !important; 
-    padding: 14px 2px; text-transform: uppercase; cursor: pointer;
+    font-size: 10px; font-weight: 900; padding: 14px 2px;
+    text-transform: uppercase; cursor: pointer; transition: 0.1s ease;
 }
 
-/* 🔦 ORACLE/FIELD MANUAL (ORANGE) */
-.triage-btn.oracle-manual, .triage-btn.field-manual, button[onclick="showHelp()"] { 
-    border-color: #ffa500 !important; color: #ffa500 !important; 
+.triage-btn:active { background: #00ff66; color: #000; transform: scale(0.95); }
+.triage-btn.green { border-color: #0f0; color: #0f0; }
+.triage-btn.yellow { border-color: #ffff00; color: #ffff00; }
+.triage-btn.red { border-color: #ff3333; color: #ff3333; }
+.triage-btn.black { border-color: #888; color: #888; }
+.triage-btn.sync-qr { border-color: #00aaff; color: #00aaff; }
+.triage-btn.intel-report { border-color: #0f6; color: #0f6; } 
+
+/* 🔦 ORACLE MANUAL / HELP STYLE */
+button[onclick="showHelp()"], .triage-btn.field-manual, .triage-btn.oracle-manual {
     background: rgba(255, 165, 0, 0.05) !important;
+    border: 1px solid #ffa500 !important;
+    color: #ffa500 !important;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    text-transform: uppercase;
 }
 
-/* ⚪ RESET BUTTON (WHITE) */
+/* ⚪ RESET BUTTON: WHITEOUT PROTOCOL */
 .triage-btn.reset {
-    grid-column: span 4; border-color: #FFFFFF !important; 
-    color: #FFFFFF !important; background: rgba(255, 255, 255, 0.1) !important;
+    grid-column: span 4;
+    border-color: #FFFFFF !important; 
+    color: #FFFFFF !important; 
+    background: rgba(255, 255, 255, 0.1) !important;
 }
-
 @media (min-width: 768px) or (orientation: landscape) {
     .triage-btn.reset { grid-column: span 1; }
 }
 
-/* --- 🏛️ OVERLAY POPUPS (HONEST DESC LOGIC) --- */
+/* --- OVERLAY POPUPS (INTEL / MANUALS) --- */
 #intel-overlay, .modal-content {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
     background: rgba(0, 10, 0, 0.98); border: 2px solid #00ff66;
-    border-left: 10px solid #00ff66; padding: 25px; z-index: 20000; 
+    border-left: 10px solid #00ff66; 
+    padding: 25px; z-index: 20000; 
     width: 320px; max-height: 85vh; overflow-y: auto;
     box-shadow: 0 0 100px #000; backdrop-filter: blur(10px);
 }
 
-/* ⚪ WHITE CIRCLE: Headers back to Cinzel Serif */
+/* ⚪ WHITE CIRCLE: HEADERS BACK TO CINZEL */
 #intel-overlay h3, .modal-content h3, #intel-overlay h2 { 
     font-family: 'Cinzel', serif !important; 
     font-weight: 700; text-transform: uppercase;
@@ -104,26 +143,76 @@ header {
     letter-spacing: 2px;
 }
 
-/* Operational Content (Montserrat 700/900 mix) */
-#intel-overlay p, #intel-overlay li { 
+#intel-overlay p, #intel-overlay li, .modal-content p { 
     font-family: 'Montserrat', sans-serif !important;
     margin: 12px 0; font-size: 0.9em; line-height: 1.6; color: #0f6;
 }
 
-/* --- 🛡️ BOOT & UTILITY --- */
-#boot-overlay {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #000; display: flex; justify-content: center; align-items: center; z-index: 99999;
+/* --- DOTS & LABELS --- */
+.triage-dot { position: absolute; z-index: 99; pointer-events: auto; }
+
+.triage-label {
+    position: absolute; left: 50%; transform: translateX(-50%) translateY(-35px) scale(calc(1 / var(--zoom-level, 1)));
+    transform-origin: bottom center; background: #00ff66; color: #000; padding: 3px 10px;
+    font-size: 11px; font-weight: 900; white-space: nowrap;
+    clip-path: polygon(12% 0, 100% 0, 88% 100%, 0 100%);
 }
 
-#boot-logo { width: 180px; animation: holo-pulse 4s infinite; }
+@keyframes emergency-flicker {
+    0%, 100% { filter: brightness(1); box-shadow: 0 0 5px #ff3333; }
+    50% { filter: brightness(2.2); box-shadow: 0 0 25px #ff3333; }
+}
+
+.triage-dot.red div { animation: emergency-flicker 0.8s infinite ease-in-out !important; }
+
+/* --- 🛡️ ADVANCED HOLOGRAPHIC BOOT OVERLAY --- */
+#boot-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: #000; display: flex; justify-content: center; align-items: center;
+    z-index: 99999; overflow: hidden;
+}
+
+#boot-logo {
+    width: 180px; filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(2476%) focus(86deg) brightness(118%) contrast(119%);
+    animation: holo-pulse 4s infinite, holo-glitch 2s infinite;
+}
 
 @keyframes holo-pulse {
     0%, 100% { transform: scale(1); opacity: 0.8; }
     50% { transform: scale(1.05); opacity: 1; }
 }
 
-.close-intel, .sync-copy-btn {
+@keyframes holo-glitch {
+    0% { transform: translate(0); }
+    10% { transform: translate(-3px, 2px); }
+    31% { transform: scaleY(0.1) scaleX(1.1) skewX(20deg); filter: brightness(2); }
+    32% { transform: scaleY(1) scaleX(1) skewX(0deg); }
+    91% { transform: scale(1.1) skewX(-10deg); opacity: 0.5; }
+}
+
+/* --- MODAL INPUTS & ACTIONS --- */
+.modal-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0, 5, 0, 0.95); backdrop-filter: blur(15px);
+    display: flex; align-items: center; justify-content: center; z-index: 999999;
+}
+
+#modal-input {
+    width: 85%; background: #111; border: 1px solid #0f6;
+    color: #0f6; padding: 15px; margin: 25px auto;
+    font-family: 'Montserrat', sans-serif; text-align: center;
+}
+
+.sync-copy-btn {
+    background: rgba(0, 170, 255, 0.1) !important;
+    border: 1px solid #00aaff !important;
+    color: #00aaff !important;
     width: 100%; padding: 12px; font-family: 'Montserrat', sans-serif;
-    font-weight: 900; text-transform: uppercase; cursor: pointer;
-        }
+    font-weight: 900; cursor: pointer; transition: 0.2s;
+}
+
+.close-intel {
+    width: 100%; padding: 10px; border: 1px solid #ff3333;
+    color: #ff3333; font-weight: 900; cursor: pointer;
+    text-transform: uppercase; margin-top: 20px;
+                  }
