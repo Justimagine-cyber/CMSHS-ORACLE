@@ -13,7 +13,7 @@ body, html {
 
 #app { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
 
-/* --- HEADER & LOGO (LOCKDOWN VERSION) --- */
+/* --- 🛡️ HEADER & LOGO LOCKDOWN --- */
 header { 
     padding: 10px 15px; 
     background: rgba(0, 20, 0, 0.95); 
@@ -38,11 +38,10 @@ header {
     text-shadow: 0 0 10px #00ff66; font-size: 1em; 
 }
 
-/* --- THE VIEWPORT & MAP --- */
+/* --- THE VIEWPORT --- */
 #viewport { 
     flex: 1; position: relative; overflow: hidden; 
-    background-color: #000; touch-action: none;
-    height: calc(100vh - 160px); 
+    background-color: #000; height: calc(100vh - 160px); 
 }
 
 #map-img { 
@@ -50,134 +49,78 @@ header {
     transform-origin: 0 0; transition: transform 0.1s ease-out; z-index: 1; 
 }
 
-#map-img::before {
-    content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    background: 
-        linear-gradient(rgba(0, 255, 102, 0.05) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0, 255, 102, 0.05) 1px, transparent 1px),
-        url('CMSHS-SDRRM-PLAN.png'); 
-    background-size: 50px 50px, 50px 50px, contain;
-    background-repeat: no-repeat;
-    filter: brightness(0.7) contrast(1.2) saturate(1.2); z-index: -1; 
-}
-
-/* --- TACTICAL HUD OVERLAYS --- */
-#stats-hud { 
-    position: absolute; top: 20px; left: 20px; 
-    background: rgba(0, 15, 0, 0.9); padding: 15px; 
-    border: 1px solid #00ff66; border-left: 8px solid #00ff66;
-    font-size: 0.75em; z-index: 50; pointer-events: none; 
-    font-weight: 900; letter-spacing: 1px;
-    box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
-}
-
-#compass { display: none !important; }
-
 /* --- UNIVERSAL TACTICAL FOOTER (8-BUTTON GRID) --- */
 #triage-hud {
     position: fixed; bottom: 0; left: 0; width: 100%;
     background: rgba(0, 5, 0, 0.98); border-top: 2px solid #00ff66;
     display: grid; grid-template-columns: repeat(4, 1fr); 
-    gap: 6px; padding: 10px;
-    z-index: 10000; box-sizing: border-box;
-    box-shadow: 0 -10px 30px rgba(0,0,0,0.8);
+    gap: 6px; padding: 10px; z-index: 10000; box-sizing: border-box;
 }
 
 @media (min-width: 768px) or (orientation: landscape) {
     #triage-hud { grid-template-columns: repeat(8, 1fr); }
 }
 
-/* 🔵 BLUE CIRCLE: MONTSERRAT 900 BOLD */
-.triage-btn, button[onclick="showHelp()"] {
+/* 🔵 BLUE CIRCLE: MONTSERRAT 900 */
+.triage-btn {
     background: rgba(0, 30, 0, 0.5); border: 1px solid #00ff66;
     color: #00ff66; font-family: 'Montserrat', sans-serif;
     font-size: 10px; font-weight: 900 !important; 
-    padding: 14px 2px; text-transform: uppercase; 
-    cursor: pointer; transition: 0.1s ease;
+    padding: 14px 2px; text-transform: uppercase; cursor: pointer;
 }
 
-.triage-btn:active { background: #00ff66; color: #000; transform: scale(0.95); }
-
-/* Tactical Triage Color Codes */
-.triage-btn.green { border-color: #0f0; color: #0f0; }
+/* 🟡 YELLOW CIRCLE & 🔦 ORANGE CIRCLE POSITIONS */
 .triage-btn.yellow { border-color: #ffff00; color: #ffff00; }
-.triage-btn.red { border-color: #ff3333; color: #ff3333; }
-.triage-btn.black { border-color: #888; color: #888; }
-.triage-btn.sync-qr { border-color: #00aaff; color: #00aaff; }
-.triage-btn.intel-report { border-color: #0f6; color: #0f6; } 
 
-/* 🔦 ORACLE MANUAL / FIELD MANUAL (ORANGE) */
-.triage-btn.oracle-manual, .triage-btn.field-manual, button[onclick="showHelp()"] { 
+.triage-btn.oracle-manual, 
+.triage-btn.field-manual, 
+button[onclick="showHelp()"] { 
     border-color: #ffa500 !important; 
     color: #ffa500 !important; 
     background: rgba(255, 165, 0, 0.05) !important;
 }
 
-/* ⚪ RESET BUTTON: WHITEOUT PROTOCOL */
-.triage-btn.reset {
-    grid-column: span 4;
-    border-color: #FFFFFF !important; 
-    color: #FFFFFF !important; 
-    background: rgba(255, 255, 255, 0.1) !important;
-}
-.triage-btn.reset:active { background: #FFFFFF !important; color: #000 !important; }
-
-@media (min-width: 768px) or (orientation: landscape) {
-    .triage-btn.reset { grid-column: span 1; }
-}
-
-/* --- OVERLAY POPUPS (INTEL / MANUALS) --- */
+/* --- OVERLAY POPUPS (WHITE CIRCLE) --- */
 #intel-overlay, .modal-content {
     position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
     background: rgba(0, 10, 0, 0.98); border: 2px solid #00ff66;
     border-left: 10px solid #00ff66; padding: 25px; z-index: 20000; 
-    width: 320px; max-height: 85vh; overflow-y: auto;
-    box-shadow: 0 0 100px #000; backdrop-filter: blur(10px);
+    width: 320px; max-height: 85vh; overflow-y: auto; backdrop-filter: blur(10px);
 }
 
-/* ⚪ WHITE CIRCLE: HEADERS BACK TO CINZEL SERIF */
+/* ⚪ WHITE CIRCLE: Headers back to Cinzel */
 #intel-overlay h3, .modal-content h3 { 
     font-family: 'Cinzel', serif !important; 
-    font-weight: 700; text-transform: uppercase;
-    margin-top: 0; color: #00ff66; text-align: center;
-    border-bottom: 1px solid rgba(0, 255, 102, 0.3); padding-bottom: 10px;
-    letter-spacing: 2px;
+    font-weight: 700; text-transform: uppercase; color: #00ff66;
+    text-align: center; border-bottom: 1px solid rgba(0, 255, 102, 0.3);
+    padding-bottom: 10px; letter-spacing: 2px;
 }
 
-#intel-overlay p, #intel-overlay li, .modal-content p { 
-    font-family: 'Montserrat', sans-serif !important;
-    margin: 12px 0; font-size: 0.9em; line-height: 1.6; color: #0f6;
+/* --- ⌨️ TACTICAL INPUT BOX (ORACLE UI MATCH) --- */
+#modal-input {
+    width: 90%; 
+    background: #000; 
+    border: 1px solid #00ff66;
+    color: #000 !important; /* SWITCHED TO BLACK FOR CONTRAST */
+    background-color: #00ff66 !important; /* IMPORT STRING BACKGROUND */
+    padding: 15px; 
+    margin: 20px auto;
+    font-family: 'Montserrat', sans-serif; 
+    font-weight: 900;
+    text-align: center;
+    box-shadow: 0 0 15px rgba(0, 255, 102, 0.3);
+    outline: none;
 }
 
-/* --- DOTS, LABELS & EMERGENCY EFFECTS --- */
-.triage-dot { position: absolute; z-index: 99; pointer-events: auto; }
-
-.triage-label {
-    position: absolute; left: 50%; transform: translateX(-50%) translateY(-35px) scale(calc(1 / var(--zoom-level, 1)));
-    transform-origin: bottom center; background: #00ff66; color: #000; padding: 3px 10px;
-    font-size: 11px; font-weight: 900; white-space: nowrap;
-    clip-path: polygon(12% 0, 100% 0, 88% 100%, 0 100%);
-}
-
-@keyframes emergency-flicker {
-    0%, 100% { filter: brightness(1); box-shadow: 0 0 5px #ff3333; }
-    50% { filter: brightness(2.2); box-shadow: 0 0 25px #ff3333; }
-}
-
-.triage-dot.red div { 
-    animation: emergency-flicker 0.8s infinite ease-in-out !important; 
-    border: 2px solid #ff3333 !important; 
-}
-
-/* --- 🛡️ ADVANCED HOLOGRAPHIC BOOT OVERLAY --- */
+/* --- 🛡️ ADVANCED HOLOGRAPHIC BOOT LOGIC --- */
 #boot-overlay {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: #000; display: flex; justify-content: center; align-items: center;
-    transition: opacity 0.8s ease-in-out; z-index: 99999; overflow: hidden;
+    background: #000; display: flex; justify-content: center; align-items: center; z-index: 99999;
 }
 
 #boot-logo {
-    width: 180px; filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(2476%) focus(86deg) brightness(118%) contrast(119%);
+    width: 180px; 
+    filter: brightness(0) saturate(100%) invert(48%) sepia(79%) saturate(2476%) hue-rotate(86deg) brightness(118%) contrast(119%);
     animation: holo-pulse 4s infinite, holo-glitch 2s infinite;
 }
 
@@ -194,17 +137,29 @@ header {
     91% { transform: scale(1.1) skewX(-10deg); opacity: 0.5; }
 }
 
-/* --- MODAL ACTIONS & SYNC --- */
+/* --- 🔳 DISMISS BUTTON: CENTERED & BLACK --- */
+.close-intel {
+    display: block;
+    margin: 20px auto 0 auto !important; /* POSITIONED AT CENTER */
+    width: 80%; 
+    padding: 12px; 
+    background: #00ff66 !important; /* SWITCH FROM WHITE TO BLACK THEME */
+    color: #000 !important; 
+    border: none;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900; 
+    text-transform: uppercase; 
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(0, 255, 102, 0.5);
+}
+
+.close-intel:active { transform: scale(0.95); filter: brightness(0.8); }
+
+/* SYNC BUTTONS */
 .sync-copy-btn {
     background: rgba(0, 170, 255, 0.1) !important;
     border: 1px solid #00aaff !important;
     color: #00aaff !important;
     width: 100%; padding: 12px; font-family: 'Montserrat', sans-serif;
-    font-weight: 900; cursor: pointer; transition: 0.2s;
+    font-weight: 900; cursor: pointer;
 }
-
-.close-intel {
-    width: 100%; padding: 10px; border: 1px solid #ff3333;
-    color: #ff3333; font-weight: 900; cursor: pointer;
-    text-transform: uppercase; margin-top: 20px;
-    }
