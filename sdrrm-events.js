@@ -10,6 +10,8 @@ console.log("ORACLE SYSTEM: V18.7 ONLINE");
 // --- INITIAL STATE ---
 let currentType = 0;
 let counts = [0, 0, 0, 0];
+let currentSelectedAgentId = null; // Tracks which dot is being modified
+
 const colors = ['#00ff66', '#ffff00', '#ff3333', '#888888']; 
 
 const map = document.getElementById('map-img');
@@ -74,18 +76,43 @@ function initializeSystem() {
 // --- PERSISTENCE & MERGE ENGINE ---
 function saveState() {
     const dots = [];
-    document.querySelectorAll('.triage-dot').forEach(d => {
-        dots.push({
-            x: d.style.left,
-            y: d.style.top,
-            type: d.dataset.type,
-            agent: d.dataset.agent,
-            time: d.dataset.timestamp,
-            uuid: d.dataset.uuid
+    const newCounts = [0, 0, 0, 0]; 
+
+    try {
+        document.querySelectorAll('.triage-dot').forEach(d => {
+            // Ignore the UI Overlay if it's currently inside the map
+            if (d.id === 'intel-overlay') return; 
+
+            const typeValue = d.dataset.type;
+            if (typeValue === undefined) return; 
+
+            const type = parseInt(typeValue);
+            
+            dots.push({
+                x: d.style.left,
+                y: d.style.top,
+                type: type,
+                agent: d.dataset.agent || "UNKNOWN",
+                time: d.dataset.timestamp || "",
+                uuid: d.dataset.uuid || ""
+            });
+
+            if (!isNaN(type) && newCounts[type] !== undefined) {
+                newCounts[type]++;
+            }
         });
-    });
-    localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(dots));
-    localStorage.setItem('ORACLE_STATS', JSON.stringify(counts));
+
+        counts = newCounts; 
+        updateHUD(); 
+        
+        // Use the same keys your "Load" function expects
+        localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(dots));
+        localStorage.setItem('ORACLE_STATS', JSON.stringify(counts));
+        
+        console.log("SDRRM PERMANENCE: State Secured."); 
+    } catch (err) {
+        console.error("CRITICAL: saveState Protocol Failed", err);
+    }
 }
 
 function loadState() {
@@ -108,7 +135,7 @@ function loadState() {
     } catch (err) { console.error("ORACLE: Cache Load Error", err); }
 }
 
-// --- CORE PLOTTING ---
+// --- CORE PLOTTING PERSISTENCE ---
 function createDot(x, y, type, agentData, timestamp, isSilent = false, existingUUID = null) {
     const mapEl = document.getElementById('map-img');
     if (!mapEl) return;
@@ -116,6 +143,7 @@ function createDot(x, y, type, agentData, timestamp, isSilent = false, existingU
     const typeInt = parseInt(type) || 0;
     const dotContainer = document.createElement('div');
     dotContainer.className = 'triage-dot'; 
+
     const classMap = ['green', 'yellow', 'red', 'black'];
     dotContainer.classList.add(classMap[typeInt]);
     dotContainer.style.position = 'absolute';
@@ -126,16 +154,17 @@ function createDot(x, y, type, agentData, timestamp, isSilent = false, existingU
     dotContainer.dataset.agent = agentData || "UNKNOWN AGENT";
     dotContainer.dataset.timestamp = timestamp || new Date().toLocaleTimeString();
     
-    // Generate UUID if it doesn't exist
-    dotContainer.dataset.uuid = existingUUID || btoa(timestamp + agentData + Math.random()).substring(0, 16);
+    // ✅ High-Precision UUID Generation
+    dotContainer.dataset.uuid = existingUUID || `AGENT-${Date.now()}-${Math.floor(Math.random() * 100000).toString(16)}`;
 
     const dotInner = document.createElement('div');
+    // Using global 'colors' array to prevent reference errors
     dotInner.style.cssText = `width:16px; height:16px; border-radius:50%; background-color:${colors[typeInt]}; box-shadow: 0 0 15px ${colors[typeInt]}; cursor:pointer;`;
     
     const triageStatus = ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][typeInt];
     dotInner.onclick = (e) => { 
         e.stopPropagation(); 
-        showIntel(dotContainer.dataset.agent, triageStatus, dotContainer.dataset.timestamp); 
+        showIntel(dotContainer.dataset.uuid, dotContainer.dataset.agent, triageStatus, dotContainer.dataset.timestamp); 
     };
 
     dotContainer.appendChild(dotInner);
@@ -146,11 +175,17 @@ function createDot(x, y, type, agentData, timestamp, isSilent = false, existingU
 
     mapEl.appendChild(dotContainer);
 
-    if (!isSilent) {
-        counts[typeInt]++;
-        updateHUD();
-        saveState();
+    // Run these for EVERY dot creation
+    counts[typeInt]++; 
+    updateHUD();
+    saveState(); 
+
+    // Only handle animation/silence here
+    if (isSilent) {
+        dotContainer.style.animation = "none";
     }
+    
+    console.log(`[SYSTEM] Identity ${dotContainer.dataset.uuid} secured in sector.`);
 }
 
 // --- 📱 MOBILE PINCH-TO-ZOOM ---
@@ -244,7 +279,7 @@ async function importTacticalGrid() {
             localStorage.setItem('ORACLE_STATS', JSON.stringify(masterCounts));
             
             // Confirm Only report
-            await tacticalPrompt("CMSHS GRID UPDATED", `${integratedPlots} NEW PLOTS INTEGRATED INTO CMSHS GRID.`, false, "", true);
+            await tacticalPrompt("CMSHS GRID UPDATED", `${integratedPlots} NEW PLOT(S) INTEGRATED INTO CMSHS GRID.`, false, "", true);
             
             sessionStorage.setItem('FAST_BOOT', 'true');
             location.reload(); 
@@ -304,11 +339,11 @@ function showIntelligenceReport() {
     overlay.innerHTML = `
         <h3 style="font-family:'Cinzel', serif; color:#0f6;">SYSTEM UPDATES</h3>
         <div style="text-align:left; font-size:0.8em; font-family:'Montserrat', sans-serif;">
-            <p><b>[v18.7]</b> Report Protocol: "Confirm Only" modals active.</p>
-            <p><b>[v18.7]</b> Persistence: One-time cinematic boot per session.</p>
-            <p><b>[v18.6]</b> True Merge Logic: Combine data without wiping.</p>
+            <p><b>[v18.8]</b> CRUD PROTOCOL:</span> Dynamic Modification and Purging of data points active. UUID-locked syncing enabled.</p>
+            <p><b>[v18.7]</b> Report Protocol: "Confirm Only modals active.</p>
+            <p><b>[v18.6]</b> Persistence: One-time cinematic boot per session.</p>
         </div>
-        <div class="close-intel" onclick="this.parentElement.style.display='none'">DISMISS</div>
+<div class="close-intel" onclick="this.parentElement.style.display='none'">DISMISS</div>
     `;
     overlay.style.display = 'block';
 }
@@ -381,15 +416,24 @@ async function clearMap() {
 // --- INPUT HANDLERS ---
 viewport.addEventListener('dblclick', async (e) => {
     const rect = viewport.getBoundingClientRect();
-    const agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
+    
+    // Use 'let' so we can modify the value
+    let agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
+    
+    // 1. Handle Cancel
+    if (agentData === null) return;
+    
+    // 2. Handle Empty Input (The "Unnamed" Protocol) - Added Semicolon
+    if (agentData.trim() === "") { agentData = "Unnamed Agent"; }
 
-    if (!agentData) return;
-
+    // 3. Coordinate Calculation
     const mouseX = (e.clientX - rect.left - mapPos.x) / zoom;
     const mouseY = (e.clientY - rect.top - mapPos.y) / zoom;
+    
     const tacticalTimestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ", " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    createDot((mouseX - 8) + 'px', (mouseY - 8) + 'px', currentType, agentData, tacticalTimestamp);
+    // 4. Create the Dot (Subtracting 8 to center the 16px dot)
+    createDot(`${mouseX - 8}px`, `${mouseY - 8}px`, currentType, agentData, tacticalTimestamp);
 });
 
 viewport.addEventListener('wheel', e => {
@@ -414,18 +458,162 @@ viewport.addEventListener('pointermove', e => {
 window.addEventListener('pointerup', () => { isDragging = false; });
 window.addEventListener('load', initializeSystem); 
 
-function showIntel(name, status, time) {
+// --- DYNAMIC AGENT MANAGEMENT ---
+function showIntel(id, name, status, time) {
+    currentSelectedAgentId = id; 
     const overlay = document.getElementById('intel-overlay');
-    overlay.innerHTML = `
-        <h3 style="font-family:'Cinzel', serif; color:#0f6;">AGENT PROFILE</h3>
-        <p style="text-align:left; font-size:0.9em;">
-            <strong>ID:</strong> ${name}<br>
-            <strong>STATUS:</strong> ${status}<br>
-            <strong>LAST SEEN:</strong> ${time} </p>
-        <div class="close-intel" onclick="document.getElementById('intel-overlay').style.display='none'">DISMISS</div>
-    `;
+    const targetDot = document.querySelector(`[data-uuid="${id}"]`);
+
+    if (!targetDot) return;
+
+    // 1. CLEAR AND APPLY CLASS
+    overlay.className = 'speech-bubble'; 
+    
+    // 2. POSITIONING - Set it to the exact dot coordinates
+    overlay.style.left = targetDot.style.left;
+    overlay.style.top = targetDot.style.top;
+    
+    // 3. ATTACH TO MAP (Ensures it moves when panned/zoomed)
+    document.getElementById('map-img').appendChild(overlay);
     overlay.style.display = 'block';
 
+    // 4. CONTENT (Your Montserrat Bold Grid)
+    overlay.innerHTML = `
+        <h3 style="font-family:'Cinzel', serif; color:#0f6; margin-bottom:10px; letter-spacing:2px; font-size:1rem; text-align:center;">AGENT PROFILE</h3>
+        
+        <div style="text-align:left; margin-bottom:12px;">
+            <label style="font-size:0.6rem; color:#888; display:block; margin-bottom:5px;">IDENTIFICATION</label>
+            <input type="text" id="edit-agent-name" value="${name}" placeholder="e.g. JUAN - GYM"
+                style="width:100%; background:rgba(0,0,0,0.5); border:1px solid #333; color:#0f6; padding:8px; font-family:'Montserrat', sans-serif; font-size:0.8rem; outline:none;">
+        </div>
+
+        <p style="text-align:left; font-size:0.75em; line-height:1.4; margin-bottom:10px;">
+            <span style="color:#888;">STATUS:</span> <span id="status-display" style="color:#0f6; font-weight:bold;">${status}</span><br>
+            <span style="color:#888;">LAST SEEN:</span> ${time}
+        </p>
+
+        <h6 style="font-family:'Montserrat', sans-serif; color:#0f6; letter-spacing:1px; margin-bottom:10px; font-size:0.7rem; text-align:center;">RECLASSIFY AGENT</h6>
+
+        <div class="tactical-status-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:15px;">
+            <div class="status-block green" onclick="updateTriage(0)" style="border:1px solid #0f6; color:#0f6; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">MINOR</div>
+            <div class="status-block yellow" onclick="updateTriage(1)" style="border:1px solid #ff0; color:#ff0; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">DELAYED</div>
+            <div class="status-block red" onclick="updateTriage(2)" style="border:1px solid #f33; color:#f33; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">IMMEDIATE</div>
+            <div class="status-block black" onclick="updateTriage(3)" style="border:1px solid #888; color:#888; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">DECEASED</div>
+        </div>
+
+        <button onclick="updateAgentIdentity()" class="btn-save" 
+            style="font-family: 'Montserrat', sans-serif; border:1px solid #0f6; color:#0f6; background:rgba(0,255,102,0.1); width:100%; padding:10px; margin-bottom:6px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">
+            SAVE IDENTITY
+        </button>
+        
+        <button onclick="deleteAgent()" class="btn-delete"
+            style="font-family: 'Montserrat', sans-serif; border:1px solid #f33; color:#f33; background:rgba(255,51,51,0.1); width:100%; padding:10px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">
+            DELETE AGENT
+        </button>
+        
+        <div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px;">DISMISS</div>
+    `;
+}
+
+function updateTriage(newType) {
+    if (!currentSelectedAgentId) return;
+
+    // Use ONE consistent variable name
+    const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
+    
+    // Safety check: if the dot doesn't exist, kill the function
+    if (!dotContainer) {
+        console.error("[CRITICAL] Agent UUID not found in DOM.");
+        return;
+    }
+
+    // 1. Swap the Class for the container
+    const classMap = ['green', 'yellow', 'red', 'black'];
+    dotContainer.classList.remove('green', 'yellow', 'red', 'black');
+    dotContainer.classList.add(classMap[newType]);
+
+    // 2. Update the metadata for saveState()
+    dotContainer.dataset.type = newType;
+
+    // 3. Update the visual appearance of the inner dot
+    const dotInner = dotContainer.querySelector('div');
+    const colors = ['#0f6', '#ff0', '#f33', '#444']; // Standard ORACLE palette
+    const newColor = colors[newType];
+    
+    if (dotInner) {
+        dotInner.style.backgroundColor = newColor;
+        dotInner.style.boxShadow = `0 0 15px ${newColor}`;
+    }
+
+    // 4. Update the Speech Bubble Display
+    const triageStatus = ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][newType];
+    const statusDisplay = document.getElementById('status-display');
+    if (statusDisplay) {
+        statusDisplay.innerText = triageStatus;
+        statusDisplay.style.color = newColor; // Visual sync
+    }
+    
+    // 5. Commit to LocalStorage
+    saveState(); 
+    
+    // Delayed dismissal for "Stoic" feedback
+    setTimeout(() => {
+        document.getElementById('intel-overlay').style.display = 'none'; 
+    }, 500);
+
+    console.log(`[SYSTEM] Agent ${currentSelectedAgentId} reclassified to ${triageStatus}.`);
+}
+
+function updateAgentIdentity() {
+    if (!currentSelectedAgentId) return;
+
+    const newName = document.getElementById('edit-agent-name').value;
+    const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
+
+    if (dotContainer && newName.trim() !== "") {
+        dotContainer.dataset.agent = newName;
+        const label = dotContainer.querySelector('.triage-label');
+        if (label) label.innerText = newName.split(' - ')[0];
+
+        saveState(); // Persist to LocalStorage
+
+        // VISUAL CONFIRMATION:
+        const saveBtn = document.querySelector('.btn-save');
+        saveBtn.innerText = "IDENTITY SECURED";
+        saveBtn.style.background = "#0f6";
+        saveBtn.style.color = "#000";
+
+        setTimeout(() => {
+            document.getElementById('intel-overlay').style.display = 'none';
+        }, 600);
+    }
+}
+async function deleteAgent() {
+    // We use your tacticalPrompt instead of the browser's confirm()
+    const confirmed = await tacticalPrompt(
+        "DELETE AGENT", 
+        "ARE YOU SURE YOU WANT TO DELETE THIS AGENT FROM THE GRID?", 
+        false // This tells the prompt NOT to show a text input
+    );
+
+    if (confirmed) {
+        // Find the dot using the UUID we locked in showIntel
+        const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
+        
+        if (dotContainer) {
+            // Visual feedback: shrink before disappearing
+            const dotInner = dotContainer.querySelector('div');
+            dotInner.style.transform = "scale(0)";
+            dotInner.style.transition = "transform 0.3s ease";
+
+            setTimeout(() => {
+                dotContainer.remove();
+                saveState(); // This recalculates HUD counts automatically
+                document.getElementById('intel-overlay').style.display = 'none';
+                console.log(`[SYSTEM] Agent ${currentSelectedAgentId} deleted successfully.`);
+            }, 300);
+        }
+    }
 }
 
 // --- FIELD MANUAL (HELP & TROUBLESHOOTING) ---
@@ -461,5 +649,3 @@ function showHelp() {
     `;
     overlay.style.display = 'block';
 }
-
-

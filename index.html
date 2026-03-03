@@ -72,7 +72,20 @@
     </div>
 </div>
 
-<div id="intel-overlay"></div>
+<div id="intel-overlay" class="triage-modal">
+    <h3 id ="agent-id" class="cinzel">AGENT:</h3>
+
+    <div class="triage-update-grid">
+        <button onclick="updateTriage('0')" class="btn-upd green">MINOR</button>
+        <button onclick ="updateTriage('1')" class="btn-upd yellow">DELAYED</button>
+        <button onclick="updateTriage('2')" class="btn-upd red">IMMEDIATE</button>
+        <button onclick="updateTriage('3')" class="btn-upd black">DECEASED</button>
+    </div>
+
+    <hr class="tactical-divider">
+
+    <button onclick="deleteAgent()" class="btn-delete">DELETE AGENT</button>
+</div>
 
 <script>
   // 🛡️ IMPROVED OFFLINE SHIELD (Protocol Aware)

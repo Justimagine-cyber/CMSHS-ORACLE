@@ -141,6 +141,66 @@ border-color: #ffffff; color: #ffffff;
 .triage-btn.reset { grid-column: span 1; }
 }
 
+/* --- ORACLE: DYNAMIC MANAGEMENT OVERLAYS --- */
+
+/* Grid for the Triage Update Buttons inside the Modal */
+.triage-update-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* 2x2 grid for quick thumb access */
+    gap: 10px;
+    margin: 15px 0;
+}
+
+.btn-upd {
+    padding: 10px;
+    font-size: 0.7rem;
+    font-weight: 900;
+    border: 1px solid;
+    background: rgba(255, 255, 255, 0.05);
+    cursor: pointer;
+    transition: 0.1s;
+}
+
+/* --- DELETE AGENT BUTTON --- */
+.btn-delete {
+    background: rgba(255, 51, 51, 0.05) !important; /* Very faint red background */
+    border: 1px solid #ff3333 !important;           /* Sharp Red Border */
+    color: #ff3333 !important;                      /* Tactical Red Text */
+    width: 100%;
+    padding: 12px;
+    margin-top: 15px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+}
+
+
+/* Hover/Active Feedback */
+.btn-delete:active {
+    background: #ff3333 !important;
+    color: #000 !important; /* Text turns black when pressed */
+    box-shadow: 0 0 20px rgba(255, 51, 51, 0.6);
+    transform: scale(0.98);
+}
+
+/* Tactical Feedback for Save Button */
+.btn-save:active {
+    background: #00ff66 !important;
+    color: #000 !important; /* Text turns black when pressed */
+    box-shadow: 0 0 20px rgba(0, 255, 102, 0.6);
+    transform: scale(0.98);
+}
+
+/* Optional: Add a hover state for better desktop feel */
+.btn-save:hover {
+    background: rgba(0, 255, 102, 0.2);
+    box-shadow: 0 0 10px rgba(0, 255, 102, 0.3);
+}
+
+
 /* --- DOTS & LABELS --- */
 .triage-dot { position: absolute; z-index: 99; pointer-events: auto; }
 
@@ -162,7 +222,25 @@ animation: emergency-flicker 0.8s infinite ease-in-out !important;
 border: 2px solid #ff3333 !important;
 }
 
-/* --- AGENT PROFILE POPUP (TACTICAL FOLDER AESTHETIC) --- */
+@keyframes tactical-pulse {
+    0% { transform: scale(1); box-shadow: 0 0 10px #ff3333; }
+    50% { transform: scale(1.2); box-shadow: 0 0 30px #ff3333, 0 0 50px rgba(255, 51, 51, 0.4); }
+    100% { transform: scale(1); box-shadow: 0 0 10px #ff3333; }
+}
+
+/* --- THE STABILIZATION FADE --- */
+.triage-dot div {
+    /* This ensures every change in background color or shadow is smooth */
+    transition: background-color 2s ease, box-shadow 2s ease, transform 1s ease;
+}
+
+/* Remove the animation if it's NOT red */
+.triage-dot:not(.red) div {
+    animation: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* --- AGENT PROFILE POPUP --- */
 #intel-overlay {
 position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
 background: rgba(0, 10, 0, 0.98); border: 2px solid #00ff66;
@@ -308,4 +386,64 @@ transition: 0.2s;
 .sync-copy-btn:hover {
 background: #00aaff !important;
 color: #000 !important;
+}
+
+/* --- THE MATERIALIZE PROTOCOL --- */
+@keyframes materialize {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+        filter: brightness(3); /* Makes it glow white as it appears */
+    }
+    70% {
+        transform: scale(1.2); /* Slight overshoot for a "bounce" feel */
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+        filter: brightness(1);
+    }
+}
+
+.triage-dot {
+    /* Apply the animation to every new dot */
+    animation: materialize 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* 🏛️ TRUE SPEECH BUBBLE CSS */
+#intel-overlay.speech-bubble {
+    position: absolute; /* Essential for coordinate placement */
+    display: none;
+    width: 280px;
+    background: rgba(0, 0, 0, 0.95);
+    border: 1px solid #0f6;
+    border-radius: 8px;
+    padding: 15px;
+    z-index: 5000;
+    
+    /* THE FIX: 
+       -50% horizontal keeps it centered over the dot.
+       -100% vertical moves the WHOLE box above the dot.
+       -20px adds the gap so it doesn't touch.
+    */
+    transform: translate(-50%, calc(-100% - 20px)); 
+    
+    /* Remove any old centering if they exist */
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin: 0;
+}
+
+/* The Triangle Pointer sitting at the bottom */
+#intel-overlay.speech-bubble::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 10px solid #0f6;
 }
