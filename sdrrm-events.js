@@ -512,6 +512,7 @@ function showSystemData(type) {
         document.body.appendChild(staticBox);
     }
     
+    staticBox.style.zIndex = "99999";
     staticBox.style.display = 'block';
     let content = "";
     let b64 = ""; 
@@ -608,6 +609,14 @@ function showSystemData(type) {
             </div>
         `;
     }
+
+    const dismissBtn = `<div class="close-intel" 
+        onclick="document.getElementById('static-system-overlay').style.display='none'" 
+        style="margin-top:15px; text-align:center; display:block; cursor:pointer; padding:15px; background:rgba(255,255,255,0.1); border-radius:5px; font-weight:bold;">
+        DISMISS
+    </div>`;
+
+    staticBox.innerHTML = content + dismissBtn;
 
     // Unified Render
     staticBox.innerHTML = content + `<div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px; text-align:center; display:block; cursor:pointer;">DISMISS</div>`;
