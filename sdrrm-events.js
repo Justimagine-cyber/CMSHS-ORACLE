@@ -1,4 +1,4 @@
-/* 🏛️ CMSHS ORACLE: tactical ENGINE V18.7 
+/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V18.7 
     - One-Time Cinematic Boot (Session Persistence)
     - Lead Locator Merge Logic (Responder 1 + Responder 2)
     - Simplified tactical Reports (Confirm Only / No Cancel)
@@ -487,7 +487,7 @@ async function deleteAgent() {
 }
 
 // --- 🏛️ SYSTEM OVERLAYS (STATIC CENTER) ---
-function generatetacticalQR() {
+function generateTacticalQR() {
     showSystemData('DATALINK');
 }
 
@@ -705,3 +705,20 @@ async function importTacticalGrid() {
         await tacticalPrompt("CRITICAL ERROR", "DATA STRING CORRUPT OR INCOMPATIBLE.", false, "", true); 
     }
 }
+
+// --- 🌉 ORACLE BRIDGE: EXPOSING FUNCTIONS TO HTML ---
+
+// Fix the naming mismatch for the QR function
+window.generateTacticalQR = generatetacticalQR; 
+
+// Expose the rest of the tactical suite
+window.setStatus = setStatus;
+window.showIntelligenceReport = showIntelligenceReport;
+window.showHelp = showHelp;
+window.showAbout = showAbout;
+window.clearMap = clearMap;
+window.updateTriage = updateTriage;
+window.deleteAgent = deleteAgent;
+window.updateAgentIdentity = updateAgentIdentity;
+
+console.log("ORACLE BRIDGE: ALL SYSTEMS EXPOSED TO GLOBAL DOM");
