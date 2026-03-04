@@ -1,7 +1,7 @@
-/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V18.7 
+/* 🏛️ CMSHS ORACLE: tactical ENGINE V18.7 
     - One-Time Cinematic Boot (Session Persistence)
     - Lead Locator Merge Logic (Responder 1 + Responder 2)
-    - Simplified Tactical Reports (Confirm Only / No Cancel)
+    - Simplified tactical Reports (Confirm Only / No Cancel)
     - Re-Engineered True Merge & Fingerprinting
 */
 
@@ -210,143 +210,6 @@ viewport.addEventListener('touchmove', e => {
 
 viewport.addEventListener('touchend', () => { initialPinchDist = -1; });
 
-// --- DATA LINK & TRUE MERGE ENGINE ---
-function generateTacticalQR() {
-    const data = localStorage.getItem('ORACLE_GRID_DATA');
-    const hasData = data && data !== "[]";
-    const b64Data = hasData ? btoa(data) : "";
-
-    const overlay = document.getElementById('intel-overlay');
-    overlay.innerHTML = `
-        <h3 style="font-family:'Cinzel', serif; color:#0f6;">DATA LINK</h3>
-        ${hasData ? `
-            <div style="background:white; padding:10px; display:inline-block; margin-bottom:10px;">
-                <div id="qr-target"></div>
-            </div>
-            <button onclick="copyToClipboard('${b64Data}')" class="sync-copy-btn">COPY DATA STRING</button>
-        ` : `<p style="font-size:0.8em; color:#888;">[ NO LOCAL DATA TO SHARE ]</p>`}
-        
-        <button onclick="document.getElementById('intel-overlay').style.display='none'; importTacticalGrid();" 
-        class="close-intel" 
-        style="border-color:#ffa500; color:#ffa500; width:100%; margin-bottom:10px;">
-        IMPORT SECTOR DATA</button>
-        <button onclick="document.getElementById('intel-overlay').style.display='none'" class="close-intel" style="width:100%;">DISMISS</button>
-    `;
-    overlay.style.display = 'block';
-
-    if (hasData) {
-        const qr = qrcode(0, 'L');
-        qr.addData(b64Data);
-        qr.make();
-        document.getElementById('qr-target').innerHTML = qr.createImgTag(4);
-    }
-}
-
-async function importTacticalGrid() {
-    const code = await tacticalPrompt(
-        "IMPORT NEW DATA", 
-        "PASTE DATA STRING:",
-        true,
-        "PASTE STRING HERE..." 
-    );
-    
-    if (!code || code.trim() === "") return;
-
-    try {
-        const incomingData = JSON.parse(atob(code.trim()));
-        const masterDataRaw = localStorage.getItem('ORACLE_GRID_DATA');
-        let masterData = masterDataRaw ? JSON.parse(masterDataRaw) : [];
-        const masterUUIDs = new Set(masterData.map(dot => dot.uuid));
-        
-        let integratedPlots = 0;
-        incomingData.forEach(responderDot => {
-            if (!masterUUIDs.has(responderDot.uuid)) {
-                masterData.push(responderDot);
-                integratedPlots++;
-            }
-        });
-
-        if (integratedPlots === 0) {
-            // Confirm Only report
-            await tacticalPrompt("DATA INTEGRATION REPORT", "NO NEW UNIQUE PLOTS DETECTED. CMSHS GRID IS CURRENT.", false, "", true);
-        } else {
-            localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(masterData));
-            const masterCounts = [0, 0, 0, 0];
-            masterData.forEach(d => {
-                const t = parseInt(d.type);
-                if (!isNaN(t)) masterCounts[t]++;
-            });
-            localStorage.setItem('ORACLE_STATS', JSON.stringify(masterCounts));
-            
-            // Confirm Only report
-            await tacticalPrompt("CMSHS GRID UPDATED", `${integratedPlots} NEW PLOT(S) INTEGRATED INTO CMSHS GRID.`, false, "", true);
-            
-            sessionStorage.setItem('FAST_BOOT', 'true');
-            location.reload(); 
-        }
-    } catch (e) { 
-        console.error("LEAD UPLINK ERROR:", e);
-        await tacticalPrompt("CRITICAL ERROR", "DATA STRING CORRUPT OR INCOMPATIBLE.", false, "", true); 
-    }
-}
-
-// --- SYSTEM OVERLAYS ---
-function showAbout() {
-    const overlay = document.getElementById('intel-overlay');
-    overlay.innerHTML = `
-        <h3 style="font-family:'Cinzel', serif; color:#00ff66; border-bottom:1px solid #00ff66; padding-bottom:10px; margin-bottom:15px; letter-spacing:2px;">SYSTEM OVERVIEW</h3>
-        
-        <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.6; color:#0f6; max-height:60vh; overflow-y:auto; padding-right:5px;">
-            <p style="margin-bottom:15px;"><strong>CMSHS ORACLE</strong> is a specialized <strong>Progressive Web App (PWA)</strong> developed for emergencies in CMSHS. It provides a high-visibility, tactical interface for real-time triage tracking and personnel location within the school campus.</p>
-            
-            <p style="color:#ffff00; font-weight:900; letter-spacing:1px; margin-top:20px;">CORE CAPABILITIES</p>
-            <ul style="list-style:none; padding-left:0; margin-bottom:15px;">
-                <li><strong>OFFLINE-FIRST:</strong> Engineered for "Air-Gapped" environments where data is unavailable.</li>
-                <li><strong>AGENT PLOTTING:</strong> Precision coordinate placement with color-coded triage status.</li>
-                <li><strong>AGENT DOSSIERS:</strong> Interactive labels and tap-to-view intelligence popups.</li>
-                <li><strong>GEOSPATIAL SYNC:</strong> Zoom-calibrated scaling for accurate sector analysis.</li>
-            </ul>
-
-            <p style="color:#00aaff; font-weight:900; letter-spacing:1px; margin-top:20px;">DEPLOYMENT</p>
-            <ol style="padding-left:15px; margin-bottom:15px;">
-                <li><strong>Scan QR Code</strong> provided by the administrator.</li>
-                <li><strong>Boot System:</strong> Wait for the ORACLE initialization sequence.</li>
-                <li><strong>Install:</strong> "Add to Home Screen" to run natively on any device.</li>
-            </ol>
-
-            <p style="color:#ffa500; font-weight:900; letter-spacing:1px; margin-top:20px;">PHILOSOPHY</p>
-            <p style="font-style:italic; border-left: 2px solid #ffa500; padding-left: 10px; margin-bottom:10px; color:#ccc;">
-                "Objective judgment, now at this very moment. Unselfish action, now at this very moment. Willing acceptance—now at this very moment—of all external events. That’s all you need." — Marcus Aurelius
-            </p>
-            <p style="font-size:0.8em; opacity:0.8;">ORACLE was built to provide clarity in chaos—a tool for the disciplined, designed for effective action when it matters most.</p>
-            
-            <hr style="border:0; border-top:1px solid #333; margin:20px 0;">
-            
-            <div style="font-size:0.75em; text-transform:uppercase; letter-spacing:1px; color:#888;">
-                <p><strong>DEVELOPED BY:</strong> Mark Justin L. Castillo, 12 - Planck</p>
-                <p><strong>INSTITUTION:</strong> City of Mandaluyong Science High School</p>
-                <p><strong>SCHOOL YEAR:</strong> 2025–2026</p>
-            </div>
-        </div>
-        
-        <div class="close-intel" onclick="this.parentElement.style.display='none'">DISMISS</div>
-    `;
-    overlay.style.display = 'block';
-}
-
-function showIntelligenceReport() {
-    const overlay = document.getElementById('intel-overlay');
-    overlay.innerHTML = `
-        <h3 style="font-family:'Cinzel', serif; color:#0f6;">SYSTEM UPDATES</h3>
-        <div style="text-align:left; font-size:0.8em; font-family:'Montserrat', sans-serif;">
-            <p><b>[v18.8]</b> CRUD PROTOCOL:</span> Dynamic Modification and Purging of data points active. UUID-locked syncing enabled.</p>
-            <p><b>[v18.7]</b> Report Protocol: "Confirm Only modals active.</p>
-            <p><b>[v18.6]</b> Persistence: One-time cinematic boot per session.</p>
-        </div>
-<div class="close-intel" onclick="this.parentElement.style.display='none'">DISMISS</div>
-    `;
-    overlay.style.display = 'block';
-}
 
 // --- UTILITIES ---
 function setStatus(s) { currentType = s; }
@@ -469,14 +332,14 @@ function showIntel(id, name, status, time) {
     // 1. CLEAR AND APPLY CLASS
     overlay.className = 'speech-bubble'; 
     
-    // 2. POSITIONING - Set it to the exact dot coordinates
+    // 2. ATTACH TO MAP (Ensures it moves when panned/zoomed)
+    document.getElementById('map-img').appendChild(overlay);
+
+    // 3. POSITIONING - Set it to the exact dot coordinates
     overlay.style.left = targetDot.style.left;
     overlay.style.top = targetDot.style.top;
-    
-    // 3. ATTACH TO MAP (Ensures it moves when panned/zoomed)
-    document.getElementById('map-img').appendChild(overlay);
     overlay.style.display = 'block';
-
+    
     // 4. CONTENT (Your Montserrat Bold Grid)
     overlay.innerHTML = `
         <h3 style="font-family:'Cinzel', serif; color:#0f6; margin-bottom:10px; letter-spacing:2px; font-size:1rem; text-align:center;">AGENT PROFILE</h3>
@@ -510,8 +373,6 @@ function showIntel(id, name, status, time) {
             style="font-family: 'Montserrat', sans-serif; border:1px solid #f33; color:#f33; background:rgba(255,51,51,0.1); width:100%; padding:10px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">
             DELETE AGENT
         </button>
-        
-        <div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px;">DISMISS</div>
     `;
 }
 
@@ -537,7 +398,7 @@ function updateTriage(newType) {
 
     // 3. Update the visual appearance of the inner dot
     const dotInner = dotContainer.querySelector('div');
-    const colors = ['#0f6', '#ff0', '#f33', '#444']; // Standard ORACLE palette
+    const colors = ['#0f6', '#ff0', '#f33', '#888']; // Standard ORACLE palette
     const newColor = colors[newType];
     
     if (dotInner) {
@@ -555,8 +416,6 @@ function updateTriage(newType) {
     
     // 5. Commit to LocalStorage
     saveState(); 
-    
-    // Delayed dismissal for "Stoic" feedback
     setTimeout(() => {
         document.getElementById('intel-overlay').style.display = 'none'; 
     }, 500);
@@ -569,25 +428,36 @@ function updateAgentIdentity() {
 
     const newName = document.getElementById('edit-agent-name').value;
     const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
-
+    
+    // Safety check for the container before looking for the label
     if (dotContainer && newName.trim() !== "") {
-        dotContainer.dataset.agent = newName;
         const label = dotContainer.querySelector('.triage-label');
-        if (label) label.innerText = newName.split(' - ')[0];
+        const displayedName = newName.split(' - ')[0].trim() || "AGENT";
 
-        saveState(); // Persist to LocalStorage
+        // Update Dataset for persistence
+        dotContainer.dataset.agent = newName;
 
-        // VISUAL CONFIRMATION:
+        // Update visual label
+        if (label) {
+            label.innerText = displayedName;
+        }
+
+        saveState(); // Commit changes to LocalStorage
+
+        // Identity Feedback
         const saveBtn = document.querySelector('.btn-save');
-        saveBtn.innerText = "IDENTITY SECURED";
-        saveBtn.style.background = "#0f6";
-        saveBtn.style.color = "#000";
+        if (saveBtn) {
+            saveBtn.innerText = "IDENTITY SECURED";
+            saveBtn.style.background = "#0f6";
+            saveBtn.style.color = "#000";
+        }
 
         setTimeout(() => {
             document.getElementById('intel-overlay').style.display = 'none';
         }, 600);
     }
 }
+
 async function deleteAgent() {
     // We use your tacticalPrompt instead of the browser's confirm()
     const confirmed = await tacticalPrompt(
@@ -616,36 +486,213 @@ async function deleteAgent() {
     }
 }
 
-// --- FIELD MANUAL (HELP & TROUBLESHOOTING) ---
+// --- 🏛️ SYSTEM OVERLAYS (STATIC CENTER) ---
+function generatetacticalQR() {
+    showSystemData('DATALINK');
+}
+
 function showHelp() {
-    const overlay = document.getElementById('intel-overlay');
-    overlay.innerHTML = `
-        <h3 style="font-family:'Cinzel', serif; color:#ffa500; border-bottom:1px solid #ffa500; padding-bottom:5px;">ORACLE MANUAL</h3>
-        <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.4; max-height:300px; overflow-y:auto; padding-right:5px;">
-            <p style="color:#0f6; font-weight:bold;">[ USAGE ]</p>
-            <ul style="padding-left:15px;">
-                <li><b>Plot Incident:</b> Double-click/tap on the map.</li>
-                <li><b>Change Triage:</b> Use the bottom HUD (Minor, Delayed, Immediate, Deceased) before plotting.</li>
-                <li><b>Move Map:</b> Drag with one finger/mouse.</li>
-                <li><b>Zoom:</b> Pinch-to-zoom (mobile) or Scroll wheel (desktop).</li>
-            </ul>
+    showSystemData('HELP');
+}
 
-            <p style="color:#0f6; font-weight:bold;">[ SYNCING ]</p>
-            <ul style="padding-left:15px;">
-                <li><b>Exporting:</b> Click SHARE REPORT to get your unique string or QR.</li>
-                <li><b>Importing:</b> Click IMPORT SECTOR DATA and paste the string from another responder. The system will only add <i>new</i> plots.</li>
-            </ul>
+function showIntelligenceReport() {
+    showSystemData('UPDATES');
+}
 
-            <p style="color:#ff3333; font-weight:bold;">[ TROUBLESHOOTING ]</p>
-            <ul style="padding-left:15px;">
-                <li><b>Lost on Map:</b> If you can't find the building, refresh the page. The position resets to the default grid.</li>
-                <li><b>Merge Failed:</b> Ensure you copied the entire string. If it looks "cut off", the merge engine will reject it.</li>
-                <li><b>Dots Not Showing:</b> Check if your browser is in "Incognito." ORACLE needs LocalStorage to save your work.</li>
-                <li><b>Merge Conflict:</b> If plots won't merge, perform RESET OPERATIONAL DATA, re-paste, and Confirm.</li>
-                <li><b>System Lag:</b> Perform RESET OPERATIONAL DATA if you have multiple old incidents slowing down your device.</li>
-            </ul>
-        </div>
-        <div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px;">DISMISS</div>
-    `;
-    overlay.style.display = 'block';
+function showAbout() {
+    showSystemData('ABOUT');
+}
+
+function showSystemData(type) {
+    let staticBox = document.getElementById('static-system-overlay');
+    if (!staticBox) {
+        staticBox = document.createElement('div');
+        staticBox.id = 'static-system-overlay';
+        staticBox.className = 'static-overlay';
+        document.body.appendChild(staticBox);
+    }
+    
+    staticBox.style.display = 'block';
+    let content = "";
+    let b64 = ""; 
+
+    if (type === 'DATALINK') {
+        const data = localStorage.getItem('ORACLE_GRID_DATA');
+        const hasData = data && data !== "[]";
+        b64 = hasData ? btoa(data) : "";
+        
+        // Merged logic: Using your specific text and styling
+        content = `
+            <h3 style="font-family:'Cinzel', serif; color:#0f6; text-align:center;">DATA LINK</h3>
+            ${hasData ? `
+                <div style="background:white; padding:10px; display:block; margin: 0 auto 10px auto; width: fit-content;">
+                    <div id="qr-static"></div>
+                </div>
+                <button onclick="copyToClipboard('${b64}')" class="sync-copy-btn" style="width:100%;">COPY DATA STRING</button>
+            ` : `<p style="font-size:0.8em; color:#888; text-align:center; margin: 20px 0;">[ NO LOCAL DATA TO SHARE ]</p>`}
+            
+            <div style="margin-top:20px; border-top:1px solid #333; padding-top:15px;">
+                <button onclick="document.getElementById('static-system-overlay').style.display='none'; importTacticalGrid();" 
+                class="close-intel" 
+                style="border-color:#ffa500; color:#ffa500; width:100%; margin-bottom:10px; cursor:pointer; background:transparent;">
+                IMPORT SECTOR DATA</button>
+            </div>
+        `;
+    }
+    else if (type === 'ABOUT') {
+        content = `
+            <h3 style="color:#0f6; font-family:'Cinzel'; text-align:center; border-bottom:1px solid #0f6; padding-bottom:5px;">SYSTEM OVERVIEW</h3>
+            <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.4; max-height:380px; overflow-y:auto; padding-right:5px; color:#ccc;">
+                <p style="font-size:0.8rem; margin-bottom:15px;">CMSHS ORACLE is a simple yet specialized <b>Progressive Web App (PWA)</b> developed for emergencies in CMSHS. It provides a high-visibility, tactical interface for real-time triage tracking and personnel location.</p>
+                <p style="color:#0f6; font-weight:bold; font-size:0.75rem;">CORE CAPABILITIES</p>
+                <ul style="padding-left:15px; margin-bottom:15px; font-size:0.8rem;">
+                    <li><b>OFFLINE-FIRST:</b> Operates in "Air-Gapped" environments without data/Wi-Fi.</li>
+                    <li><b>AGENT PLOTTING:</b> Precision coordinate placement with triage color-coding.</li>
+                    <li><b>AGENT DOSSIERS:</b> Interactive tap-to-view intelligence popups.</li>
+                    <li><b>GEOSPATIAL SYNC:</b> Zoom-calibrated scaling for sector analysis.</li>
+                </ul>
+                <p style="color:#0f6; font-weight:bold; font-size:0.75rem;">DEPLOYMENT</p>
+                <ol style="padding-left:15px; margin-bottom:15px; font-size:0.8rem;">
+                    <li>Scan Admin QR Code.</li>
+                    <li>Wait for ORACLE Initialization Sequence.</li>
+                    <li>Select "Add to Home Screen" for native installation.</li>
+                </ol>
+                <p style="color:#ffa500; font-weight:bold; font-size:0.75rem;">PHILOSOPHY</p>
+                <p style="font-style:italic; font-size:0.8rem; border-left: 2px solid #ffa500; padding-left:10px; margin-bottom:10px;">
+                    "Objective judgment, now at this very moment. Unselfish action, now at this very moment. Willing acceptance—now at this very moment—of all external events. That’s all you need." — Marcus Aurelius
+                </p>
+                <p style="font-size:0.75rem; margin-bottom:15px; opacity:0.8;">ORACLE was built to provide clarity in chaos. A tool for the disciplined, designed for calm, effective action.</p>
+                <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
+                <p style="font-size:0.7rem; margin:0;"><b>DEVELOPED BY:</b> Mark Justin L. Castillo, 12 - Planck</p>
+                <p style="font-size:0.7rem; margin:0;"><b>INSTITUTION:</b> CMSHS</p>
+                <p style="font-size:0.7rem; margin:0;"><b>S.Y.</b> 2025–2026</p>
+            </div>
+        `;
+    }
+    else if (type === 'HELP') {
+        content = `
+            <h3 style="font-family:'Cinzel', serif; color:#ffa500; text-align:center; border-bottom:1px solid #ffa500; padding-bottom:5px;">ORACLE MANUAL</h3>
+            <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.4; max-height:350px; overflow-y:auto; padding-right:5px; color:#ccc;">
+                <p style="color:#0f6; font-weight:bold; margin-top:10px;">USAGE</p>
+                <ul style="padding-left:15px; margin-bottom:10px;">
+                    <li><b>Plot Incident:</b> Double-tap map.</li>
+                    <li><b>Change Triage:</b> Use footer HUD before plotting.</li>
+                    <li><b>Move Map:</b> Drag with one finger/mouse.</li>
+                    <li><b>Zoom:</b> Pinch-to-zoom / Scroll wheel.</li>
+                </ul>
+                <p style="color:#0f6; font-weight:bold;">SYNCING</p>
+                <ul style="padding-left:15px; margin-bottom:10px;">
+                    <li><b>Exporting:</b> SHARE REPORT -> QR/String.</li>
+                    <li><b>Importing:</b> IMPORT SECTOR DATA -> Paste String.</li>
+                </ul>
+                <p style="color:#ff3333; font-weight:bold;">TROUBLESHOOTING</p>
+                <ul style="padding-left:15px;">
+                    <li><b>Lost on Map:</b> Refresh page to reset.</li>
+                    <li><b>Dots Missing:</b> Disable Incognito mode.</li>
+                    <li><b>Merge Conflict:</b> Ensure string is copied, perform RESET OPERATIONAL DATA and re-paste.</li>
+                    <li><b>System Lag:</b> Perform RESET OPERATIONAL DATA.</li>
+                </ul>
+            </div>
+        `;
+    }
+    else if (type === 'UPDATES') {
+        content = `
+            <h3 style="font-family:'Cinzel'; color:#0f6; text-align:center; border-bottom:1px solid #0f6; padding-bottom:5px;">SYSTEM LOG</h3>
+            <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.6; color:#ccc; margin-top:10px;">
+                <p><b style="color:#0f6;">[v18.8]</b> <span style="color:#fff;">UI ARCHITECTURE:</span> Separated Geospatial and Global overlays. System data now screen-locked.</p>
+                <p><b style="color:#0f6;">[v18.8]</b> <span style="color:#fff;">CRUD PROTOCOL:</span> Dynamic Agent modification and UUID-locked syncing active.</p>
+                <p><b style="color:#0f6;">[v18.7]</b> <span style="color:#fff;">REPORT ENGINE:</span> Confirm-only tactical modals deployed.</p>
+                <p><b style="color:#0f6;">[v18.6]</b> <span style="color:#fff;">BOOT SEQUENCE:</span> One-time cinematic session persistence active.</p>
+                <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
+                <p style="font-size:0.7em; opacity:0.6; text-align:center;">ORACLE STATUS: OPTIMIZED</p>
+            </div>
+        `;
+    }
+
+    // Unified Render
+    staticBox.innerHTML = content + `<div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px; text-align:center; display:block; cursor:pointer;">DISMISS</div>`;
+
+    // --- 🧬 ROBUST QR GENERATOR ENGINE ---
+    if (type === 'DATALINK' && b64) {
+        setTimeout(() => {
+            const qrBox = document.getElementById('qr-static');
+            if (qrBox) {
+                try {
+                    // Level 'L' (Low) is the most compact and allows the most data.
+                    // We use version 0 (auto), but the library needs a little help for base64.
+                    let qr = qrcode(0, 'L'); 
+                    qr.addData(b64);
+                    qr.make();
+                    
+                    // cellSize 3 keeps the image from getting too massive visually
+                    qrBox.innerHTML = qr.createImgTag(3, 4); 
+                } catch (qrErr) {
+                    console.error("QR Sync Limit Reached:", qrErr);
+                    // Fallback: If data is TOO big for a QR, show a warning
+                    qrBox.innerHTML = `
+                        <div style="color:#ff3333; font-size:0.7rem; border:1px dashed #ff3333; padding:10px;">
+                            CRITICAL: DATA DENSITY EXCEEDS QR CAPACITY.<br>
+                            USE "COPY DATA STRING" INSTEAD.
+                        </div>`;
+                }
+                
+                // Style the resulting image
+                const qrImg = qrBox.querySelector('img');
+                if (qrImg) {
+                    qrImg.style.maxWidth = "100%";
+                    qrImg.style.height = "auto";
+                    qrImg.style.display = "block";
+                    qrImg.style.margin = "0 auto";
+                }
+            }
+        }, 50);
+    }
+}
+
+// --- DATA LINK & TRUE MERGE ENGINE ---
+
+async function importTacticalGrid() {
+    const code = await tacticalPrompt(
+        "IMPORT NEW DATA", 
+        "PASTE DATA STRING:",
+        true,
+        "PASTE STRING HERE..." 
+    );
+    
+    if (!code || code.trim() === "") return;
+
+    try {
+        const incomingData = JSON.parse(atob(code.trim()));
+        const masterDataRaw = localStorage.getItem('ORACLE_GRID_DATA');
+        let masterData = masterDataRaw ? JSON.parse(masterDataRaw) : [];
+        const masterUUIDs = new Set(masterData.map(dot => dot.uuid));
+        
+        let integratedPlots = 0;
+        incomingData.forEach(responderDot => {
+            if (!masterUUIDs.has(responderDot.uuid)) {
+                masterData.push(responderDot);
+                integratedPlots++;
+            }
+        });
+
+        if (integratedPlots === 0) {
+            await tacticalPrompt("DATA INTEGRATION REPORT", "NO NEW UNIQUE PLOTS DETECTED. CMSHS GRID IS CURRENT.", false, "", true);
+        } else {
+            localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(masterData));
+            const masterCounts = [0, 0, 0, 0];
+            masterData.forEach(d => {
+                const t = parseInt(d.type);
+                if (!isNaN(t)) masterCounts[t]++;
+            });
+            localStorage.setItem('ORACLE_STATS', JSON.stringify(masterCounts));
+            
+            await tacticalPrompt("CMSHS GRID UPDATED", `${integratedPlots} NEW PLOT(S) INTEGRATED INTO CMSHS GRID.`, false, "", true);
+            
+            sessionStorage.setItem('FAST_BOOT', 'true');
+            location.reload(); 
+        }
+    } catch (e) { 
+        console.error("LEAD UPLINK ERROR:", e);
+        await tacticalPrompt("CRITICAL ERROR", "DATA STRING CORRUPT OR INCOMPATIBLE.", false, "", true); 
+    }
 }
