@@ -276,29 +276,51 @@ async function clearMap() {
     }
 }
 
-// --- INPUT HANDLERS ---
-viewport.addEventListener('dblclick', async (e) => {
+// --- 📱 MOBILE-FRIENDLY PLOTTING ENGINE ---
+let lastTap = 0;
+
+// Shared function to handle both Desktop and Mobile plotting
+async function handlePlotting(clientX, clientY) {
+
     const rect = viewport.getBoundingClientRect();
     
-    // Use 'let' so we can modify the value
     let agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
     
-    // 1. Handle Cancel
     if (agentData === null) return;
-    
-    // 2. Handle Empty Input (The "Unnamed" Protocol) - Added Semicolon
     if (agentData.trim() === "") { agentData = "Unnamed Agent"; }
 
-    // 3. Coordinate Calculation
-    const mouseX = (e.clientX - rect.left - mapPos.x) / zoom;
-    const mouseY = (e.clientY - rect.top - mapPos.y) / zoom;
+    // Coordinate Calculation (Now works for both touch and mouse coords)
+    const mouseX = (clientX - rect.left - mapPos.x) / zoom;
+    const mouseY = (clientY - rect.top - mapPos.y) / zoom;
     
     const tacticalTimestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ", " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // 4. Create the Dot (Subtracting 8 to center the 16px dot)
     createDot(`${mouseX - 8}px`, `${mouseY - 8}px`, currentType, agentData, tacticalTimestamp);
+}
+
+// 1. DESKTOP HANDLER
+viewport.addEventListener('dblclick', (e) => {
+    handlePlotting(e.clientX, e.clientY);
 });
 
+// 2. iOS/ANDROID DOUBLE-TAP HANDLER
+viewport.addEventListener('touchend', (e) => {
+    const currentTime = new Date().getTime();
+    const tapLength = currentTime - lastTap;
+    
+    // If user taps twice within 300ms
+    if (tapLength < 300 && tapLength > 0) {
+        // Prevent iOS from zooming the browser
+        e.preventDefault(); 
+        
+        // Use the coordinates of the first finger touch
+        const touch = e.changedTouches[0];
+        handlePlotting(touch.clientX, touch.clientY);
+    }
+    lastTap = currentTime;
+});
+
+// --- NAVIGATION HANDLERS ---
 viewport.addEventListener('wheel', e => {
     e.preventDefault();
     zoom = Math.min(Math.max(0.4, zoom + (e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED)), 4);
@@ -306,6 +328,8 @@ viewport.addEventListener('wheel', e => {
 }, { passive: false });
 
 viewport.addEventListener('pointerdown', e => {
+    // Check if it's a right-click or middle-click, if so, ignore
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
     isDragging = true;
     lastMouse = { x: e.clientX, y: e.clientY };
 });
@@ -722,3 +746,4 @@ window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 
 console.log("ORACLE BRIDGE: ALL SYSTEMS EXPOSED TO GLOBAL DOM");
+
