@@ -475,3 +475,27 @@ color: #000 !important;
     border-left: 10px solid #00aaff !important;
 
 }
+
+/* Satellite Button Style */
+#gps-btn {
+    background: rgba(0, 150, 255, 0.1);
+    box-shadow: 0 0 10px rgba(0, 150, 255, 0.2);
+    transition: 0.3s;
+}
+
+#gps-btn:hover {
+    background: rgba(0, 150, 255, 0.3);
+}
+
+/* The Blue Pulsing User Marker */
+#user-location-marker {
+    width: 24px;
+    height: 24px;
+    background: #0096ff;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    position: absolute;
+    z-index: 9999;
+    pointer-events: none;
+    box-shadow: 0 0 20px #0096ff;
+}
