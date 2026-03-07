@@ -188,29 +188,6 @@ function createDot(x, y, type, agentData, timestamp, isSilent = false, existingU
     console.log(`[SYSTEM] Identity ${dotContainer.dataset.uuid} secured in sector.`);
 }
 
-// --- 📱 MOBILE PINCH-TO-ZOOM ---
-viewport.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
-        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-    }
-}, { passive: false });
-
-viewport.addEventListener('touchmove', e => {
-    if (e.touches.length === 2) {
-        e.preventDefault();
-        const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-        if (initialPinchDist > 0) {
-            const diff = dist - initialPinchDist;
-            zoom = Math.min(Math.max(0.4, zoom + (diff * 0.005)), 4);
-            updateMapTransform();
-            initialPinchDist = dist;
-        }
-    }
-}, { passive: false });
-
-viewport.addEventListener('touchend', () => { initialPinchDist = -1; });
-
-
 // --- UTILITIES ---
 function setStatus(s) { currentType = s; }
 function updateHUD() {
@@ -276,44 +253,57 @@ async function clearMap() {
     }
 }
 
-// --- 📱 MOBILE-FRIENDLY PLOTTING ENGINE ---
+// --- 📱 MOBILE TOUCH ENGINE: PLOTTING + PINCH-ZOOM ---
 let lastTap = 0;
+let initialPinchDist = -1;
+let wasPinching = false; // The shield flag
 
-// Shared function to handle both Desktop and Mobile plotting
-async function handlePlotting(clientX, clientY) {
+viewport.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+        // Prepare for zoom
+        wasPinching = true; 
+        initialPinchDist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX, 
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+    }
+}, { passive: false });
 
-    const rect = viewport.getBoundingClientRect();
-    
-    let agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
-    
-    if (agentData === null) return;
-    if (agentData.trim() === "") { agentData = "Unnamed Agent"; }
+viewport.addEventListener('touchmove', e => {
+    if (e.touches.length === 2) {
+        e.preventDefault();
+        const dist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX, 
+            e.touches[0].pageY - e.touches[1].pageY
+        );
+        if (initialPinchDist > 0) {
+            const diff = dist - initialPinchDist;
+            // Pinch sensitivity (0.005)
+            zoom = Math.min(Math.max(0.4, zoom + (diff * 0.005)), 4);
+            updateMapTransform();
+            initialPinchDist = dist;
+        }
+    }
+}, { passive: false });
 
-    // Coordinate Calculation (Now works for both touch and mouse coords)
-    const mouseX = (clientX - rect.left - mapPos.x) / zoom;
-    const mouseY = (clientY - rect.top - mapPos.y) / zoom;
-    
-    const tacticalTimestamp = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ", " + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-    createDot(`${mouseX - 8}px`, `${mouseY - 8}px`, currentType, agentData, tacticalTimestamp);
-}
-
-// 1. DESKTOP HANDLER
-viewport.addEventListener('dblclick', (e) => {
-    handlePlotting(e.clientX, e.clientY);
-});
-
-// 2. iOS/ANDROID DOUBLE-TAP HANDLER
 viewport.addEventListener('touchend', (e) => {
+    // 1. If we just finished a pinch, reset flags and ABORT plotting logic
+    if (e.touches.length > 0 || wasPinching) {
+        initialPinchDist = -1;
+        // If no fingers are left on screen, we can reset wasPinching
+        if (e.touches.length === 0) {
+            // Small delay to ensure the final "tap" of a pinch isn't counted
+            setTimeout(() => { wasPinching = false; }, 100);
+        }
+        return;
+    }
+
+    // 2. Double-Tap Logic (Only runs if wasPinching is false)
     const currentTime = new Date().getTime();
     const tapLength = currentTime - lastTap;
     
-    // If user taps twice within 300ms
     if (tapLength < 300 && tapLength > 0) {
-        // Prevent iOS from zooming the browser
-        e.preventDefault(); 
-        
-        // Use the coordinates of the first finger touch
+        e.preventDefault(); // Stop iOS browser zoom
         const touch = e.changedTouches[0];
         handlePlotting(touch.clientX, touch.clientY);
     }
@@ -746,4 +736,3 @@ window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 
 console.log("ORACLE BRIDGE: ALL SYSTEMS EXPOSED TO GLOBAL DOM");
-
