@@ -1,17 +1,15 @@
-/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V18.7 
-    - One-Time Cinematic Boot (Session Persistence)
-    - Lead Locator Merge Logic (Responder 1 + Responder 2)
-    - Simplified tactical Reports (Confirm Only / No Cancel)
-    - Re-Engineered True Merge & Fingerprinting
+/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V20.1 
+    - Fixed Boot Sequence Case-Sensitivity
+    - Integrated Hybrid GPS (Mock + Real)
+    - Unified Touch Engine (Pinch-Zoom Shield Active)
 */
 
-console.log("ORACLE SYSTEM: V18.7 ONLINE");
+console.log("ORACLE SYSTEM: V20.1 ONLINE");
 
 // --- INITIAL STATE ---
 let currentType = 0;
 let counts = [0, 0, 0, 0];
-let currentSelectedAgentId = null; // Tracks which dot is being modified
-
+let currentSelectedAgentId = null;
 const colors = ['#00ff66', '#ffff00', '#ff3333', '#888888']; 
 
 const map = document.getElementById('map-img');
@@ -22,25 +20,28 @@ let zoom = 1;
 const ZOOM_SPEED = 0.08;
 let isDragging = false;
 let lastMouse = { x: 0, y: 0 };
-let initialPinchDist = -1; // Mobile Zoom tracking
 
-// --- 🛡️ BULLETPROOF BOOT SEQUENCE ---
+// --- 🛰️ GPS GLOBAL STATE ---
+let gpsWatcher = null;
+let mockInterval = null;
+
+// --- 📱 TOUCH GLOBAL STATE ---
+let lastTap = 0;
+let initialPinchDist = -1;
+let wasPinching = false;
+
+// --- 🛡️ BOOT SEQUENCE ---
 function initializeSystem() {
     const bootOverlay = document.getElementById('boot-overlay');
     const isSessionActive = sessionStorage.getItem('INITIAL_BOOT_COMPLETE');
 
-    // IF SESSION IS ALREADY ACTIVE: Kill the boot screen instantly
     if (isSessionActive) {
-        if (bootOverlay) {
-            bootOverlay.style.display = 'none';
-        }
+        if (bootOverlay) bootOverlay.style.display = 'none';
         loadState(); 
         updateMapTransform();
-        return; // EXIT EARLY
+        return;
     }
 
-    // NORMAL STARTUP (First time opening the tab)
-    console.log("STARTING MASTER BOOT PROTOCOL...");
     const bootText = document.getElementById('boot-text');
     const fullText = "INITIALIZING CMSHS GRID...\nACCESSING CMSHS ORACLE...\nSUCCESSFUL INITIALIZATION!";
     let i = 0;
@@ -53,10 +54,7 @@ function initializeSystem() {
         }
     }
 
-    if (bootText) {
-        bootText.innerHTML = "";
-        typeWriter();
-    }
+    if (bootText) { bootText.innerHTML = ""; typeWriter(); }
 
     setTimeout(() => {
         if (bootOverlay) {
@@ -64,7 +62,6 @@ function initializeSystem() {
             bootOverlay.style.pointerEvents = 'none'; 
             setTimeout(() => {
                 bootOverlay.style.display = 'none';
-                // SET THE FLAG: No more boot screens until the tab is closed
                 sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
             }, 600);
         }
@@ -73,212 +70,109 @@ function initializeSystem() {
     }, 3500);
 }
 
-// --- PERSISTENCE & MERGE ENGINE ---
-function saveState() {
-    const dots = [];
-    const newCounts = [0, 0, 0, 0]; 
+// --- 🛰️ GEOSPATIAL ENGINE: LIVE HYBRID MODE ---
 
-    try {
-        document.querySelectorAll('.triage-dot').forEach(d => {
-            // Ignore the UI Overlay if it's currently inside the map
-            if (d.id === 'intel-overlay') return; 
-
-            const typeValue = d.dataset.type;
-            if (typeValue === undefined) return; 
-
-            const type = parseInt(typeValue);
-            
-            dots.push({
-                x: d.style.left,
-                y: d.style.top,
-                type: type,
-                agent: d.dataset.agent || "UNKNOWN",
-                time: d.dataset.timestamp || "",
-                uuid: d.dataset.uuid || ""
-            });
-
-            if (!isNaN(type) && newCounts[type] !== undefined) {
-                newCounts[type]++;
-            }
-        });
-
-        counts = newCounts; 
-        updateHUD(); 
-        
-        // Use the same keys your "Load" function expects
-        localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(dots));
-        localStorage.setItem('ORACLE_STATS', JSON.stringify(counts));
-        
-        console.log("SDRRM PERMANENCE: State Secured."); 
-    } catch (err) {
-        console.error("CRITICAL: saveState Protocol Failed", err);
+async function locateUser() {
+    const btnText = document.getElementById('gps-text');
+    
+    if (gpsWatcher !== null || mockInterval !== null) {
+        stopTracking();
+        return;
     }
-}
 
-function loadState() {
-    const savedDotsRaw = localStorage.getItem('ORACLE_GRID_DATA');
-    const savedCountsRaw = localStorage.getItem('ORACLE_STATS');
+    const useMock = await tacticalPrompt("GPS MODE", "ENABLE LIVE MOCK TEST?", false);
     
-    try {
-        if (savedCountsRaw) {
-            counts = JSON.parse(savedCountsRaw);
-            updateHUD();
-        }
-        if (savedDotsRaw) {
-            const savedDots = JSON.parse(savedDotsRaw);
-            if (Array.isArray(savedDots)) {
-                savedDots.forEach(d => {
-                    createDot(d.x, d.y, d.type, d.agent, d.time, true, d.uuid);
-                });
-            }
-        }
-    } catch (err) { console.error("ORACLE: Cache Load Error", err); }
-}
-
-// --- CORE PLOTTING PERSISTENCE ---
-function createDot(x, y, type, agentData, timestamp, isSilent = false, existingUUID = null) {
-    const mapEl = document.getElementById('map-img');
-    if (!mapEl) return;
-
-    const typeInt = parseInt(type) || 0;
-    const dotContainer = document.createElement('div');
-    dotContainer.className = 'triage-dot'; 
-
-    const classMap = ['green', 'yellow', 'red', 'black'];
-    dotContainer.classList.add(classMap[typeInt]);
-    dotContainer.style.position = 'absolute';
-    dotContainer.style.left = x;
-    dotContainer.style.top = y;
-
-    dotContainer.dataset.type = typeInt;
-    dotContainer.dataset.agent = agentData || "UNKNOWN AGENT";
-    dotContainer.dataset.timestamp = timestamp || new Date().toLocaleTimeString();
-    
-    // ✅ High-Precision UUID Generation
-    dotContainer.dataset.uuid = existingUUID || `AGENT-${Date.now()}-${Math.floor(Math.random() * 100000).toString(16)}`;
-
-    const dotInner = document.createElement('div');
-    // Using global 'colors' array to prevent reference errors
-    dotInner.style.cssText = `width:16px; height:16px; border-radius:50%; background-color:${colors[typeInt]}; box-shadow: 0 0 15px ${colors[typeInt]}; cursor:pointer;`;
-    
-    const triageStatus = ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][typeInt];
-    dotInner.onclick = (e) => { 
-        e.stopPropagation(); 
-        showIntel(dotContainer.dataset.uuid, dotContainer.dataset.agent, triageStatus, dotContainer.dataset.timestamp); 
-    };
-
-    dotContainer.appendChild(dotInner);
-    const label = document.createElement('div');
-    label.className = 'triage-label';
-    label.innerText = (agentData || "UNKNOWN").split(' - ')[0]; 
-    dotContainer.appendChild(label);
-
-    mapEl.appendChild(dotContainer);
-
-    // Run these for EVERY dot creation
-    counts[typeInt]++; 
-    updateHUD();
-    saveState(); 
-
-    // Only handle animation/silence here
-    if (isSilent) {
-        dotContainer.style.animation = "none";
+    if (useMock) {
+        startMockMovement();
+        return; 
     }
-    
-    console.log(`[SYSTEM] Identity ${dotContainer.dataset.uuid} secured in sector.`);
-}
 
-// --- UTILITIES ---
-function setStatus(s) { currentType = s; }
-function updateHUD() {
-    const ids = ['g-c', 'y-c', 'r-c', 'b-c'];
-    ids.forEach((id, i) => { if(document.getElementById(id)) document.getElementById(id).innerText = counts[i]; });
-}
-function updateMapTransform() {
-    if (map) {
-        map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
-        viewport.style.setProperty('--zoom-level', zoom); 
+    if (!navigator.geolocation) {
+        tacticalPrompt("ERROR", "GPS HARDWARE NOT FOUND.", false, "", true);
+        return;
     }
-}
-function copyToClipboard(str) {
-    if (!str) return;
-    navigator.clipboard.writeText(str).then(async () => {
-        await tacticalPrompt("DATA SECURED", "DATA STRING ENCRYPTED & COPIED TO CLIPBOARD", false, "", true);
-    }).catch(err => { console.error("Link Failure", err); });
-}
 
-// UPDATED: Added hideCancel parameter
-function tacticalPrompt(title, desc, showsInput = true, customPlaceholder = "Enter data...", hideCancel = false) {
-    const intelOverlay = document.getElementById('intel-overlay');
-    if (intelOverlay) intelOverlay.style.display = 'none';
-    
-    return new Promise((resolve) => {
-        const modal = document.getElementById('custom-modal');
-        const input = document.getElementById('modal-input');
-        const cancelBtn = document.getElementById('modal-cancel');
-        
-        document.getElementById('modal-title').innerText = title;
-        document.getElementById('modal-desc').innerText = desc;
-        input.placeholder = customPlaceholder; 
-        input.style.display = showsInput ? 'block' : 'none';
-        
-        // Modal Button Logic
-        cancelBtn.style.display = hideCancel ? 'none' : 'block';
-        
-        input.value = ""; 
-        modal.style.display = 'flex';
-        
-        if(showsInput) setTimeout(() => input.focus(), 100);
+    if(btnText) btnText.innerText = "LINKING...";
 
-        document.getElementById('modal-confirm').onclick = () => {
-            modal.style.display = 'none';
-            resolve(showsInput ? input.value : true);
-        };
-
-        cancelBtn.onclick = () => {
-            modal.style.display = 'none';
-            resolve(null);
-        };
-    });
+    gpsWatcher = navigator.geolocation.watchPosition((position) => {
+        processCoords(position.coords.latitude, position.coords.longitude);
+        if(btnText) btnText.innerText = "📡 LIVE";
+    }, (err) => {
+        tacticalPrompt("SIGNAL LOST", "GPS TIMEOUT. TRY MOCK MODE.", false, "", true);
+        stopTracking();
+    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
 }
 
-async function clearMap() {
-    const confirmed = await tacticalPrompt("DATA WIPE WARNING", "ERASE ALL PLOTTED INCIDENTS?", false);
-    if(confirmed) {
-        localStorage.clear();
-        counts = [0, 0, 0, 0];
-        document.querySelectorAll('.triage-dot').forEach(dot => dot.remove());
-        updateHUD();
-        location.reload();
+function stopTracking() {
+    const btnText = document.getElementById('gps-text');
+    if (gpsWatcher !== null) navigator.geolocation.clearWatch(gpsWatcher);
+    if (mockInterval !== null) clearInterval(mockInterval);
+    gpsWatcher = null;
+    mockInterval = null;
+    if(btnText) btnText.innerText = "LOCATE ME";
+    const marker = document.getElementById('user-location-marker');
+    if (marker) marker.style.display = 'none';
+}
+
+function startMockMovement() {
+    const btnText = document.getElementById('gps-text');
+    if(btnText) btnText.innerText = "📡 MOCKING";
+    let lat = 14.58075; 
+    let lng = 121.03065;
+    mockInterval = setInterval(() => {
+        lat += 0.00001; lng += 0.00001;
+        processCoords(lat, lng);
+        if (lat > 14.58130) stopTracking(); 
+    }, 1500); 
+}
+
+function processCoords(lat, lng) {
+    const mapConfig = { topLat: 14.58130, bottomLat: 14.58020, leftLong: 121.03020, rightLong: 121.03120 };
+    const pctY = (mapConfig.topLat - lat) / (mapConfig.topLat - mapConfig.bottomLat);
+    const pctX = (lng - mapConfig.leftLong) / (mapConfig.rightLong - mapConfig.leftLong);
+    const mapImg = document.getElementById('map-img');
+    const pixelX = mapImg.offsetWidth * pctX;
+    const pixelY = mapImg.offsetHeight * pctY;
+    drawUserMarker(pixelX, pixelY);
+    focusOnUser(pixelX, pixelY);
+}
+
+function drawUserMarker(x, y) {
+    let marker = document.getElementById('user-location-marker');
+    if (!marker) {
+        marker = document.createElement('div');
+        marker.id = 'user-location-marker';
+        marker.className = 'pulse-animation';
+        marker.style.cssText = `width:24px; height:24px; background:#0096ff; border:3px solid white; border-radius:50%; position:absolute; z-index:9999; box-shadow:0 0 20px #0096ff; pointer-events:none;`;
+        document.getElementById('map-img').appendChild(marker);
     }
+    marker.style.left = `${x - 12}px`;
+    marker.style.top = `${y - 12}px`;
+    marker.style.display = 'block';
 }
 
-// --- 📱 MOBILE TOUCH ENGINE: PLOTTING + PINCH-ZOOM ---
-let lastTap = 0;
-let initialPinchDist = -1;
-let wasPinching = false; // The shield flag
+function focusOnUser(x, y) {
+    const vWidth = viewport.offsetWidth / 2;
+    const vHeight = viewport.offsetHeight / 2;
+    mapPos.x = vWidth - (x * zoom);
+    mapPos.y = vHeight - (y * zoom);
+    updateMapTransform();
+}
 
+// --- 📱 UNIFIED TOUCH ENGINE (PLOTTING + PINCH) ---
 viewport.addEventListener('touchstart', e => {
     if (e.touches.length === 2) {
-        // Prepare for zoom
         wasPinching = true; 
-        initialPinchDist = Math.hypot(
-            e.touches[0].pageX - e.touches[1].pageX, 
-            e.touches[0].pageY - e.touches[1].pageY
-        );
+        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
     }
 }, { passive: false });
 
 viewport.addEventListener('touchmove', e => {
     if (e.touches.length === 2) {
         e.preventDefault();
-        const dist = Math.hypot(
-            e.touches[0].pageX - e.touches[1].pageX, 
-            e.touches[0].pageY - e.touches[1].pageY
-        );
+        const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
         if (initialPinchDist > 0) {
             const diff = dist - initialPinchDist;
-            // Pinch sensitivity (0.005)
             zoom = Math.min(Math.max(0.4, zoom + (diff * 0.005)), 4);
             updateMapTransform();
             initialPinchDist = dist;
@@ -287,28 +181,38 @@ viewport.addEventListener('touchmove', e => {
 }, { passive: false });
 
 viewport.addEventListener('touchend', (e) => {
-    // 1. If we just finished a pinch, reset flags and ABORT plotting logic
     if (e.touches.length > 0 || wasPinching) {
         initialPinchDist = -1;
-        // If no fingers are left on screen, we can reset wasPinching
         if (e.touches.length === 0) {
-            // Small delay to ensure the final "tap" of a pinch isn't counted
             setTimeout(() => { wasPinching = false; }, 100);
         }
         return;
     }
 
-    // 2. Double-Tap Logic (Only runs if wasPinching is false)
     const currentTime = new Date().getTime();
     const tapLength = currentTime - lastTap;
     
     if (tapLength < 300 && tapLength > 0) {
-        e.preventDefault(); // Stop iOS browser zoom
+        e.preventDefault(); 
         const touch = e.changedTouches[0];
         handlePlotting(touch.clientX, touch.clientY);
     }
     lastTap = currentTime;
 });
+
+// --- CORE PLOTTING LOGIC ---
+async function handlePlotting(clientX, clientY) {
+    const rect = viewport.getBoundingClientRect();
+    let agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
+    if (agentData === null) return;
+    if (agentData.trim() === "") { agentData = "Unnamed Agent"; }
+
+    const mouseX = (clientX - rect.left - mapPos.x) / zoom;
+    const mouseY = (clientY - rect.top - mapPos.y) / zoom;
+    const tacticalTimestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    createDot(`${mouseX - 8}px`, `${mouseY - 8}px`, currentType, agentData, tacticalTimestamp);
+}
 
 // --- NAVIGATION HANDLERS ---
 viewport.addEventListener('wheel', e => {
@@ -721,11 +625,8 @@ async function importTacticalGrid() {
 }
 
 // --- 🌉 ORACLE BRIDGE: EXPOSING FUNCTIONS TO HTML ---
-
-// Fix the naming mismatch for the QR function
-window.generateTacticalQR = generatetacticalQR; 
-
-// Expose the rest of the tactical suite
+window.generateTacticalQR = generateTacticalQR; // FIXED: Changed lowercase g to match function name
+window.locateUser = locateUser;
 window.setStatus = setStatus;
 window.showIntelligenceReport = showIntelligenceReport;
 window.showHelp = showHelp;
