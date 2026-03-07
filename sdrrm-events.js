@@ -71,7 +71,6 @@ function initializeSystem() {
 }
 
 // --- 🛰️ GEOSPATIAL ENGINE: LIVE HYBRID MODE ---
-
 async function locateUser() {
     const btnText = document.getElementById('gps-text');
     
@@ -159,18 +158,50 @@ function focusOnUser(x, y) {
     updateMapTransform();
 }
 
-// --- 📱 UNIFIED TOUCH ENGINE (PLOTTING + PINCH) ---
+// --- 📱 TRUE UNIFIED TOUCH ENGINE (PAN + ZOOM + PLOT) ---
+let lastTap = 0;
+let initialPinchDist = -1;
+let wasPinching = false;
+let isDraggingMobile = false; // 🛡️ NEW: Movement Shield
+let touchStartPos = { x: 0, y: 0 };
+
 viewport.addEventListener('touchstart', e => {
-    if (e.touches.length === 2) {
+    if (e.touches.length === 1) {
+        // Prepare for potential Drag or Double-Tap
+        isDraggingMobile = false;
+        touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length === 2) {
+        // Prepare for Zoom
         wasPinching = true; 
-        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+        initialPinchDist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX, 
+            e.touches[0].pageY - e.touches[1].pageY
+        );
     }
 }, { passive: false });
 
 viewport.addEventListener('touchmove', e => {
-    if (e.touches.length === 2) {
+    if (e.touches.length === 1 && !wasPinching) {
+        // --- 1-FINGER NAVIGATION ---
+        const touch = e.touches[0];
+        const moveDist = Math.hypot(touch.clientX - touchStartPos.x, touch.clientY - touchStartPos.y);
+        
+        // If moved more than 5px, it's a drag, not a tap
+        if (moveDist > 5) isDraggingMobile = true;
+
+        mapPos.x += touch.clientX - lastMouse.x;
+        mapPos.y += touch.clientY - lastMouse.y;
+        updateMapTransform();
+        lastMouse = { x: touch.clientX, y: touch.clientY };
+        
+    } else if (e.touches.length === 2) {
+        // --- 2-FINGER ZOOM ---
         e.preventDefault();
-        const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+        const dist = Math.hypot(
+            e.touches[0].pageX - e.touches[1].pageX, 
+            e.touches[0].pageY - e.touches[1].pageY
+        );
         if (initialPinchDist > 0) {
             const diff = dist - initialPinchDist;
             zoom = Math.min(Math.max(0.4, zoom + (diff * 0.005)), 4);
@@ -181,23 +212,25 @@ viewport.addEventListener('touchmove', e => {
 }, { passive: false });
 
 viewport.addEventListener('touchend', (e) => {
-    if (e.touches.length > 0 || wasPinching) {
+    // 1. PINCH RESET
+    if (wasPinching && e.touches.length === 0) {
+        setTimeout(() => { wasPinching = false; }, 100);
         initialPinchDist = -1;
-        if (e.touches.length === 0) {
-            setTimeout(() => { wasPinching = false; }, 100);
-        }
         return;
     }
 
-    const currentTime = new Date().getTime();
-    const tapLength = currentTime - lastTap;
-    
-    if (tapLength < 300 && tapLength > 0) {
-        e.preventDefault(); 
-        const touch = e.changedTouches[0];
-        handlePlotting(touch.clientX, touch.clientY);
+    // 2. PLOT LOGIC (Only if NOT dragging and NOT pinching)
+    if (!isDraggingMobile && !wasPinching && e.touches.length === 0) {
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTap;
+        
+        if (tapLength < 300 && tapLength > 0) {
+            e.preventDefault(); 
+            const touch = e.changedTouches[0];
+            handlePlotting(touch.clientX, touch.clientY);
+        }
+        lastTap = currentTime;
     }
-    lastTap = currentTime;
 });
 
 // --- CORE PLOTTING LOGIC ---
@@ -637,3 +670,4 @@ window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 
 console.log("ORACLE BRIDGE: ALL SYSTEMS EXPOSED TO GLOBAL DOM");
+
