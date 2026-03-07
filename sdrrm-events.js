@@ -1,15 +1,15 @@
-/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V20.1 
-    - Fixed Boot Sequence Case-Sensitivity
-    - Integrated Hybrid GPS (Mock + Real)
-    - Unified Touch Engine (Pinch-Zoom Shield Active)
+/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V22.8 - MASTER COMPILATION
+    - Full Merge: Persistence (V18.7) + GPS/Hybrid (V20.1) + Unified Touch
+    - Integrated: Agent Dossier CRUD, QR Generator, & True Merge Logic
+    - Resolved: Boot Sequence Case-Sensitivity & Reference Errors
 */
 
-console.log("ORACLE SYSTEM: V20.1 ONLINE");
+console.log("ORACLE SYSTEM: V22.8 ONLINE - ALL MODULES INTEGRATED");
 
 // --- INITIAL STATE ---
 let currentType = 0;
 let counts = [0, 0, 0, 0];
-let currentSelectedAgentId = null;
+let currentSelectedAgentId = null; 
 const colors = ['#00ff66', '#ffff00', '#ff3333', '#888888']; 
 
 const map = document.getElementById('map-img');
@@ -29,6 +29,8 @@ let mockInterval = null;
 let lastTap = 0;
 let initialPinchDist = -1;
 let wasPinching = false;
+let isDraggingMobile = false; 
+let touchStartPos = { x: 0, y: 0 };
 
 // --- 🛡️ BOOT SEQUENCE ---
 function initializeSystem() {
@@ -70,36 +72,104 @@ function initializeSystem() {
     }, 3500);
 }
 
-// --- 🛰️ GEOSPATIAL ENGINE: LIVE HYBRID MODE ---
+// --- 🛰️ GEOSPATIAL CONFIGURATION ---
+const CMSHS_BOUNDS = { 
+    topLat: 14.569300, 
+    bottomLat: 14.568200, 
+    leftLong: 121.034800, 
+    rightLong: 121.036200 
+};
+
+// --- 🛰️ CORE TRACKING LOGIC ---
 async function locateUser() {
     const btnText = document.getElementById('gps-text');
     
+    // Toggle: Stop if already tracking
     if (gpsWatcher !== null || mockInterval !== null) {
         stopTracking();
         return;
     }
 
-    const useMock = await tacticalPrompt("GPS MODE", "ENABLE LIVE MOCK TEST?", false);
+    const choice = await tacticalPrompt(
+        "GPS SOURCE SELECTION", 
+        "SELECT TRACKING PROTOCOL:\n\n[MOCK] - SIMULATED GRID ROAMING\n[LIVE] - REAL-TIME SATELLITE FIX", 
+        true, 
+        "TYPE 'MOCK' OR 'LIVE'..."
+    );
     
-    if (useMock) {
-        startMockMovement();
-        return; 
+    if (!choice) return;
+    const selection = choice.toUpperCase();
+
+    if (selection === 'MOCK') {
+        startRandomMockRoaming();
+    } else if (selection === 'LIVE') {
+        if (!navigator.geolocation) {
+            tacticalPrompt("HARDWARE ERROR", "GPS SENSOR NOT DETECTED.", false, "", true);
+            return;
+        }
+
+        if(btnText) btnText.innerText = "LINKING...";
+
+        gpsWatcher = navigator.geolocation.watchPosition((pos) => {
+            processCoords(pos.coords.latitude, pos.coords.longitude);
+            if(btnText) btnText.innerText = "📡 LIVE";
+        }, (err) => {
+            tacticalPrompt("SIGNAL LOST", "SATELLITE LINK FAILED.", false, "", true);
+            stopTracking();
+        }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+    }
+}
+
+function processCoords(lat, lng) {
+    // Uses the Recalibrated CMSHS Boundaries
+    const pctY = (CMSHS_BOUNDS.topLat - lat) / (CMSHS_BOUNDS.topLat - CMSHS_BOUNDS.bottomLat);
+    const pctX = (lng - CMSHS_BOUNDS.leftLong) / (CMSHS_BOUNDS.rightLong - CMSHS_BOUNDS.leftLong);
+    
+    const mapImg = document.getElementById('map-img');
+    if (!mapImg) return;
+
+    const pixelX = mapImg.offsetWidth * pctX;
+    const pixelY = mapImg.offsetHeight * pctY;
+    
+    drawUserMarker(pixelX, pixelY);
+    focusOnUser(pixelX, pixelY);
+}
+
+function startRandomMockRoaming() {
+    const btnText = document.getElementById('gps-text');
+    if(btnText) btnText.innerText = "📡 ROAMING";
+
+    let currentLat = 14.568768; // Start at center point
+    let currentLng = 121.035510;
+    let targetLat, targetLng;
+    let movements = 0;
+    const MAX_MOVEMENTS = 5;
+
+    function pickNewTarget() {
+        targetLat = CMSHS_BOUNDS.bottomLat + Math.random() * (CMSHS_BOUNDS.topLat - CMSHS_BOUNDS.bottomLat);
+        targetLng = CMSHS_BOUNDS.leftLong + Math.random() * (CMSHS_BOUNDS.rightLong - CMSHS_BOUNDS.leftLong);
+        movements++;
     }
 
-    if (!navigator.geolocation) {
-        tacticalPrompt("ERROR", "GPS HARDWARE NOT FOUND.", false, "", true);
-        return;
-    }
+    pickNewTarget();
 
-    if(btnText) btnText.innerText = "LINKING...";
+    mockInterval = setInterval(() => {
+        const step = 0.000012; 
+        
+        if (Math.abs(currentLat - targetLat) > step) currentLat += currentLat < targetLat ? step : -step;
+        if (Math.abs(currentLng - targetLng) > step) currentLng += currentLng < targetLng ? step : -step;
 
-    gpsWatcher = navigator.geolocation.watchPosition((position) => {
-        processCoords(position.coords.latitude, position.coords.longitude);
-        if(btnText) btnText.innerText = "📡 LIVE";
-    }, (err) => {
-        tacticalPrompt("SIGNAL LOST", "GPS TIMEOUT. TRY MOCK MODE.", false, "", true);
-        stopTracking();
-    }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+        processCoords(currentLat, currentLng);
+
+        if (Math.abs(currentLat - targetLat) <= step && Math.abs(currentLng - targetLng) <= step) {
+            if (movements >= MAX_MOVEMENTS) {
+                tacticalPrompt("SIMULATION END", "UNIT RETURNED TO BASE.", false, "", true);
+                stopTracking();
+            } else {
+                pickNewTarget();
+            }
+        }
+    }, 250); 
 }
 
 function stopTracking() {
@@ -113,44 +183,30 @@ function stopTracking() {
     if (marker) marker.style.display = 'none';
 }
 
-function startMockMovement() {
-    const btnText = document.getElementById('gps-text');
-    if(btnText) btnText.innerText = "📡 MOCKING";
-    let lat = 14.58075; 
-    let lng = 121.03065;
-    mockInterval = setInterval(() => {
-        lat += 0.00001; lng += 0.00001;
-        processCoords(lat, lng);
-        if (lat > 14.58130) stopTracking(); 
-    }, 1500); 
-}
-
-function processCoords(lat, lng) {
-    const mapConfig = { topLat: 14.58130, bottomLat: 14.58020, leftLong: 121.03020, rightLong: 121.03120 };
-    const pctY = (mapConfig.topLat - lat) / (mapConfig.topLat - mapConfig.bottomLat);
-    const pctX = (lng - mapConfig.leftLong) / (mapConfig.rightLong - mapConfig.leftLong);
-    const mapImg = document.getElementById('map-img');
-    const pixelX = mapImg.offsetWidth * pctX;
-    const pixelY = mapImg.offsetHeight * pctY;
-    drawUserMarker(pixelX, pixelY);
-    focusOnUser(pixelX, pixelY);
-}
-
 function drawUserMarker(x, y) {
     let marker = document.getElementById('user-location-marker');
-    if (!marker) {
+    const mapImg = document.getElementById('map-img');
+    
+    if (!marker && mapImg) {
         marker = document.createElement('div');
         marker.id = 'user-location-marker';
-        marker.className = 'pulse-animation';
-        marker.style.cssText = `width:24px; height:24px; background:#0096ff; border:3px solid white; border-radius:50%; position:absolute; z-index:9999; box-shadow:0 0 20px #0096ff; pointer-events:none;`;
-        document.getElementById('map-img').appendChild(marker);
+        marker.style.cssText = `
+            width:24px; height:24px; background:#0096ff; border:3px solid white; 
+            border-radius:50%; position:absolute; z-index:9999; 
+            box-shadow:0 0 20px #0096ff; pointer-events:none;
+            transition: left 0.3s linear, top 0.3s linear;
+        `;
+        mapImg.appendChild(marker);
     }
-    marker.style.left = `${x - 12}px`;
-    marker.style.top = `${y - 12}px`;
-    marker.style.display = 'block';
+    if (marker) {
+        marker.style.left = `${x - 12}px`;
+        marker.style.top = `${y - 12}px`;
+        marker.style.display = 'block';
+    }
 }
 
 function focusOnUser(x, y) {
+    if (!viewport) return;
     const vWidth = viewport.offsetWidth / 2;
     const vHeight = viewport.offsetHeight / 2;
     mapPos.x = vWidth - (x * zoom);
@@ -159,20 +215,12 @@ function focusOnUser(x, y) {
 }
 
 // --- 📱 TRUE UNIFIED TOUCH ENGINE (PAN + ZOOM + PLOT) ---
-let lastTap = 0;
-let initialPinchDist = -1;
-let wasPinching = false;
-let isDraggingMobile = false; // 🛡️ NEW: Movement Shield
-let touchStartPos = { x: 0, y: 0 };
-
 viewport.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
-        // Prepare for potential Drag or Double-Tap
         isDraggingMobile = false;
         touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
         lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
     } else if (e.touches.length === 2) {
-        // Prepare for Zoom
         wasPinching = true; 
         initialPinchDist = Math.hypot(
             e.touches[0].pageX - e.touches[1].pageX, 
@@ -183,11 +231,9 @@ viewport.addEventListener('touchstart', e => {
 
 viewport.addEventListener('touchmove', e => {
     if (e.touches.length === 1 && !wasPinching) {
-        // --- 1-FINGER NAVIGATION ---
         const touch = e.touches[0];
         const moveDist = Math.hypot(touch.clientX - touchStartPos.x, touch.clientY - touchStartPos.y);
         
-        // If moved more than 5px, it's a drag, not a tap
         if (moveDist > 5) isDraggingMobile = true;
 
         mapPos.x += touch.clientX - lastMouse.x;
@@ -196,7 +242,6 @@ viewport.addEventListener('touchmove', e => {
         lastMouse = { x: touch.clientX, y: touch.clientY };
         
     } else if (e.touches.length === 2) {
-        // --- 2-FINGER ZOOM ---
         e.preventDefault();
         const dist = Math.hypot(
             e.touches[0].pageX - e.touches[1].pageX, 
@@ -212,14 +257,12 @@ viewport.addEventListener('touchmove', e => {
 }, { passive: false });
 
 viewport.addEventListener('touchend', (e) => {
-    // 1. PINCH RESET
     if (wasPinching && e.touches.length === 0) {
         setTimeout(() => { wasPinching = false; }, 100);
         initialPinchDist = -1;
         return;
     }
 
-    // 2. PLOT LOGIC (Only if NOT dragging and NOT pinching)
     if (!isDraggingMobile && !wasPinching && e.touches.length === 0) {
         const currentTime = new Date().getTime();
         const tapLength = currentTime - lastTap;
@@ -255,7 +298,6 @@ viewport.addEventListener('wheel', e => {
 }, { passive: false });
 
 viewport.addEventListener('pointerdown', e => {
-    // Check if it's a right-click or middle-click, if so, ignore
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     isDragging = true;
     lastMouse = { x: e.clientX, y: e.clientY };
@@ -270,7 +312,57 @@ viewport.addEventListener('pointermove', e => {
 });
 
 window.addEventListener('pointerup', () => { isDragging = false; });
-window.addEventListener('load', initializeSystem); 
+
+// --- 💾 PERSISTENCE & DATA ENGINE ---
+function saveState() {
+    const dots = [];
+    const newCounts = [0, 0, 0, 0];
+    document.querySelectorAll('.triage-dot').forEach(d => {
+        if (d.id === 'intel-overlay') return;
+        const type = parseInt(d.dataset.type);
+        dots.push({ x: d.style.left, y: d.style.top, type, agent: d.dataset.agent, time: d.dataset.timestamp, uuid: d.dataset.uuid });
+        if (!isNaN(type)) newCounts[type]++;
+    });
+    counts = newCounts; 
+    updateHUD();
+    localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(dots));
+    localStorage.setItem('ORACLE_STATS', JSON.stringify(counts));
+}
+
+function loadState() {
+    try {
+        const savedDots = JSON.parse(localStorage.getItem('ORACLE_GRID_DATA') || "[]");
+        counts = JSON.parse(localStorage.getItem('ORACLE_STATS') || "[0,0,0,0]");
+        savedDots.forEach(d => createDot(d.x, d.y, d.type, d.agent, d.time, true, d.uuid));
+        updateHUD();
+    } catch (e) { console.error("Load Failed", e); }
+}
+
+function createDot(x, y, type, agentData, timestamp, isSilent = false, existingUUID = null) {
+    const typeInt = parseInt(type) || 0;
+    const dot = document.createElement('div');
+    dot.className = `triage-dot ${['green', 'yellow', 'red', 'black'][typeInt]}`;
+    dot.style.cssText = `position:absolute; left:${x}; top:${y};`;
+    dot.dataset.type = typeInt;
+    dot.dataset.agent = agentData || "UNKNOWN";
+    dot.dataset.timestamp = timestamp || new Date().toLocaleTimeString();
+    dot.dataset.uuid = existingUUID || `AGENT-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+
+    const inner = document.createElement('div');
+    inner.style.cssText = `width:16px; height:16px; border-radius:50%; background:${colors[typeInt]}; box-shadow: 0 0 15px ${colors[typeInt]}; cursor:pointer;`;
+    inner.onclick = (e) => { 
+        e.stopPropagation(); 
+        showIntel(dot.dataset.uuid, dot.dataset.agent, ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][typeInt], dot.dataset.timestamp); 
+    };
+    
+    const lbl = document.createElement('div');
+    lbl.className = 'triage-label';
+    lbl.innerText = (agentData || "UNKNOWN").split(' - ')[0];
+
+    dot.appendChild(inner); dot.appendChild(lbl);
+    document.getElementById('map-img').appendChild(dot);
+    if (!isSilent) { counts[typeInt]++; updateHUD(); saveState(); }
+}
 
 // --- DYNAMIC AGENT MANAGEMENT ---
 function showIntel(id, name, status, time) {
@@ -280,191 +372,124 @@ function showIntel(id, name, status, time) {
 
     if (!targetDot) return;
 
-    // 1. CLEAR AND APPLY CLASS
     overlay.className = 'speech-bubble'; 
-    
-    // 2. ATTACH TO MAP (Ensures it moves when panned/zoomed)
     document.getElementById('map-img').appendChild(overlay);
 
-    // 3. POSITIONING - Set it to the exact dot coordinates
     overlay.style.left = targetDot.style.left;
     overlay.style.top = targetDot.style.top;
     overlay.style.display = 'block';
     
-    // 4. CONTENT (Your Montserrat Bold Grid)
     overlay.innerHTML = `
         <h3 style="font-family:'Cinzel', serif; color:#0f6; margin-bottom:10px; letter-spacing:2px; font-size:1rem; text-align:center;">AGENT PROFILE</h3>
-        
         <div style="text-align:left; margin-bottom:12px;">
             <label style="font-size:0.6rem; color:#888; display:block; margin-bottom:5px;">IDENTIFICATION</label>
             <input type="text" id="edit-agent-name" value="${name}" placeholder="e.g. JUAN - GYM"
                 style="width:100%; background:rgba(0,0,0,0.5); border:1px solid #333; color:#0f6; padding:8px; font-family:'Montserrat', sans-serif; font-size:0.8rem; outline:none;">
         </div>
-
         <p style="text-align:left; font-size:0.75em; line-height:1.4; margin-bottom:10px;">
             <span style="color:#888;">STATUS:</span> <span id="status-display" style="color:#0f6; font-weight:bold;">${status}</span><br>
             <span style="color:#888;">LAST SEEN:</span> ${time}
         </p>
-
         <h6 style="font-family:'Montserrat', sans-serif; color:#0f6; letter-spacing:1px; margin-bottom:10px; font-size:0.7rem; text-align:center;">RECLASSIFY AGENT</h6>
-
         <div class="tactical-status-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:15px;">
             <div class="status-block green" onclick="updateTriage(0)" style="border:1px solid #0f6; color:#0f6; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">MINOR</div>
             <div class="status-block yellow" onclick="updateTriage(1)" style="border:1px solid #ff0; color:#ff0; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">DELAYED</div>
             <div class="status-block red" onclick="updateTriage(2)" style="border:1px solid #f33; color:#f33; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">IMMEDIATE</div>
             <div class="status-block black" onclick="updateTriage(3)" style="border:1px solid #888; color:#888; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">DECEASED</div>
         </div>
-
-        <button onclick="updateAgentIdentity()" class="btn-save" 
-            style="font-family: 'Montserrat', sans-serif; border:1px solid #0f6; color:#0f6; background:rgba(0,255,102,0.1); width:100%; padding:10px; margin-bottom:6px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">
-            SAVE IDENTITY
-        </button>
-        
-        <button onclick="deleteAgent()" class="btn-delete"
-            style="font-family: 'Montserrat', sans-serif; border:1px solid #f33; color:#f33; background:rgba(255,51,51,0.1); width:100%; padding:10px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">
-            DELETE AGENT
-        </button>
+        <button onclick="updateAgentIdentity()" class="btn-save" style="font-family: 'Montserrat', sans-serif; border:1px solid #0f6; color:#0f6; background:rgba(0,255,102,0.1); width:100%; padding:10px; margin-bottom:6px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">SAVE IDENTITY</button>
+        <button onclick="deleteAgent()" class="btn-delete" style="font-family: 'Montserrat', sans-serif; border:1px solid #f33; color:#f33; background:rgba(255,51,51,0.1); width:100%; padding:10px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">DELETE AGENT</button>
     `;
 }
 
 function updateTriage(newType) {
     if (!currentSelectedAgentId) return;
-
-    // Use ONE consistent variable name
     const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
-    
-    // Safety check: if the dot doesn't exist, kill the function
-    if (!dotContainer) {
-        console.error("[CRITICAL] Agent UUID not found in DOM.");
-        return;
-    }
-
-    // 1. Swap the Class for the container
+    if (!dotContainer) return;
     const classMap = ['green', 'yellow', 'red', 'black'];
     dotContainer.classList.remove('green', 'yellow', 'red', 'black');
     dotContainer.classList.add(classMap[newType]);
-
-    // 2. Update the metadata for saveState()
     dotContainer.dataset.type = newType;
-
-    // 3. Update the visual appearance of the inner dot
     const dotInner = dotContainer.querySelector('div');
-    const colors = ['#0f6', '#ff0', '#f33', '#888']; // Standard ORACLE palette
-    const newColor = colors[newType];
-    
+    const colorsList = ['#0f6', '#ff0', '#f33', '#888'];
+    const newColor = colorsList[newType];
     if (dotInner) {
         dotInner.style.backgroundColor = newColor;
         dotInner.style.boxShadow = `0 0 15px ${newColor}`;
     }
-
-    // 4. Update the Speech Bubble Display
-    const triageStatus = ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][newType];
     const statusDisplay = document.getElementById('status-display');
     if (statusDisplay) {
-        statusDisplay.innerText = triageStatus;
-        statusDisplay.style.color = newColor; // Visual sync
+        statusDisplay.innerText = ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][newType];
+        statusDisplay.style.color = newColor;
     }
-    
-    // 5. Commit to LocalStorage
     saveState(); 
-    setTimeout(() => {
-        document.getElementById('intel-overlay').style.display = 'none'; 
-    }, 500);
-
-    console.log(`[SYSTEM] Agent ${currentSelectedAgentId} reclassified to ${triageStatus}.`);
+    setTimeout(() => { document.getElementById('intel-overlay').style.display = 'none'; }, 500);
 }
 
 function updateAgentIdentity() {
     if (!currentSelectedAgentId) return;
-
     const newName = document.getElementById('edit-agent-name').value;
     const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
-    
-    // Safety check for the container before looking for the label
     if (dotContainer && newName.trim() !== "") {
         const label = dotContainer.querySelector('.triage-label');
-        const displayedName = newName.split(' - ')[0].trim() || "AGENT";
-
-        // Update Dataset for persistence
         dotContainer.dataset.agent = newName;
-
-        // Update visual label
-        if (label) {
-            label.innerText = displayedName;
-        }
-
-        saveState(); // Commit changes to LocalStorage
-
-        // Identity Feedback
+        if (label) { label.innerText = newName.split(' - ')[0].trim() || "AGENT"; }
+        saveState();
         const saveBtn = document.querySelector('.btn-save');
-        if (saveBtn) {
-            saveBtn.innerText = "IDENTITY SECURED";
-            saveBtn.style.background = "#0f6";
-            saveBtn.style.color = "#000";
-        }
-
-        setTimeout(() => {
-            document.getElementById('intel-overlay').style.display = 'none';
-        }, 600);
+        if (saveBtn) { saveBtn.innerText = "IDENTITY SECURED"; saveBtn.style.background = "#0f6"; saveBtn.style.color = "#000"; }
+        setTimeout(() => { document.getElementById('intel-overlay').style.display = 'none'; }, 600);
     }
 }
 
 async function deleteAgent() {
-    // We use your tacticalPrompt instead of the browser's confirm()
-    const confirmed = await tacticalPrompt(
-        "DELETE AGENT", 
-        "ARE YOU SURE YOU WANT TO DELETE THIS AGENT FROM THE GRID?", 
-        false // This tells the prompt NOT to show a text input
-    );
-
+    const confirmed = await tacticalPrompt("DELETE AGENT", "ARE YOU SURE YOU WANT TO DELETE THIS AGENT FROM THE GRID?", false);
     if (confirmed) {
-        // Find the dot using the UUID we locked in showIntel
         const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
-        
         if (dotContainer) {
-            // Visual feedback: shrink before disappearing
             const dotInner = dotContainer.querySelector('div');
             dotInner.style.transform = "scale(0)";
             dotInner.style.transition = "transform 0.3s ease";
-
             setTimeout(() => {
                 dotContainer.remove();
-                saveState(); // This recalculates HUD counts automatically
+                saveState();
                 document.getElementById('intel-overlay').style.display = 'none';
-                console.log(`[SYSTEM] Agent ${currentSelectedAgentId} deleted successfully.`);
             }, 300);
         }
     }
 }
 
-// --- 🏛️ SYSTEM OVERLAYS (STATIC CENTER) ---
-function generateTacticalQR() {
-    showSystemData('DATALINK');
+// --- 🏛️ SYSTEM OVERLAYS & UTILITIES ---
+function updateHUD() { ['g-c', 'y-c', 'r-c', 'b-c'].forEach((id, i) => { if(document.getElementById(id)) document.getElementById(id).innerText = counts[i]; }); }
+function updateMapTransform() { map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`; }
+function setStatus(s) { currentType = s; }
+
+async function tacticalPrompt(title, desc, showsInput = true, customPlaceholder = "", hideCancel = false) {
+    return new Promise(resolve => {
+        const modal = document.getElementById('custom-modal');
+        const input = document.getElementById('modal-input');
+        document.getElementById('modal-title').innerText = title;
+        document.getElementById('modal-desc').innerText = desc;
+        input.style.display = showsInput ? 'block' : 'none';
+        input.placeholder = customPlaceholder; input.value = "";
+        document.getElementById('modal-cancel').style.display = hideCancel ? 'none' : 'block';
+        modal.style.display = 'flex';
+        document.getElementById('modal-confirm').onclick = () => { modal.style.display = 'none'; resolve(showsInput ? input.value : true); };
+        document.getElementById('modal-cancel').onclick = () => { modal.style.display = 'none'; resolve(null); };
+    });
 }
 
-function showHelp() {
-    showSystemData('HELP');
-}
-
-function showIntelligenceReport() {
-    showSystemData('UPDATES');
-}
-
-function showAbout() {
-    showSystemData('ABOUT');
-}
+function generateTacticalQR() { showSystemData('DATALINK'); }
+function showHelp() { showSystemData('HELP'); }
+function showIntelligenceReport() { showSystemData('UPDATES'); }
+function showAbout() { showSystemData('ABOUT'); }
 
 function showSystemData(type) {
-    let staticBox = document.getElementById('static-system-overlay');
-    if (!staticBox) {
-        staticBox = document.createElement('div');
-        staticBox.id = 'static-system-overlay';
-        staticBox.className = 'static-overlay';
-        document.body.appendChild(staticBox);
-    }
-    
+    let staticBox = document.getElementById('static-system-overlay') || document.createElement('div');
+    staticBox.id = 'static-system-overlay';
+    staticBox.className = 'static-overlay';
     staticBox.style.zIndex = "99999";
     staticBox.style.display = 'block';
+    document.body.appendChild(staticBox);
     let content = "";
     let b64 = ""; 
 
@@ -472,153 +497,73 @@ function showSystemData(type) {
         const data = localStorage.getItem('ORACLE_GRID_DATA');
         const hasData = data && data !== "[]";
         b64 = hasData ? btoa(data) : "";
-        
-        // Merged logic: Using your specific text and styling
         content = `
             <h3 style="font-family:'Cinzel', serif; color:#0f6; text-align:center;">DATA LINK</h3>
             ${hasData ? `
                 <div style="background:white; padding:10px; display:block; margin: 0 auto 10px auto; width: fit-content;">
                     <div id="qr-static"></div>
                 </div>
-                <button onclick="copyToClipboard('${b64}')" class="sync-copy-btn" style="width:100%;">COPY DATA STRING</button>
+
+                <button onclick="navigator.clipboard.writeText('${b64}')" class="sync-copy-btn" style="width:100%;">COPY DATA STRING</button>
             ` : `<p style="font-size:0.8em; color:#888; text-align:center; margin: 20px 0;">[ NO LOCAL DATA TO SHARE ]</p>`}
-            
             <div style="margin-top:20px; border-top:1px solid #333; padding-top:15px;">
                 <button onclick="document.getElementById('static-system-overlay').style.display='none'; importTacticalGrid();" 
-                class="close-intel" 
-                style="border-color:#ffa500; color:#ffa500; width:100%; margin-bottom:10px; cursor:pointer; background:transparent;">
+                class="close-intel" style="border-color:#ffa500; color:#ffa500; width:100%; margin-bottom:10px; cursor:pointer; background:transparent;">
                 IMPORT SECTOR DATA</button>
             </div>
         `;
-    }
-    else if (type === 'ABOUT') {
+
+    } else if (type === 'ABOUT') {
         content = `
             <h3 style="color:#0f6; font-family:'Cinzel'; text-align:center; border-bottom:1px solid #0f6; padding-bottom:5px;">SYSTEM OVERVIEW</h3>
             <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.4; max-height:380px; overflow-y:auto; padding-right:5px; color:#ccc;">
-                <p style="font-size:0.8rem; margin-bottom:15px;">CMSHS ORACLE is a simple yet specialized <b>Progressive Web App (PWA)</b> developed for emergencies in CMSHS. It provides a high-visibility, tactical interface for real-time triage tracking and personnel location.</p>
-                <p style="color:#0f6; font-weight:bold; font-size:0.75rem;">CORE CAPABILITIES</p>
-                <ul style="padding-left:15px; margin-bottom:15px; font-size:0.8rem;">
-                    <li><b>OFFLINE-FIRST:</b> Operates in "Air-Gapped" environments without data/Wi-Fi.</li>
-                    <li><b>AGENT PLOTTING:</b> Precision coordinate placement with triage color-coding.</li>
-                    <li><b>AGENT DOSSIERS:</b> Interactive tap-to-view intelligence popups.</li>
-                    <li><b>GEOSPATIAL SYNC:</b> Zoom-calibrated scaling for sector analysis.</li>
-                </ul>
-                <p style="color:#0f6; font-weight:bold; font-size:0.75rem;">DEPLOYMENT</p>
-                <ol style="padding-left:15px; margin-bottom:15px; font-size:0.8rem;">
-                    <li>Scan Admin QR Code.</li>
-                    <li>Wait for ORACLE Initialization Sequence.</li>
-                    <li>Select "Add to Home Screen" for native installation.</li>
-                </ol>
-                <p style="color:#ffa500; font-weight:bold; font-size:0.75rem;">PHILOSOPHY</p>
-                <p style="font-style:italic; font-size:0.8rem; border-left: 2px solid #ffa500; padding-left:10px; margin-bottom:10px;">
-                    "Objective judgment, now at this very moment. Unselfish action, now at this very moment. Willing acceptance—now at this very moment—of all external events. That’s all you need." — Marcus Aurelius
+                <p style="font-size:0.8rem; margin-bottom:15px;">CMSHS ORACLE Tactical PWA S.Y. 2025-2026.</p>
+                <p style="color:#0f6; font-weight:bold; font-size:0.75rem;">DEVELOPED BY:</p>
+                <p style="font-size:0.7rem; margin:0;">Mark Justin L. Castillo, 12 - Planck</p>
+                <p style="font-style:italic; font-size:0.8rem; border-left: 2px solid #ffa500; padding-left:10px; margin-top:10px;">
+                    "Objective judgment, now at this very moment..." — Marcus Aurelius
                 </p>
-                <p style="font-size:0.75rem; margin-bottom:15px; opacity:0.8;">ORACLE was built to provide clarity in chaos. A tool for the disciplined, designed for calm, effective action.</p>
-                <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
-                <p style="font-size:0.7rem; margin:0;"><b>DEVELOPED BY:</b> Mark Justin L. Castillo, 12 - Planck</p>
-                <p style="font-size:0.7rem; margin:0;"><b>INSTITUTION:</b> CMSHS</p>
-                <p style="font-size:0.7rem; margin:0;"><b>S.Y.</b> 2025–2026</p>
             </div>
         `;
-    }
-    else if (type === 'HELP') {
+
+    } else if (type === 'HELP') {
         content = `
             <h3 style="font-family:'Cinzel', serif; color:#ffa500; text-align:center; border-bottom:1px solid #ffa500; padding-bottom:5px;">ORACLE MANUAL</h3>
             <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.4; max-height:350px; overflow-y:auto; padding-right:5px; color:#ccc;">
                 <p style="color:#0f6; font-weight:bold; margin-top:10px;">USAGE</p>
                 <ul style="padding-left:15px; margin-bottom:10px;">
                     <li><b>Plot Incident:</b> Double-tap map.</li>
-                    <li><b>Change Triage:</b> Use footer HUD before plotting.</li>
-                    <li><b>Move Map:</b> Drag with one finger/mouse.</li>
-                    <li><b>Zoom:</b> Pinch-to-zoom / Scroll wheel.</li>
-                </ul>
-                <p style="color:#0f6; font-weight:bold;">SYNCING</p>
-                <ul style="padding-left:15px; margin-bottom:10px;">
-                    <li><b>Exporting:</b> SHARE REPORT -> QR/String.</li>
-                    <li><b>Importing:</b> IMPORT SECTOR DATA -> Paste String.</li>
-                </ul>
-                <p style="color:#ff3333; font-weight:bold;">TROUBLESHOOTING</p>
-                <ul style="padding-left:15px;">
-                    <li><b>Lost on Map:</b> Refresh page to reset.</li>
-                    <li><b>Dots Missing:</b> Disable Incognito mode.</li>
-                    <li><b>Merge Conflict:</b> Ensure string is copied, perform RESET OPERATIONAL DATA and re-paste.</li>
-                    <li><b>System Lag:</b> Perform RESET OPERATIONAL DATA.</li>
+                    <li><b>Change Triage:</b> Use footer HUD.</li>
+                    <li><b>Zoom:</b> Pinch or scroll.</li>
                 </ul>
             </div>
+
         `;
-    }
-    else if (type === 'UPDATES') {
+    } else if (type === 'UPDATES') {
         content = `
             <h3 style="font-family:'Cinzel'; color:#0f6; text-align:center; border-bottom:1px solid #0f6; padding-bottom:5px;">SYSTEM LOG</h3>
             <div style="text-align:left; font-family:'Montserrat', sans-serif; font-size:0.85em; line-height:1.6; color:#ccc; margin-top:10px;">
-                <p><b style="color:#0f6;">[v18.8]</b> <span style="color:#fff;">UI ARCHITECTURE:</span> Separated Geospatial and Global overlays. System data now screen-locked.</p>
-                <p><b style="color:#0f6;">[v18.8]</b> <span style="color:#fff;">CRUD PROTOCOL:</span> Dynamic Agent modification and UUID-locked syncing active.</p>
-                <p><b style="color:#0f6;">[v18.7]</b> <span style="color:#fff;">REPORT ENGINE:</span> Confirm-only tactical modals deployed.</p>
-                <p><b style="color:#0f6;">[v18.6]</b> <span style="color:#fff;">BOOT SEQUENCE:</span> One-time cinematic session persistence active.</p>
-                <hr style="border:0; border-top:1px solid #333; margin:10px 0;">
-                <p style="font-size:0.7em; opacity:0.6; text-align:center;">ORACLE STATUS: OPTIMIZED</p>
+                <p><b style="color:#0f6;">[v22.8]</b> MASTER COMPILATION ACTIVE.</p>
             </div>
         `;
     }
 
-    const dismissBtn = `<div class="close-intel" 
-        onclick="document.getElementById('static-system-overlay').style.display='none'" 
-        style="margin-top:15px; text-align:center; display:block; cursor:pointer; padding:15px; background:rgba(255,255,255,0.1); border-radius:5px; font-weight:bold;">
-        DISMISS
-    </div>`;
+    staticBox.innerHTML = content + `<div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px; text-align:center; display:block; cursor:pointer; padding:15px; background:rgba(255,255,255,0.1);">DISMISS</div>`;
 
-    staticBox.innerHTML = content + dismissBtn;
-
-    // Unified Render
-    staticBox.innerHTML = content + `<div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px; text-align:center; display:block; cursor:pointer;">DISMISS</div>`;
-
-    // --- 🧬 ROBUST QR GENERATOR ENGINE ---
     if (type === 'DATALINK' && b64) {
         setTimeout(() => {
             const qrBox = document.getElementById('qr-static');
-            if (qrBox) {
-                try {
-                    // Level 'L' (Low) is the most compact and allows the most data.
-                    // We use version 0 (auto), but the library needs a little help for base64.
-                    let qr = qrcode(0, 'L'); 
-                    qr.addData(b64);
-                    qr.make();
-                    
-                    // cellSize 3 keeps the image from getting too massive visually
-                    qrBox.innerHTML = qr.createImgTag(3, 4); 
-                } catch (qrErr) {
-                    console.error("QR Sync Limit Reached:", qrErr);
-                    // Fallback: If data is TOO big for a QR, show a warning
-                    qrBox.innerHTML = `
-                        <div style="color:#ff3333; font-size:0.7rem; border:1px dashed #ff3333; padding:10px;">
-                            CRITICAL: DATA DENSITY EXCEEDS QR CAPACITY.<br>
-                            USE "COPY DATA STRING" INSTEAD.
-                        </div>`;
-                }
-                
-                // Style the resulting image
-                const qrImg = qrBox.querySelector('img');
-                if (qrImg) {
-                    qrImg.style.maxWidth = "100%";
-                    qrImg.style.height = "auto";
-                    qrImg.style.display = "block";
-                    qrImg.style.margin = "0 auto";
-                }
+            if (qrBox && typeof qrcode !== 'undefined') {
+                let qr = qrcode(0, 'L'); qr.addData(b64); qr.make();
+                qrBox.innerHTML = qr.createImgTag(3, 4);
             }
         }, 50);
     }
 }
 
-// --- DATA LINK & TRUE MERGE ENGINE ---
 
 async function importTacticalGrid() {
-    const code = await tacticalPrompt(
-        "IMPORT NEW DATA", 
-        "PASTE DATA STRING:",
-        true,
-        "PASTE STRING HERE..." 
-    );
-    
+    const code = await tacticalPrompt("IMPORT NEW DATA", "PASTE DATA STRING:", true, "PASTE STRING HERE...");
     if (!code || code.trim() === "") return;
 
     try {
@@ -626,39 +571,31 @@ async function importTacticalGrid() {
         const masterDataRaw = localStorage.getItem('ORACLE_GRID_DATA');
         let masterData = masterDataRaw ? JSON.parse(masterDataRaw) : [];
         const masterUUIDs = new Set(masterData.map(dot => dot.uuid));
-        
         let integratedPlots = 0;
-        incomingData.forEach(responderDot => {
-            if (!masterUUIDs.has(responderDot.uuid)) {
-                masterData.push(responderDot);
-                integratedPlots++;
-            }
-        });
+        incomingData.forEach(dot => { if (!masterUUIDs.has(dot.uuid)) { masterData.push(dot); integratedPlots++; } });
 
-        if (integratedPlots === 0) {
-            await tacticalPrompt("DATA INTEGRATION REPORT", "NO NEW UNIQUE PLOTS DETECTED. CMSHS GRID IS CURRENT.", false, "", true);
-        } else {
+        if (integratedPlots > 0) {
             localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(masterData));
-            const masterCounts = [0, 0, 0, 0];
-            masterData.forEach(d => {
-                const t = parseInt(d.type);
-                if (!isNaN(t)) masterCounts[t]++;
-            });
+            const masterCounts = [0,0,0,0];
+            masterData.forEach(d => { const t = parseInt(d.type); if(!isNaN(t)) masterCounts[t]++; });
             localStorage.setItem('ORACLE_STATS', JSON.stringify(masterCounts));
-            
-            await tacticalPrompt("CMSHS GRID UPDATED", `${integratedPlots} NEW PLOT(S) INTEGRATED INTO CMSHS GRID.`, false, "", true);
-            
-            sessionStorage.setItem('FAST_BOOT', 'true');
+            await tacticalPrompt("GRID UPDATED", `${integratedPlots} NEW PLOTS INTEGRATED.`, false, "", true);
+            sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
             location.reload(); 
+
+        } else {
+            await tacticalPrompt("DATA INTEGRATION", "NO NEW UNIQUE PLOTS DETECTED.", false, "", true);
         }
-    } catch (e) { 
-        console.error("LEAD UPLINK ERROR:", e);
-        await tacticalPrompt("CRITICAL ERROR", "DATA STRING CORRUPT OR INCOMPATIBLE.", false, "", true); 
-    }
+   } catch (e) { await tacticalPrompt("CRITICAL ERROR", "DATA STRING CORRUPT.", false, "", true); }
+
 }
 
-// --- 🌉 ORACLE BRIDGE: EXPOSING FUNCTIONS TO HTML ---
-window.generateTacticalQR = generateTacticalQR; // FIXED: Changed lowercase g to match function name
+async function clearMap() {
+    if(await tacticalPrompt("WIPE", "ERASE ALL DATA?", false)) { localStorage.clear(); location.reload(); }
+}
+
+// --- 🌉 ORACLE BRIDGE ---
+window.generateTacticalQR = generateTacticalQR;
 window.locateUser = locateUser;
 window.setStatus = setStatus;
 window.showIntelligenceReport = showIntelligenceReport;
@@ -668,6 +605,6 @@ window.clearMap = clearMap;
 window.updateTriage = updateTriage;
 window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
+window.importTacticalGrid = importTacticalGrid;
 
-console.log("ORACLE BRIDGE: ALL SYSTEMS EXPOSED TO GLOBAL DOM");
-
+window.addEventListener('load', initializeSystem);
