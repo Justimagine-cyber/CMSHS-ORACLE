@@ -73,6 +73,15 @@ function initializeSystem() {
 }
 
 // --- 🛰️ GEOSPATIAL ENGINE: LIVE HYBRID + RANDOM ROAMING ---
+
+// GLOBAL CONFIG: CMSHS MANDALUYONG COORDINATES
+const CMSHS_CONFIG = {
+    centerLat: 14.568770,
+    centerLng: 121.035513,
+    latSpan: 0.0011, 
+    lngSpan: 0.0014 
+};
+
 async function locateUser() {
     const btnText = document.getElementById('gps-text');
     
@@ -81,7 +90,6 @@ async function locateUser() {
         return;
     }
 
-    // New Structured Popup with Tactical Wording
     const choice = await tacticalPrompt(
         "GPS SOURCE SELECTION", 
         "SELECT TRACKING PROTOCOL:\n\n[MOCK] - SIMULATED GRID ROAMING\n[LIVE] - REAL-TIME SATELLITE FIX", 
@@ -95,7 +103,6 @@ async function locateUser() {
     if (selection === 'MOCK') {
         startRandomMockRoaming();
     } else if (selection === 'LIVE') {
-        // --- REAL GPS LOGIC ---
         if (!navigator.geolocation) {
             tacticalPrompt("HARDWARE ERROR", "GPS SENSOR NOT DETECTED ON THIS UNIT.", false, "", true);
             return;
@@ -124,19 +131,18 @@ function startRandomMockRoaming() {
     if(btnText) btnText.innerText = "📡 ROAMING";
 
     const mapConfig = { 
-        topLat: 14.58130, 
-        bottomLat: 14.58020, 
-        leftLong: 121.03020, 
-        rightLong: 121.03120 
+        topLat: CMSHS_CONFIG.centerLat + (CMSHS_CONFIG.latSpan / 2), 
+        bottomLat: CMSHS_CONFIG.centerLat - (CMSHS_CONFIG.latSpan / 2), 
+        leftLong: CMSHS_CONFIG.centerLng - (CMSHS_CONFIG.lngSpan / 2), 
+        rightLong: CMSHS_CONFIG.centerLng + (CMSHS_CONFIG.lngSpan / 2) 
     };
 
-    // Starting Point (Center of CMSHS)
-    let currentLat = 14.58075;
-    let currentLng = 121.03065;
+    let currentLat = CMSHS_CONFIG.centerLat;
+    let currentLng = CMSHS_CONFIG.centerLng;
     
     let targetLat, targetLng;
     let movements = 0;
-    const MAX_MOVEMENTS = 5; // Simulation ends after 5 random destinations
+    const MAX_MOVEMENTS = 5;
 
     function pickNewTarget() {
         targetLat = mapConfig.bottomLat + Math.random() * (mapConfig.topLat - mapConfig.bottomLat);
@@ -147,7 +153,6 @@ function startRandomMockRoaming() {
     pickNewTarget();
 
     mockInterval = setInterval(() => {
-        // Precise step movement for "walking" effect
         const step = 0.000015;
         
         if (Math.abs(currentLat - targetLat) > step) {
@@ -159,16 +164,15 @@ function startRandomMockRoaming() {
 
         processCoords(currentLat, currentLng);
 
-        // Check if target reached
         if (Math.abs(currentLat - targetLat) <= step && Math.abs(currentLng - targetLng) <= step) {
             if (movements >= MAX_MOVEMENTS) {
-                tacticalPrompt("SIMULATION TERMINATED", "MOCK ROAMING SEQUENCE COMPLETE. RETURNING TO STANDBY.", false, "", true);
+                tacticalPrompt("SIMULATION TERMINATED", "MOCK ROAMING SEQUENCE COMPLETE.", false, "", true);
                 stopTracking();
             } else {
                 pickNewTarget();
             }
         }
-    }, 200); // Fast update for smooth roaming
+    }, 200);
 }
 
 function stopTracking() {
@@ -184,15 +188,19 @@ function stopTracking() {
 
 function processCoords(lat, lng) {
     const mapConfig = { 
-        topLat: 14.58130, 
-        bottomLat: 14.58020, 
-        leftLong: 121.03020, 
-        rightLong: 121.03120 
+        topLat: CMSHS_CONFIG.centerLat + (CMSHS_CONFIG.latSpan / 2), 
+        bottomLat: CMSHS_CONFIG.centerLat - (CMSHS_CONFIG.latSpan / 2), 
+        leftLong: CMSHS_CONFIG.centerLng - (CMSHS_CONFIG.lngSpan / 2), 
+        rightLong: CMSHS_CONFIG.centerLng + (CMSHS_CONFIG.lngSpan / 2) 
     };
 
-    const pctY = (mapConfig.topLat - lat) / (mapConfig.topLat - mapConfig.bottomLat);
-    const pctX = (lng - mapConfig.leftLong) / (mapConfig.rightLong - mapConfig.leftLong);
+    let pctY = (mapConfig.topLat - lat) / (mapConfig.topLat - mapConfig.bottomLat);
+    let pctX = (lng - mapConfig.leftLong) / (mapConfig.rightLong - mapConfig.leftLong);
     
+    // 🛡️ VOID PROTECTOR: Force dot to stay on map edges
+    pctX = Math.max(0, Math.min(1, pctX));
+    pctY = Math.max(0, Math.min(1, pctY));
+
     const mapImg = document.getElementById('map-img');
     const pixelX = mapImg.offsetWidth * pctX;
     const pixelY = mapImg.offsetHeight * pctY;
@@ -208,15 +216,9 @@ function drawUserMarker(x, y) {
         marker.id = 'user-location-marker';
         marker.className = 'pulse-animation';
         marker.style.cssText = `
-            width:24px; 
-            height:24px; 
-            background:#0096ff; 
-            border:3px solid white; 
-            border-radius:50%; 
-            position:absolute; 
-            z-index:9999; 
-            box-shadow:0 0 20px #0096ff; 
-            pointer-events:none; 
+            width:24px; height:24px; background:#0096ff; border:3px solid white; 
+            border-radius:50%; position:absolute; z-index:9999; 
+            box-shadow:0 0 20px #0096ff; pointer-events:none; 
             transition: left 0.3s linear, top 0.3s linear;
         `;
         document.getElementById('map-img').appendChild(marker);
@@ -227,6 +229,7 @@ function drawUserMarker(x, y) {
 }
 
 function focusOnUser(x, y) {
+    if (!viewport) return; // Safeguard
     const vWidth = viewport.offsetWidth / 2;
     const vHeight = viewport.offsetHeight / 2;
     mapPos.x = vWidth - (x * zoom);
