@@ -194,17 +194,10 @@ function processCoords(lat, lng) {
         rightLong: CMSHS_CONFIG.centerLng + (CMSHS_CONFIG.lngSpan / 2) 
     };
 
-    // 1. Calculate raw percentages
     let pctY = (mapConfig.topLat - lat) / (mapConfig.topLat - mapConfig.bottomLat);
     let pctX = (lng - mapConfig.leftLong) / (mapConfig.rightLong - mapConfig.leftLong);
     
-    // 2. 🛡️ MIRRORING PROTOCOL (THE INVERSION FIX)
-    // You observed the dot moving toward the Supply Room when you went home.
-    // Flipping these ensure your movement matches the map's orientation.
-    pctX = 1 - pctX; 
-    pctY = 1 - pctY;
-
-    // 3. BOUNDARY CLAMPING
+    // 🛡️ VOID PROTECTOR: Force dot to stay on map edges
     pctX = Math.max(0, Math.min(1, pctX));
     pctY = Math.max(0, Math.min(1, pctY));
 
@@ -502,6 +495,90 @@ async function deleteAgent() {
             }, 300);
         }
     }
+}
+
+// --- 🛰️ ORACLE DYNAMIC FIDUCIAL REGISTRY ---
+let ARUCO_REGISTRY = {}; // Starts empty!
+
+function handleManualAruco() {
+    const id = document.getElementById('aruco-id-input').value;
+    const statusText = document.getElementById('scanner-status');
+
+    if (id === "") return;
+
+    // 1. Check if we already know this ID
+    if (ARUCO_REGISTRY[id]) {
+        executeArUcoPin(ARUCO_REGISTRY[id]);
+    } else {
+        // 2. If it's a NEW ID, ask for the name/location
+        const newName = prompt(`NEW FIDUCIAL DETECTED (ID: ${id})\nASSIGN NAME/LOCATION:`, "e.g. JUAN - ROOM 302");
+        
+        if (newName) {
+            // Save it to the registry for the rest of the session
+            ARUCO_REGISTRY[id] = { name: newName.toUpperCase(), status: "RED" }; 
+            executeArUcoPin(ARUCO_REGISTRY[id]);
+        }
+    }
+}
+
+let stream = null;
+
+async function initiateGhostTag() {
+    const modal = document.getElementById('ghost-modal');
+    modal.classList.add('active');
+    
+    // 🎥 Start Camera for Demo Effect
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } });
+        document.getElementById('scanner-video').srcObject = stream;
+    } catch (err) {
+        console.warn("CAMERA BLOCKED: Using manual entry fallback.");
+    }
+}
+
+function handleManualAruco() {
+    const id = document.getElementById('aruco-id-input').value;
+    const statusText = document.getElementById('scanner-status');
+
+    if (ARUCO_DICT[id]) {
+        statusText.innerText = `ID ${id} VERIFIED: TETHERING...`;
+        statusText.style.color = "#00ff66";
+
+        // Auto-pin after detection delay
+        setTimeout(() => {
+            executeArUcoPin(ARUCO_DICT[id]);
+        }, 800);
+    }
+}
+
+function executeArUcoPin(agent) {
+    const userMarker = document.getElementById('user-location-marker');
+    let posX = userMarker ? userMarker.style.left : "50%";
+    let posY = userMarker ? userMarker.style.top : "50%";
+
+    const ghostMarker = document.createElement('div');
+    ghostMarker.className = 'ghost-marker';
+    ghostMarker.style.left = posX;
+    ghostMarker.style.top = posY;
+
+    const label = document.createElement('div');
+    label.className = 'ghost-label';
+    label.innerText = agent.name;
+    
+    ghostMarker.appendChild(label);
+    document.getElementById('map-img').appendChild(ghostMarker);
+
+    // Feedback & Cleanup
+    console.log(`ARUCO SUCCESS: ${agent.name} anchored.`);
+    closeGhostModal();
+}
+
+function closeGhostModal() {
+    if (stream) stream.getTracks().forEach(track => track.stop());
+    document.getElementById('ghost-modal').classList.remove('active');
+    document.getElementById('aruco-id-input').value = "";
+    document.getElementById('scanner-status').innerText = "SCANNING FOR FIDUCIAL ID...";
+    document.getElementById('scanner-status').style.color = "#ffcc00";
 }
 
 // --- 🏛️ SYSTEM OVERLAYS & UTILITIES ---
