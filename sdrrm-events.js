@@ -194,10 +194,17 @@ function processCoords(lat, lng) {
         rightLong: CMSHS_CONFIG.centerLng + (CMSHS_CONFIG.lngSpan / 2) 
     };
 
+    // 1. Calculate raw percentages
     let pctY = (mapConfig.topLat - lat) / (mapConfig.topLat - mapConfig.bottomLat);
     let pctX = (lng - mapConfig.leftLong) / (mapConfig.rightLong - mapConfig.leftLong);
     
-    // 🛡️ VOID PROTECTOR: Force dot to stay on map edges
+    // 2. 🛡️ MIRRORING PROTOCOL (THE INVERSION FIX)
+    // You observed the dot moving toward the Supply Room when you went home.
+    // Flipping these ensure your movement matches the map's orientation.
+    pctX = 1 - pctX; 
+    pctY = 1 - pctY;
+
+    // 3. BOUNDARY CLAMPING
     pctX = Math.max(0, Math.min(1, pctX));
     pctY = Math.max(0, Math.min(1, pctY));
 
