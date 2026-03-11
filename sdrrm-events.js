@@ -512,10 +512,32 @@ async function deleteAgent() {
     }
 }
 
-// --- 🛰️ ORACLE DYNAMIC FIDUCIAL REGISTRY (v4 FINAL) ---
+ // --- 🛰️ ORACLE DYNAMIC FIDUCIAL REGISTRY ---
 let ARUCO_REGISTRY = {}; 
+let stream = null;      
 
-/** * 1. PROCESSOR: The Entry Point from the Manual ID Box */
+/** * 1. TRIGGER: Opens Modal & Activates S10 Sensors */
+async function initiateGhostTag() {
+    const modal = document.getElementById('ghost-modal');
+    modal.classList.add('active');
+    modal.style.display = 'flex';
+    
+    const statusText = document.getElementById('scanner-status');
+    statusText.innerText = "LINKING OPTICAL SENSORS...";
+
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment" } 
+        });
+        document.getElementById('scanner-video').srcObject = stream;
+        statusText.innerText = "SCANNING FOR FIDUCIAL ID...";
+    } catch (err) {
+        statusText.innerText = "VISION OFFLINE - MANUAL OVERRIDE";
+        statusText.style.color = "#ff3333";
+    }
+}
+
+/** * 2. PROCESSOR: Handles input and determines Registry status */
 function handleManualAruco() {
     const idInput = document.getElementById('aruco-id-input');
     const id = idInput.value;
@@ -523,96 +545,108 @@ function handleManualAruco() {
 
     if (id === "" || id === null) return;
 
-    // Check if this ID is already in our local mesh database
     if (ARUCO_REGISTRY[id]) {
-        const agent = ARUCO_REGISTRY[id];
-        statusText.innerText = `RE-SCAN: ${agent.name} (${agent.status})`;
-        statusText.style.color = getTriageHex(agent.status);
+        statusText.innerText = `VERIFIED: ${ARUCO_REGISTRY[id].name}`;
+        statusText.style.color = "#00ff66";
         
         setTimeout(() => { 
-            executeArUcoPin(agent); 
+            executeArUcoPin(ARUCO_REGISTRY[id]); 
             idInput.value = ""; 
-        }, 600);
+        }, 800);
     } 
     else {
-        // Not in registry? Trigger the SDRRM Discovery Protocol
         registerNewFiducial(id);
     }
 }
 
-/** * 2. DISCOVERY: Capturing Identity & Triage Level */
+/** * 3. REGISTRY: The Multi-Triage Discovery Logic */
 async function registerNewFiducial(id) {
-    // Stage A: Identity Capture
-    const name = prompt(`NEW FIDUCIAL (ID: ${id})\nASSIGN NAME/LOCATION:`, "e.g. JUAN - ROOM 302");
-    if (!name) return resetScanner();
-
-    // Stage B: Triage Classification
-    const choice = prompt(
-        `TRIAGE CLASSIFICATION for ${name.toUpperCase()}:\n\n` +
-        `[G] GREEN  - MINOR\n` +
-        `[Y] YELLOW - DELAYED\n` +
-        `[R] RED    - IMMEDIATE\n` +
-        `[B] BLACK  - DECEASED`, "R"
-    );
+    const name = prompt(`NEW FIDUCIAL (ID: ${id})\nASSIGN IDENTITY:`, "e.g. JUAN - ROOM 302");
     
-    const statusMap = { 'G': 'GREEN', 'Y': 'YELLOW', 'R': 'RED', 'B': 'BLACK' };
-    const triage = statusMap[(choice || 'R').toUpperCase()] || 'RED';
+    if (name && name.trim() !== "") {
+        const choice = prompt(
+            `SELECT TRIAGE STATUS for ${name.toUpperCase()}:\n\n` +
+            `[G] GREEN - Minor\n` +
+            `[Y] YELLOW - Delayed\n` +
+            `[R] RED - Immediate\n` +
+            `[B] BLACK - Deceased`, 
+            "R"
+        );
 
-    // Stage C: Mesh Storage
-    ARUCO_REGISTRY[id] = { 
-        name: name.toUpperCase(), 
-        status: triage 
-    }; 
+        const statusMap = { 'G': 'GREEN', 'Y': 'YELLOW', 'R': 'RED', 'B': 'BLACK' };
+        const finalStatus = (choice) ? statusMap[choice.toUpperCase()] || 'RED' : 'RED';
 
-    executeArUcoPin(ARUCO_REGISTRY[id]);
-    resetScanner();
+        // Store in the decentralized session registry
+        ARUCO_REGISTRY[id] = { 
+            name: name.toUpperCase(), 
+            status: finalStatus 
+        }; 
+        
+        document.getElementById('scanner-status').innerText = `${finalStatus} RECORDED`;
+        document.getElementById('scanner-status').style.color = "#00ff66";
+
+        setTimeout(() => { 
+            executeArUcoPin(ARUCO_REGISTRY[id]); 
+            document.getElementById('aruco-id-input').value = "";
+        }, 800);
+    }
 }
 
-/** * 3. ANCHOR: Rendering the Colored Beacon on the Map */
+/** * 4. ANCHOR: The Geospatial Drop with Dynamic Coloring */
 function executeArUcoPin(agent) {
     const userMarker = document.getElementById('user-location-marker');
     const mapImg = document.getElementById('map-img');
 
-    // Tether to Blue Dot location (or viewport center if GPS is off)
+    // Tether to Blue Dot position, or center if GPS is off
     let posX = userMarker ? userMarker.style.left : `${(window.innerWidth / 2) - mapPos.x}px`;
     let posY = userMarker ? userMarker.style.top : `${(window.innerHeight / 2) - mapPos.y}px`;
 
-    const pin = document.createElement('div');
-    const color = getTriageHex(agent.status);
+    const ghostMarker = document.createElement('div');
+    // Add both common and status-specific classes for CSS styling
+    ghostMarker.className = `ghost-marker pulse-animation ${agent.status.toLowerCase()}`;
     
-    // Applying CSS Classes for Triage Styling
-    pin.className = `ghost-marker pulse-animation ${agent.status.toLowerCase()}`;
-    pin.style.cssText = `
+    // Inline Tactical Styling
+    const colors = { 'RED': '#ff3333', 'YELLOW': '#ffff00', 'GREEN': '#00ff66', 'BLACK': '#444444' };
+    const triageColor = colors[agent.status] || '#ff3333';
+    
+    ghostMarker.style.cssText = `
         left: ${posX}; top: ${posY}; position: absolute;
-        width: 18px; height: 18px; border-radius: 50%;
-        border: 2px solid white; background: ${color};
-        box-shadow: 0 0 15px ${color}; z-index: 1000;
+        width: 20px; height: 20px; border-radius: 50%;
+        background: ${triageColor}; border: 2px solid white;
+        box-shadow: 0 0 15px ${triageColor}; z-index: 500;
+        transition: transform 0.3s ease;
     `;
 
     const label = document.createElement('div');
     label.innerText = agent.name;
     label.style.cssText = `
-        position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
-        background: rgba(0,0,0,0.85); color: ${color}; padding: 2px 8px;
-        border-radius: 4px; font-size: 10px; white-space: nowrap;
-        border: 1px solid ${color}; font-family: 'Montserrat', sans-serif;
+        position: absolute; top: -25px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.85); color: ${triageColor}; padding: 2px 10px;
+        border-radius: 4px; font-size: 11px; font-weight: bold; white-space: nowrap;
+        border: 1px solid ${triageColor}; font-family: 'Montserrat', sans-serif;
     `;
     
-    pin.appendChild(label);
-    mapImg.appendChild(pin);
+    ghostMarker.appendChild(label);
+    mapImg.appendChild(ghostMarker);
+
+    closeGhostModal();
+    // Use the S10's voice to confirm triage level
+    const msg = new SpeechSynthesisUtterance(`${agent.status} agent anchored.`);
+    window.speechSynthesis.speak(msg);
 }
 
-/** * 4. UTILITIES: Helper Functions */
-function getTriageHex(status) {
-    const colors = { 'RED': '#ff3333', 'YELLOW': '#ffff00', 'GREEN': '#00ff66', 'BLACK': '#444444' };
-    return colors[status] || '#ff3333';
-}
-
-function resetScanner() {
+/** * 5. CLEANUP: Camera and Modal Reset */
+function closeGhostModal() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    document.getElementById('ghost-modal').classList.remove('active');
+    document.getElementById('ghost-modal').style.display = 'none';
     document.getElementById('aruco-id-input').value = "";
     document.getElementById('scanner-status').innerText = "SCANNING FOR FIDUCIAL ID...";
     document.getElementById('scanner-status').style.color = "#ffcc00";
-}
+} 
 
 // --- 🏛️ SYSTEM OVERLAYS & UTILITIES ---
 function updateHUD() { ['g-c', 'y-c', 'r-c', 'b-c'].forEach((id, i) => { if(document.getElementById(id)) document.getElementById(id).innerText = counts[i]; }); }
@@ -819,6 +853,7 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
 
 
 
