@@ -72,12 +72,13 @@ function initializeSystem() {
     }, 3500);
 }
 
-// --- 🛰️ GEOSPATIAL ENGINE: LIVE HYBRID + RANDOM ROAMING ---
 
-// GLOBAL CONFIG: CMSHS MANDALUYONG COORDINATES
+// --- 🛰️ ORACLE GEOSPATIAL ENGINE: CALIBRATED HYBRID ---
+
+// UPDATED CMSHS ANCHOR
 const CMSHS_CONFIG = {
-    centerLat: 14.568770,
-    centerLng: 121.035513,
+    centerLat: 14.568851,
+    centerLng: 121.035180,
     latSpan: 0.0011, 
     lngSpan: 0.0014 
 };
@@ -194,10 +195,15 @@ function processCoords(lat, lng) {
         rightLong: CMSHS_CONFIG.centerLng + (CMSHS_CONFIG.lngSpan / 2) 
     };
 
+    // 1. Calculate Raw Percentage
     let pctY = (mapConfig.topLat - lat) / (mapConfig.topLat - mapConfig.bottomLat);
     let pctX = (lng - mapConfig.leftLong) / (mapConfig.rightLong - mapConfig.leftLong);
     
-    // 🛡️ VOID PROTECTOR: Force dot to stay on map edges
+    // 2. 🛡️ HORIZONTAL INVERSION FIX (SDRRM MIRRORING)
+    // Flips the Longitude so West (SHS Bldg) isn't East (Gym)
+    pctX = 1 - pctX; 
+
+    // 3. Keep within map boundaries
     pctX = Math.max(0, Math.min(1, pctX));
     pctY = Math.max(0, Math.min(1, pctY));
 
@@ -229,11 +235,20 @@ function drawUserMarker(x, y) {
 }
 
 function focusOnUser(x, y) {
-    if (!viewport) return; // Safeguard
+    const viewport = document.getElementById('viewport'); // Ensure this ID exists
+    if (!viewport) return;
+
+    // Center the viewport on the dot
     const vWidth = viewport.offsetWidth / 2;
     const vHeight = viewport.offsetHeight / 2;
+
+    // Apply Zoom to the position calculation
     mapPos.x = vWidth - (x * zoom);
-    mapPos.y = vHeight - (y * zoom);
+    
+    // 🛡️ HUD OFFSET: Shift the Y-focus up slightly 
+    // This keeps the blue dot above your footer HUD
+    mapPos.y = (vHeight - 100) - (y * zoom); 
+
     updateMapTransform();
 }
 
