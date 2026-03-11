@@ -639,6 +639,27 @@ color: #000 !important;
     text-shadow: 0 0 5px #00ff66;
     }
 
+#marker-boundary {
+    display: none;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 140px; height: 140px;
+    border: 2px solid #00ff66; /* The Green Square */
+    box-shadow: 0 0 15px rgba(0, 255, 102, 0.5);
+    pointer-events: none;
+    z-index: 10;
+}
+
+#marker-boundary::before {
+    content: "TRACKING ID...";
+    position: absolute;
+    top: -20px; left: 0;
+    color: #00ff66;
+    font-size: 10px;
+    font-family: monospace;
+}
+
 /* ⌨️ THE INPUT BRIDGE */
 .input-section {
     width: 100%;
@@ -710,3 +731,4 @@ color: #000 !important;
 .corner-tr { top: 0; right: 0; border-width: 2px 2px 0 0; }
 .corner-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
 .corner-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
+
