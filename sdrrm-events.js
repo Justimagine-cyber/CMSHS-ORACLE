@@ -549,26 +549,45 @@ function handleManualAruco() {
     const id = idInput.value;
     const statusText = document.getElementById('scanner-status');
 
+    // 1. Exit if empty
     if (id === "" || id === null) return;
+    
+    console.log("ORACLE: Processing ID " + id); // Check your console for this!
 
-    // UI Feedback: Detecting...
-    statusText.innerText = `ID ${id} DETECTED...`;
-    statusText.style.color = "#ffcc00";
-
-    // CHECK IF KNOWN: If ID exists in our local mesh registry
+    // 2. CHECK: Do we know this person/location yet?
     if (ARUCO_REGISTRY[id]) {
+        // YES: We know them. Proceed to pin.
         statusText.innerText = `VERIFIED: ${ARUCO_REGISTRY[id].name}`;
         statusText.style.color = "#00ff66";
         
-        // Auto-anchor after verification delay for visual impact
         setTimeout(() => { 
             executeArUcoPin(ARUCO_REGISTRY[id]); 
-            idInput.value = ""; // Clear for next use
-        }, 1000);
+            idInput.value = ""; 
+        }, 600);
     } 
     else {
-        // NEW DISCOVERY: If ID is unknown, trigger Dynamic Capture
-        registerNewFiducial(id);
+        // NO: This is a new discovery. Open the "Naming" prompt.
+        statusText.innerText = "NEW ID DETECTED - ASSIGNING...";
+        statusText.style.color = "#ffcc00";
+
+        // This is where the "Dynamic" part happens!
+        const newName = prompt(`NEW FIDUCIAL (ID: ${id})\nWho or what is at this location?`, "e.g., ROOM 402 / PATIENT X");
+
+        if (newName && newName.trim() !== "") {
+            // Add to registry dynamically
+            ARUCO_REGISTRY[id] = { 
+                name: newName.toUpperCase(), 
+                status: "RED" 
+            };
+            
+            statusText.innerText = "REGISTRY UPDATED";
+            executeArUcoPin(ARUCO_REGISTRY[id]);
+            idInput.value = "";
+        } else {
+            // If they cancel the prompt, reset the input
+            idInput.value = "";
+            statusText.innerText = "SCANNING FOR FIDUCIAL ID...";
+        }
     }
 }
 
@@ -867,3 +886,4 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
