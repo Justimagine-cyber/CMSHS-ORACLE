@@ -539,46 +539,64 @@ async function initiateGhostTag() {
     }
 }
 
-// 2. FIXED handleManualAruco (Restores the ID Tag and Vector Visuals)
 function handleManualAruco() {
     const idInput = document.getElementById('aruco-id-input');
     const id = idInput.value;
     const vectorOverlay = document.getElementById('vector-overlay');
+    const boundary = document.getElementById('marker-boundary');
     const idTag = document.getElementById('floating-id-tag');
-    const statusText = document.getElementById('scanner-status');
+    const statusText = document.getElementById('scanner-status'); // Added definition
 
+    // 1. CLEARANCE
     if (!id || id === "") {
         if (vectorOverlay) vectorOverlay.style.display = "none";
+        if (boundary) boundary.style.display = "none";
+        statusText.innerText = "SCANNING...";
         return;
     }
 
-    // ACTIVATE VISUALS
-    if (vectorOverlay) {
+    // 2. POSE ESTIMATION LOCK-ON (The Visual Flex)
+    if (boundary && vectorOverlay) {
+        boundary.style.display = "block";
         vectorOverlay.style.display = "block";
         idTag.innerText = `ID: ${id}`;
-        // Tactical Jitter
-        const jitter = (Math.random() - 0.5) * 2; 
-        vectorOverlay.style.transform = `translate(-50%, -50%) rotate(${jitter}deg)`;
+        
+        // Dynamic "Tracking" Jitter
+        const driftX = (Math.random() - 0.5) * 6;
+        const driftY = (Math.random() - 0.5) * 6;
+        const rot = (Math.random() - 0.5) * 3;
+        
+        const trackingTransform = `translate(calc(-50% + ${driftX}px), calc(-50% + ${driftY}px)) rotate(${rot}deg)`;
+        boundary.style.transform = trackingTransform;
+        vectorOverlay.style.transform = trackingTransform;
     }
 
+    // 3. REGISTRY CHECK & SYNC
     if (ARUCO_REGISTRY[id]) {
+        // Cleaned up redundant status updates
         statusText.innerText = `VERIFIED: ${ARUCO_REGISTRY[id].name}`;
         statusText.style.color = "#00ff66";
         
         setTimeout(() => { 
             if(idInput.value === id) {
                 executeArUcoPin(ARUCO_REGISTRY[id]); 
+                
+                // Cleanup UI after pin drop
                 idInput.value = ""; 
                 if (vectorOverlay) vectorOverlay.style.display = "none";
+                if (boundary) boundary.style.display = "none";
             }
-        }, 1000);
+        }, 1200); // 1.2s delay makes the "lock-on" feel authentic
     } 
     else {
+        statusText.innerText = "NEW ASSET DETECTED";
+        statusText.style.color = "#ffcc00";
+        
         setTimeout(() => {
             if(idInput.value === id) {
                 registerNewFiducial(id);
             }
-        }, 500);
+        }, 600);
     }
 }
 
@@ -864,3 +882,4 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
