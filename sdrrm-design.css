@@ -601,14 +601,36 @@ color: #000 !important;
     border: 1px solid rgba(255, 204, 0, 0.3);
 }
 
-/* ⚡ PULSING SCAN LINE */
+/* 🛰️ AXIS OVERLAY (The "3D Look") */
+.scan-overlay::before {
+    content: "";
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 2px; height: 100px; /* Blue Axis (Z) */
+    background: #0000ff;
+    transform-origin: bottom;
+    transform: rotate(15deg);
+    box-shadow: 0 0 10px #0000ff;
+}
+
 .scan-overlay::after {
     content: "";
     position: absolute;
-    width: 100%; height: 2px;
-    background: #ffcc00;
-    box-shadow: 0 0 15px #ffcc00;
-    animation: scanMove 2.5s ease-in-out infinite;
+    top: 50%; left: 50%;
+    width: 100px; height: 2px; /* Red Axis (X) */
+    background: #ff0000;
+    box-shadow: 0 0 10px #ff0000;
+}
+
+/* Green Axis (Y) - Adding as a separate div in HTML */
+.axis-y {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 2px; height: 60px;
+    background: #00ff00;
+    transform-origin: top;
+    transform: rotate(-45deg);
+    box-shadow: 0 0 10px #00ff00;
 }
 
 /* ⌨️ THE INPUT BRIDGE */
