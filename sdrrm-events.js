@@ -539,8 +539,7 @@ async function initiateGhostTag() {
     }
 }
 
-/** * 2. PROCESSOR: The "Bridge" logic that watches the input box 
- */
+// 2. FIXED handleManualAruco (Restores the ID Tag and Vector Visuals)
 function handleManualAruco() {
     const idInput = document.getElementById('aruco-id-input');
     const id = idInput.value;
@@ -548,37 +547,33 @@ function handleManualAruco() {
     const idTag = document.getElementById('floating-id-tag');
     const statusText = document.getElementById('scanner-status');
 
-    // 1. ESCAPE CLAUSE: If input is empty, hide the vectors and stop
     if (!id || id === "") {
-        vectorOverlay.style.display = "none";
+        if (vectorOverlay) vectorOverlay.style.display = "none";
         return;
     }
 
-    // 2. THE VISUAL FLEX: Show the 3D Vector Illusion immediately
-    vectorOverlay.style.display = "block";
-    idTag.innerText = `ID: ${id}`;
-    
-    // Tactical "Jitter" to simulate active sensor tracking
-    const jitter = (Math.random() - 0.5) * 2; 
-    vectorOverlay.style.transform = `translate(-50%, -50%) rotate(${jitter}deg)`;
+    // ACTIVATE VISUALS
+    if (vectorOverlay) {
+        vectorOverlay.style.display = "block";
+        idTag.innerText = `ID: ${id}`;
+        // Tactical Jitter
+        const jitter = (Math.random() - 0.5) * 2; 
+        vectorOverlay.style.transform = `translate(-50%, -50%) rotate(${jitter}deg)`;
+    }
 
-    // 3. THE REGISTRY CHECK: Does this ID exist in the Mesh?
     if (ARUCO_REGISTRY[id]) {
         statusText.innerText = `VERIFIED: ${ARUCO_REGISTRY[id].name}`;
         statusText.style.color = "#00ff66";
         
-        // Auto-pin after 1 second of "stable" tracking
         setTimeout(() => { 
-            if(idInput.value === id) { // Double check user hasn't typed more
+            if(idInput.value === id) {
                 executeArUcoPin(ARUCO_REGISTRY[id]); 
                 idInput.value = ""; 
-                vectorOverlay.style.display = "none";
+                if (vectorOverlay) vectorOverlay.style.display = "none";
             }
         }, 1000);
     } 
     else {
-        // Unknown ID - Prompt for new SDRRM registration
-        // We wrap this in a timeout so the user can see the Vector ID first
         setTimeout(() => {
             if(idInput.value === id) {
                 registerNewFiducial(id);
@@ -587,33 +582,23 @@ function handleManualAruco() {
     }
 }
 
-/** * 3. REGISTRY: Dynamic Capture & Triage Assignment 
- */
+// 3. UPDATED registerNewFiducial (Fixes missing ID Tag cleanup)
 async function registerNewFiducial(id) {
-    const name = prompt(`NEW FIDUCIAL (ID: ${id})\nASSIGN IDENTITY:`, "e.g. ROOM 302 / JUAN");
-    
+    const name = prompt(`NEW FIDUCIAL (ID: ${id})\nASSIGN IDENTITY:`, "e.g. ROOM 302");
     if (name && name.trim() !== "") {
-        const choice = prompt(
-            `SELECT TRIAGE STATUS for ${name.toUpperCase()}:\n\n` +
-            `[G] GREEN - Minor\n` +
-            `[Y] YELLOW - Delayed\n` +
-            `[R] RED - Immediate\n` +
-            `[B] BLACK - Deceased`, 
-            "R"
-        );
-
+        const choice = prompt(`TRIAGE: [G]REEN, [Y]ELLOW, [R]ED, [B]LACK`, "R");
         const statusMap = { 'G': 'GREEN', 'Y': 'YELLOW', 'R': 'RED', 'B': 'BLACK' };
-        const finalStatus = (choice) ? statusMap[choice.toUpperCase()] || 'RED' : 'RED';
+        const finalStatus = statusMap[choice.toUpperCase()] || 'RED';
 
         ARUCO_REGISTRY[id] = { name: name.toUpperCase(), status: finalStatus }; 
         
-        document.getElementById('scanner-status').innerText = `${finalStatus} RECORDED`;
-        document.getElementById('scanner-status').style.color = "#00ff66";
-
         setTimeout(() => { 
             executeArUcoPin(ARUCO_REGISTRY[id]); 
             document.getElementById('aruco-id-input').value = "";
+            document.getElementById('vector-overlay').style.display = "none";
         }, 800);
+    } else {
+        document.getElementById('vector-overlay').style.display = "none";
     }
 }
 
@@ -879,5 +864,3 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
-
-
