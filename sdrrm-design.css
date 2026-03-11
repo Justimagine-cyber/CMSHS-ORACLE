@@ -601,37 +601,43 @@ color: #000 !important;
     border: 1px solid rgba(255, 204, 0, 0.3);
 }
 
-/* 🛰️ AXIS OVERLAY (The "3D Look") */
-.scan-overlay::before {
-    content: "";
+#vector-overlay {
     position: absolute;
     top: 50%; left: 50%;
-    width: 2px; height: 100px; /* Blue Axis (Z) */
-    background: #0000ff;
-    transform-origin: bottom;
-    transform: rotate(15deg);
-    box-shadow: 0 0 10px #0000ff;
+    transform: translate(-50%, -50%);
+    width: 100px; height: 100px;
+    pointer-events: none;
 }
 
-.scan-overlay::after {
-    content: "";
+/* The XYZ Vectors */
+.axis-x, .axis-y, .axis-z {
     position: absolute;
-    top: 50%; left: 50%;
-    width: 100px; height: 2px; /* Red Axis (X) */
-    background: #ff0000;
-    box-shadow: 0 0 10px #ff0000;
-}
-
-/* Green Axis (Y) - Adding as a separate div in HTML */
-.axis-y {
-    position: absolute;
-    top: 50%; left: 50%;
+    bottom: 50%; left: 50%;
     width: 2px; height: 60px;
-    background: #00ff00;
-    transform-origin: top;
-    transform: rotate(-45deg);
-    box-shadow: 0 0 10px #00ff00;
+    transform-origin: bottom;
 }
+
+.axis-y { background: #00ff66; transform: rotate(0deg); } /* Green - Up */
+.axis-x { background: #ff3333; transform: rotate(90deg); } /* Red - Right */
+.axis-z { 
+    background: #3333ff; 
+    height: 40px; 
+    transform: rotate(210deg) skewX(20deg); /* Blue - Depth */
+}
+
+#floating-id-tag {
+    position: absolute;
+    top: -40px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 255, 102, 0.2);
+    color: #00ff66;
+    border: 1px solid #00ff66;
+    padding: 2px 8px;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 0 0 5px #00ff66;
+    }
 
 /* ⌨️ THE INPUT BRIDGE */
 .input-section {
