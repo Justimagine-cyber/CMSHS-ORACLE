@@ -544,23 +544,46 @@ async function initiateGhostTag() {
 function handleManualAruco() {
     const idInput = document.getElementById('aruco-id-input');
     const id = idInput.value;
+    const vectorOverlay = document.getElementById('vector-overlay');
+    const idTag = document.getElementById('floating-id-tag');
     const statusText = document.getElementById('scanner-status');
 
-    if (id === "" || id === null) return;
+    // 1. ESCAPE CLAUSE: If input is empty, hide the vectors and stop
+    if (!id || id === "") {
+        vectorOverlay.style.display = "none";
+        return;
+    }
 
-    // Check if ID is already known to the mesh
+    // 2. THE VISUAL FLEX: Show the 3D Vector Illusion immediately
+    vectorOverlay.style.display = "block";
+    idTag.innerText = `ID: ${id}`;
+    
+    // Tactical "Jitter" to simulate active sensor tracking
+    const jitter = (Math.random() - 0.5) * 2; 
+    vectorOverlay.style.transform = `translate(-50%, -50%) rotate(${jitter}deg)`;
+
+    // 3. THE REGISTRY CHECK: Does this ID exist in the Mesh?
     if (ARUCO_REGISTRY[id]) {
         statusText.innerText = `VERIFIED: ${ARUCO_REGISTRY[id].name}`;
         statusText.style.color = "#00ff66";
         
+        // Auto-pin after 1 second of "stable" tracking
         setTimeout(() => { 
-            executeArUcoPin(ARUCO_REGISTRY[id]); 
-            idInput.value = ""; 
-        }, 800);
+            if(idInput.value === id) { // Double check user hasn't typed more
+                executeArUcoPin(ARUCO_REGISTRY[id]); 
+                idInput.value = ""; 
+                vectorOverlay.style.display = "none";
+            }
+        }, 1000);
     } 
     else {
-        // Discovery logic for unknown markers
-        registerNewFiducial(id);
+        // Unknown ID - Prompt for new SDRRM registration
+        // We wrap this in a timeout so the user can see the Vector ID first
+        setTimeout(() => {
+            if(idInput.value === id) {
+                registerNewFiducial(id);
+            }
+        }, 500);
     }
 }
 
@@ -856,8 +879,5 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
-
-
-
 
 
