@@ -487,17 +487,16 @@ color: #000 !important;
     background: rgba(0, 150, 255, 0.3);
 }
 
-/* The Blue Pulsing User Marker */
+
+#map-container {
+    padding-bottom: 300px; /* This "pushes" the map up so the dot stays above the HUD */
+    height: 100vh;
+    overflow: scroll;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling */
+}
+
 #user-location-marker {
-    width: 24px;
-    height: 24px;
-    background: #0096ff;
-    border: 3px solid #fff;
-    border-radius: 50%;
-    position: absolute;
-    z-index: 9999;
-    pointer-events: none;
-    box-shadow: 0 0 20px #0096ff;
+    transition: all 0.5s ease-out; /* Makes the dot "glide" like Google Maps */
 }
 
 .viewfinder-container {
@@ -558,4 +557,3 @@ color: #000 !important;
     color: #ffcc00; text-align: center; padding: 10px;
     font-family: 'Montserrat'; font-weight: 900;
 }
-
