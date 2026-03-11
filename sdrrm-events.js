@@ -545,73 +545,26 @@ async function initiateGhostTag() {
 /** * 2. PROCESSOR: Handles ID input (from Camera or Keyboard)
  */
 function handleManualAruco() {
-    const idInput = document.getElementById('aruco-id-input');
-    const id = idInput.value;
+    const inputField = document.getElementById('aruco-id-input');
+    const id = inputField.value;
     const statusText = document.getElementById('scanner-status');
 
-    // 1. Exit if empty
-    if (id === "" || id === null) return;
-    
-    console.log("ORACLE: Processing ID " + id); // Check your console for this!
+    if (id === "") return;
 
-    // 2. CHECK: Do we know this person/location yet?
+    // 🚨 DEBUG ALERT: If this doesn't pop up, the function isn't being called!
+    alert("ORACLE: Input Detected - ID " + id); 
+
     if (ARUCO_REGISTRY[id]) {
-        // YES: We know them. Proceed to pin.
-        statusText.innerText = `VERIFIED: ${ARUCO_REGISTRY[id].name}`;
+        statusText.innerText = "VERIFIED: " + ARUCO_REGISTRY[id].name;
         statusText.style.color = "#00ff66";
-        
-        setTimeout(() => { 
-            executeArUcoPin(ARUCO_REGISTRY[id]); 
-            idInput.value = ""; 
-        }, 600);
-    } 
-    else {
-        // NO: This is a new discovery. Open the "Naming" prompt.
-        statusText.innerText = "NEW ID DETECTED - ASSIGNING...";
-        statusText.style.color = "#ffcc00";
-
-        // This is where the "Dynamic" part happens!
-        const newName = prompt(`NEW FIDUCIAL (ID: ${id})\nWho or what is at this location?`, "e.g., ROOM 402 / PATIENT X");
-
-        if (newName && newName.trim() !== "") {
-            // Add to registry dynamically
-            ARUCO_REGISTRY[id] = { 
-                name: newName.toUpperCase(), 
-                status: "RED" 
-            };
-            
-            statusText.innerText = "REGISTRY UPDATED";
+        setTimeout(() => { executeArUcoPin(ARUCO_REGISTRY[id]); }, 600);
+    } else {
+        // This is the Dynamic Registration
+        const name = prompt("NEW ID " + id + " DETECTED.\nEnter Name/Location:");
+        if (name) {
+            ARUCO_REGISTRY[id] = { name: name.toUpperCase(), status: "RED" };
             executeArUcoPin(ARUCO_REGISTRY[id]);
-            idInput.value = "";
-        } else {
-            // If they cancel the prompt, reset the input
-            idInput.value = "";
-            statusText.innerText = "SCANNING FOR FIDUCIAL ID...";
         }
-    }
-}
-
-/** * 3. REGISTRY: Dynamic Victim/Location Assignment
- */
-async function registerNewFiducial(id) {
-    // We use a simple prompt for 1:1 speed, or use tacticalPrompt if integrated
-    const newName = prompt(`NEW FIDUCIAL DETECTED (ID: ${id})\n\nASSIGN IDENTITY/LOCATION:`, "e.g. JUAN - ROOM 302");
-    
-    if (newName && newName.trim() !== "") {
-        // Defaulting new discoveries to 'RED' (Immediate) for safety
-        ARUCO_REGISTRY[id] = { 
-            name: newName.toUpperCase(), 
-            status: "RED" 
-        }; 
-        
-        const statusText = document.getElementById('scanner-status');
-        statusText.innerText = "REGISTRY UPDATED";
-        statusText.style.color = "#00ff66";
-
-        setTimeout(() => { 
-            executeArUcoPin(ARUCO_REGISTRY[id]); 
-            document.getElementById('aruco-id-input').value = "";
-        }, 800);
     }
 }
 
@@ -886,4 +839,5 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
 
