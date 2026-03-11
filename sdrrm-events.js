@@ -512,126 +512,106 @@ async function deleteAgent() {
     }
 }
 
-// --- 🛰️ ORACLE DYNAMIC FIDUCIAL REGISTRY ---
-let ARUCO_REGISTRY = {}; // Central Database for the session
-let stream = null;       // Camera stream holder
+// --- 🛰️ ORACLE DYNAMIC FIDUCIAL REGISTRY (v4 FINAL) ---
+let ARUCO_REGISTRY = {}; 
 
-/** * 1. TRIGGER: Opens the Modal & Starts S10 Camera 
- */
-async function initiateGhostTag() {
-    const modal = document.getElementById('ghost-modal');
-    if (!modal) return console.error("ORACLE: Modal not found.");
-    
-    modal.classList.add('active');
-    modal.style.display = 'flex'; // Ensure visibility
-    
-    const statusText = document.getElementById('scanner-status');
-    statusText.innerText = "LINKING SENSORS...";
-
-    try {
-        // Accessing back camera for tactical scanning
-        stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" } 
-        });
-        document.getElementById('scanner-video').srcObject = stream;
-        statusText.innerText = "SCANNING FOR FIDUCIAL ID...";
-    } catch (err) {
-        console.warn("CAMERA BLOCKED: Using manual entry fallback.");
-        statusText.innerText = "CAMERA OFFLINE - MANUAL MODE ONLY";
-        statusText.style.color = "#ff3333";
-    }
-}
-
-/** * 2. PROCESSOR: Handles ID input (from Camera or Keyboard)
- */
+/** * 1. PROCESSOR: The Entry Point from the Manual ID Box */
 function handleManualAruco() {
-    const inputField = document.getElementById('aruco-id-input');
-    const id = inputField.value;
+    const idInput = document.getElementById('aruco-id-input');
+    const id = idInput.value;
     const statusText = document.getElementById('scanner-status');
 
-    if (id === "") return;
+    if (id === "" || id === null) return;
 
-    // 🚨 DEBUG ALERT: If this doesn't pop up, the function isn't being called!
-    alert("ORACLE: Input Detected - ID " + id); 
-
+    // Check if this ID is already in our local mesh database
     if (ARUCO_REGISTRY[id]) {
-        statusText.innerText = "VERIFIED: " + ARUCO_REGISTRY[id].name;
-        statusText.style.color = "#00ff66";
-        setTimeout(() => { executeArUcoPin(ARUCO_REGISTRY[id]); }, 600);
-    } else {
-        // This is the Dynamic Registration
-        const name = prompt("NEW ID " + id + " DETECTED.\nEnter Name/Location:");
-        if (name) {
-            ARUCO_REGISTRY[id] = { name: name.toUpperCase(), status: "RED" };
-            executeArUcoPin(ARUCO_REGISTRY[id]);
-        }
+        const agent = ARUCO_REGISTRY[id];
+        statusText.innerText = `RE-SCAN: ${agent.name} (${agent.status})`;
+        statusText.style.color = getTriageHex(agent.status);
+        
+        setTimeout(() => { 
+            executeArUcoPin(agent); 
+            idInput.value = ""; 
+        }, 600);
+    } 
+    else {
+        // Not in registry? Trigger the SDRRM Discovery Protocol
+        registerNewFiducial(id);
     }
 }
 
-/** * 4. ANCHOR: Drops the Pin on the Geospatial Map
- */
+/** * 2. DISCOVERY: Capturing Identity & Triage Level */
+async function registerNewFiducial(id) {
+    // Stage A: Identity Capture
+    const name = prompt(`NEW FIDUCIAL (ID: ${id})\nASSIGN NAME/LOCATION:`, "e.g. JUAN - ROOM 302");
+    if (!name) return resetScanner();
+
+    // Stage B: Triage Classification
+    const choice = prompt(
+        `TRIAGE CLASSIFICATION for ${name.toUpperCase()}:\n\n` +
+        `[G] GREEN  - MINOR\n` +
+        `[Y] YELLOW - DELAYED\n` +
+        `[R] RED    - IMMEDIATE\n` +
+        `[B] BLACK  - DECEASED`, "R"
+    );
+    
+    const statusMap = { 'G': 'GREEN', 'Y': 'YELLOW', 'R': 'RED', 'B': 'BLACK' };
+    const triage = statusMap[(choice || 'R').toUpperCase()] || 'RED';
+
+    // Stage C: Mesh Storage
+    ARUCO_REGISTRY[id] = { 
+        name: name.toUpperCase(), 
+        status: triage 
+    }; 
+
+    executeArUcoPin(ARUCO_REGISTRY[id]);
+    resetScanner();
+}
+
+/** * 3. ANCHOR: Rendering the Colored Beacon on the Map */
 function executeArUcoPin(agent) {
     const userMarker = document.getElementById('user-location-marker');
     const mapImg = document.getElementById('map-img');
 
-    // Get current Blue Dot location for precise tethering
-    // If Blue Dot isn't active, we center it in the current viewport
+    // Tether to Blue Dot location (or viewport center if GPS is off)
     let posX = userMarker ? userMarker.style.left : `${(window.innerWidth / 2) - mapPos.x}px`;
     let posY = userMarker ? userMarker.style.top : `${(window.innerHeight / 2) - mapPos.y}px`;
 
-    // Create the Ghost Pin Element
-    const ghostMarker = document.createElement('div');
-    ghostMarker.className = 'ghost-marker pulse-animation';
-    ghostMarker.style.left = posX;
-    ghostMarker.style.top = posY;
-    ghostMarker.style.position = "absolute";
-    ghostMarker.style.background = "#ff3333"; // Red for Triage
-    ghostMarker.style.width = "18px";
-    ghostMarker.style.height = "18px";
-    ghostMarker.style.borderRadius = "50%";
-    ghostMarker.style.border = "2px solid white";
-    ghostMarker.style.zIndex = "500";
+    const pin = document.createElement('div');
+    const color = getTriageHex(agent.status);
+    
+    // Applying CSS Classes for Triage Styling
+    pin.className = `ghost-marker pulse-animation ${agent.status.toLowerCase()}`;
+    pin.style.cssText = `
+        left: ${posX}; top: ${posY}; position: absolute;
+        width: 18px; height: 18px; border-radius: 50%;
+        border: 2px solid white; background: ${color};
+        box-shadow: 0 0 15px ${color}; z-index: 1000;
+    `;
 
-    // Create the Label
     const label = document.createElement('div');
-    label.className = 'ghost-label';
     label.innerText = agent.name;
     label.style.cssText = `
-        position:absolute; top:-22px; left:50%; transform:translateX(-50%);
-        background:rgba(0,0,0,0.8); color:gold; padding:2px 8px;
-        border-radius:4px; font-size:10px; white-space:nowrap;
-        border:1px solid #ffcc00; font-family:'Montserrat';
+        position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+        background: rgba(0,0,0,0.85); color: ${color}; padding: 2px 8px;
+        border-radius: 4px; font-size: 10px; white-space: nowrap;
+        border: 1px solid ${color}; font-family: 'Montserrat', sans-serif;
     `;
     
-    ghostMarker.appendChild(label);
-    mapImg.appendChild(ghostMarker);
-
-    // SYSTEM LOG
-    console.log(`ORACLE SUCCESS: ${agent.name} tethered at ${posX}, ${posY}`);
-    
-    // Close & Cleanup
-    closeGhostModal();
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance("Agent tethered to grid."));
+    pin.appendChild(label);
+    mapImg.appendChild(pin);
 }
 
-/** * 5. CLEANUP: Safety Shutoff for Camera
- */
-function closeGhostModal() {
-    // Kill the camera stream to save S10 battery
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-    }
-    
-    const modal = document.getElementById('ghost-modal');
-    modal.classList.remove('active');
-    modal.style.display = 'none';
-    
-    // Reset UI
+/** * 4. UTILITIES: Helper Functions */
+function getTriageHex(status) {
+    const colors = { 'RED': '#ff3333', 'YELLOW': '#ffff00', 'GREEN': '#00ff66', 'BLACK': '#444444' };
+    return colors[status] || '#ff3333';
+}
+
+function resetScanner() {
     document.getElementById('aruco-id-input').value = "";
-    const statusText = document.getElementById('scanner-status');
-    statusText.innerText = "SCANNING FOR FIDUCIAL ID...";
-    statusText.style.color = "#ffcc00";
+    document.getElementById('scanner-status').innerText = "SCANNING FOR FIDUCIAL ID...";
+    document.getElementById('scanner-status').style.color = "#ffcc00";
 }
 
 // --- 🏛️ SYSTEM OVERLAYS & UTILITIES ---
@@ -839,5 +819,6 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
 
 
