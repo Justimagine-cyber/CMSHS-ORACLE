@@ -30,46 +30,69 @@ let wasPinching = false;
 let isDraggingMobile = false; 
 let touchStartPos = { x: 0, y: 0 };
 
-// --- 🛡️ BOOT SEQUENCE ---
+/* 🏛️ ORACLE KERNEL: SYSTEM INITIALIZATION & BOOT PROTECTOR */
+let bootInitiated = false;
+
 function initializeSystem() {
+    // 1. PREVENT DOUBLE-BOOT LOCK
+    if (bootInitiated) return;
+    bootInitiated = true;
+
     const bootOverlay = document.getElementById('boot-overlay');
+    const bootText = document.getElementById('boot-text') || document.querySelector('.boot-text');
     const isSessionActive = sessionStorage.getItem('INITIAL_BOOT_COMPLETE');
 
+    // 2. BYPASS BOOT IF ALREADY INITIALIZED IN THIS SESSION
     if (isSessionActive) {
         if (bootOverlay) bootOverlay.style.display = 'none';
         loadState(); 
+        if (typeof loadHazards === 'function') loadHazards(); // Restore Hazards
         updateMapTransform();
         return;
     }
 
-    const bootText = document.getElementById('boot-text');
+    // 3. THE CLEAN TYPEWRITER PROTOCOL
     const fullText = "INITIALIZING CMSHS GRID...\nACCESSING CMSHS ORACLE...\nSUCCESSFUL INITIALIZATION!";
     let i = 0;
+    if (bootText) bootText.innerHTML = ""; // Clear any ghost chars
 
     function typeWriter() {
         if (bootText && i < fullText.length) {
             bootText.innerHTML += fullText.charAt(i);
             i++;
-            setTimeout(typeWriter, 30);
+            // Smooth typing speed for S10 display
+            setTimeout(typeWriter, 40); 
         }
     }
 
-    if (bootText) { bootText.innerHTML = ""; typeWriter(); }
+    // Execute Typing
+    typeWriter();
 
+    // 4. THE SMOOTH DISMOUNT
     setTimeout(() => {
         if (bootOverlay) {
             bootOverlay.style.opacity = '0';
             bootOverlay.style.pointerEvents = 'none'; 
+            
             setTimeout(() => {
                 bootOverlay.style.display = 'none';
                 sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
-            }, 600);
+                // Ensure map state is synced after overlay is gone
+                loadState(); 
+                if (typeof loadHazards === 'function') loadHazards();
+                updateMapTransform();
+            }, 800);
         }
-        loadState(); 
-        updateMapTransform();
-    }, 3500);
+    }, 3800); // 3.8s allows full text to finish before fade
 }
 
+// --- 📡 GLOBAL LISTENERS ---
+window.addEventListener('load', initializeSystem);
+
+// Fallback for Service Worker re-renders
+document.addEventListener('DOMContentLoaded', () => {
+    if (!bootInitiated) initializeSystem();
+});
 
 // --- 🛰️ ORACLE GEOSPATIAL ENGINE: CALIBRATED HYBRID ---
 
@@ -627,19 +650,63 @@ function createHazardMarker(x, y, type, id = null, isSilent = false) {
     }
 }
 
-// UPDATE & DELETE MODAL LOGIC
+// --- 🛠️ HAZARD INTEL: UPDATE & DELETE LOGIC ---
 async function showHazardIntel(id, type) {
-    const choice = await tacticalPrompt(
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    // 1. INITIAL ACTION PROMPT
+    const action = await tacticalPrompt(
         "HAZARD INTEL", 
-        `TYPE: ${type.toUpperCase()}\n\n[DELETE] - REMOVE FROM GRID\n[CANCEL] - KEEP MARKER`, 
+        `CURRENT: ${type.toUpperCase()}\n\n[DELETE] - PURGE MARKER\n[UPDATE] - CHANGE TYPE\n[ANY] - EXIT`, 
         true, 
-        "TYPE 'DELETE' TO REMOVE"
+        "TYPE 'DELETE' OR 'UPDATE'"
     );
     
-    if (choice && choice.toUpperCase() === 'DELETE') {
-        const el = document.getElementById(id);
-        if (el) el.remove();
+    if (!action) return;
+
+    // 🗑️ DELETE BRANCH
+    if (action.toUpperCase() === 'DELETE') {
+        el.remove();
         saveOperationalData();
+        if (navigator.vibrate) navigator.vibrate(100);
+        return;
+    }
+
+    // 🔄 UPDATE BRANCH
+    if (action.toUpperCase() === 'UPDATE') {
+        const newType = await tacticalPrompt(
+            "RECLASSIFY HAZARD",
+            "SELECT NEW TYPE:\nFIRE, FLOOD, BIO, STRUCTURE, ELECTRIC",
+            true,
+            "ENTER NEW TYPE"
+        );
+
+        if (newType) {
+            const val = newType.toLowerCase();
+            const valid = ['fire', 'flood', 'bio', 'structure', 'electric'];
+            
+            if (valid.includes(val)) {
+                // Update Element Properties
+                el.className = `hazard-marker hazard-${val}`;
+                el.dataset.type = val;
+                
+                // Update Icon
+                const icons = { fire: '🔥', flood: '🌊', bio: '☣️', structure: '🏗️', electric: '⚡' };
+                el.querySelector('.hazard-icon').innerHTML = icons[val];
+                
+                // Update the onclick to pass the NEW type for next time
+                el.onclick = (e) => {
+                    e.stopPropagation();
+                    showHazardIntel(id, val);
+                };
+
+                saveOperationalData();
+                if (navigator.vibrate) navigator.vibrate([40, 40]);
+            } else {
+                tacticalPrompt("ERROR", "INVALID TYPE - RECLASSIFICATION FAILED", false, "", true);
+            }
+        }
     }
 }
 
@@ -892,3 +959,4 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
