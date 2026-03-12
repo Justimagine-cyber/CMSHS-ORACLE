@@ -320,16 +320,43 @@ function updateMapTransform() {
     if(map) map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
 }
 
+// --- NAVIGATION HANDLERS ---
+viewport.addEventListener('wheel', e => {
+    e.preventDefault();
+    zoom = Math.min(Math.max(0.4, zoom + (e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED)), 4);
+    updateMapTransform();
+}, { passive: false });
+
+viewport.addEventListener('pointerdown', e => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    isDragging = true;
+    lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+viewport.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    mapPos.x += e.clientX - lastMouse.x;
+    mapPos.y += e.clientY - lastMouse.y;
+    updateMapTransform();
+    lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+window.addEventListener('pointerup', () => { isDragging = false; });
+
 // --- 💾 PERSISTENCE & DATA ENGINE ---
 function saveState() {
     const dots = [];
+    const newCounts = [0, 0, 0, 0];
     document.querySelectorAll('.triage-dot').forEach(d => {
+        if (d.id === 'intel-overlay') return;
         const type = parseInt(d.dataset.type);
         dots.push({ x: d.style.left, y: d.style.top, type, agent: d.dataset.agent, time: d.dataset.timestamp, uuid: d.dataset.uuid });
+        if (!isNaN(type)) newCounts[type]++;
     });
+    counts = newCounts; 
+    updateHUD();
     localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(dots));
     localStorage.setItem('ORACLE_STATS', JSON.stringify(counts));
-    updateHUD();
 }
 
 function loadState() {
@@ -364,14 +391,104 @@ function createDot(x, y, type, agentData, timestamp, isSilent = false, existingU
 
     dot.appendChild(inner); dot.appendChild(lbl);
     document.getElementById('map-img').appendChild(dot);
-    if (!isSilent) { counts[typeInt]++; saveState(); }
+    if (!isSilent) { counts[typeInt]++; updateHUD(); saveState(); }
 }
 
-function updateHUD() {
-    const ids = ['g-c', 'y-c', 'r-c', 'b-c'];
-    ids.forEach((id, i) => { if(document.getElementById(id)) document.getElementById(id).innerText = counts[i]; });
+// --- DYNAMIC AGENT MANAGEMENT ---
+function showIntel(id, name, status, time) {
+    currentSelectedAgentId = id; 
+    const overlay = document.getElementById('intel-overlay');
+    const targetDot = document.querySelector(`[data-uuid="${id}"]`);
+
+    if (!targetDot) return;
+
+    overlay.className = 'speech-bubble'; 
+    document.getElementById('map-img').appendChild(overlay);
+
+    overlay.style.left = targetDot.style.left;
+    overlay.style.top = targetDot.style.top;
+    overlay.style.display = 'block';
+    
+    overlay.innerHTML = `
+        <h3 style="font-family:'Cinzel', serif; color:#0f6; margin-bottom:10px; letter-spacing:2px; font-size:1rem; text-align:center;">AGENT PROFILE</h3>
+        <div style="text-align:left; margin-bottom:12px;">
+            <label style="font-size:0.6rem; color:#888; display:block; margin-bottom:5px;">IDENTIFICATION</label>
+            <input type="text" id="edit-agent-name" value="${name}" placeholder="e.g. JUAN - GYM"
+                style="width:100%; background:rgba(0,0,0,0.5); border:1px solid #333; color:#0f6; padding:8px; font-family:'Montserrat', sans-serif; font-size:0.8rem; outline:none;">
+        </div>
+        <p style="text-align:left; font-size:0.75em; line-height:1.4; margin-bottom:10px;">
+            <span style="color:#888;">STATUS:</span> <span id="status-display" style="color:#0f6; font-weight:bold;">${status}</span><br>
+            <span style="color:#888;">LAST SEEN:</span> ${time}
+        </p>
+        <h6 style="font-family:'Montserrat', sans-serif; color:#0f6; letter-spacing:1px; margin-bottom:10px; font-size:0.7rem; text-align:center;">RECLASSIFY AGENT</h6>
+        <div class="tactical-status-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap:8px; margin-bottom:15px;">
+            <div class="status-block green" onclick="updateTriage(0)" style="border:1px solid #0f6; color:#0f6; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">MINOR</div>
+            <div class="status-block yellow" onclick="updateTriage(1)" style="border:1px solid #ff0; color:#ff0; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">DELAYED</div>
+            <div class="status-block red" onclick="updateTriage(2)" style="border:1px solid #f33; color:#f33; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">IMMEDIATE</div>
+            <div class="status-block black" onclick="updateTriage(3)" style="border:1px solid #888; color:#888; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">DECEASED</div>
+        </div>
+        <button onclick="updateAgentIdentity()" class="btn-save" style="font-family: 'Montserrat', sans-serif; border:1px solid #0f6; color:#0f6; background:rgba(0,255,102,0.1); width:100%; padding:10px; margin-bottom:6px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">SAVE IDENTITY</button>
+        <button onclick="deleteAgent()" class="btn-delete" style="font-family: 'Montserrat', sans-serif; border:1px solid #f33; color:#f33; background:rgba(255,51,51,0.1); width:100%; padding:10px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">DELETE AGENT</button>
+    `;
 }
 
+function updateTriage(newType) {
+    if (!currentSelectedAgentId) return;
+    const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
+    if (!dotContainer) return;
+    const classMap = ['green', 'yellow', 'red', 'black'];
+    dotContainer.classList.remove('green', 'yellow', 'red', 'black');
+    dotContainer.classList.add(classMap[newType]);
+    dotContainer.dataset.type = newType;
+    const dotInner = dotContainer.querySelector('div');
+    const colorsList = ['#0f6', '#ff0', '#f33', '#888'];
+    const newColor = colorsList[newType];
+    if (dotInner) {
+        dotInner.style.backgroundColor = newColor;
+        dotInner.style.boxShadow = `0 0 15px ${newColor}`;
+    }
+    const statusDisplay = document.getElementById('status-display');
+    if (statusDisplay) {
+        statusDisplay.innerText = ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][newType];
+        statusDisplay.style.color = newColor;
+    }
+    saveState(); 
+    setTimeout(() => { document.getElementById('intel-overlay').style.display = 'none'; }, 500);
+}
+
+function updateAgentIdentity() {
+    if (!currentSelectedAgentId) return;
+    const newName = document.getElementById('edit-agent-name').value;
+    const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
+    if (dotContainer && newName.trim() !== "") {
+        const label = dotContainer.querySelector('.triage-label');
+        dotContainer.dataset.agent = newName;
+        if (label) { label.innerText = newName.split(' - ')[0].trim() || "AGENT"; }
+        saveState();
+        const saveBtn = document.querySelector('.btn-save');
+        if (saveBtn) { saveBtn.innerText = "IDENTITY SECURED"; saveBtn.style.background = "#0f6"; saveBtn.style.color = "#000"; }
+        setTimeout(() => { document.getElementById('intel-overlay').style.display = 'none'; }, 600);
+    }
+}
+
+async function deleteAgent() {
+    const confirmed = await tacticalPrompt("DELETE AGENT", "ARE YOU SURE YOU WANT TO DELETE THIS AGENT FROM THE GRID?", false);
+    if (confirmed) {
+        const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
+        if (dotContainer) {
+            const dotInner = dotContainer.querySelector('div');
+            dotInner.style.transform = "scale(0)";
+            dotInner.style.transition = "transform 0.3s ease";
+            setTimeout(() => {
+                dotContainer.remove();
+                saveState();
+                document.getElementById('intel-overlay').style.display = 'none';
+            }, 300);
+        }
+    }
+}
+
+// ARUCO SECTIONALS (WIP)
 async function initiateGhostTag() {
     const modal = document.getElementById('ghost-modal');
     modal.style.display = 'flex'; // Move this to the top!
@@ -775,4 +892,5 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
 
