@@ -354,6 +354,22 @@ function updateHUD() {
     ids.forEach((id, i) => { if(document.getElementById(id)) document.getElementById(id).innerText = counts[i]; });
 }
 
+async function initiateGhostTag() {
+    const modal = document.getElementById('ghost-modal');
+    modal.style.display = 'flex'; // Move this to the top!
+    modal.classList.add('active');
+    
+    // Now try the camera
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment" } 
+        });
+        document.getElementById('scanner-video').srcObject = stream;
+    } catch (err) {
+        document.getElementById('scanner-status').innerText = "CAMERA BLOCKED";
+    }
+}
+
 // --- ARUCO / KERNEL INTEGRATION ---
 function handleManualAruco() {
     const idInput = document.getElementById('aruco-id-input');
@@ -638,3 +654,4 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
