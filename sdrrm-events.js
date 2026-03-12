@@ -289,12 +289,30 @@ viewport.addEventListener('touchend', (e) => {
 async function handlePlotting(clientX, clientY) {
     if (!viewport) return;
     const rect = viewport.getBoundingClientRect();
-    let agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
-    if (agentData === null) return;
+    
+    // Calculate precise coordinates on the 2500x1800 grid
     const mouseX = (clientX - rect.left - mapPos.x) / zoom;
     const mouseY = (clientY - rect.top - mapPos.y) / zoom;
+
+    // ⚠️ THE HAZARD BYPASS
+    if (currentHazardMode) {
+        // If a hazard is selected in the sidebar, we skip the name prompt
+        createHazardMarker(`${mouseX}px`, `${mouseY}px`, currentHazardMode);
+        
+        // Stoic Reset: Clear the mode so you don't accidentally plot 10 fires
+        currentHazardMode = null; 
+        document.getElementById('hazard-status').innerText = "WAITING FOR SELECTION";
+        return; 
+    }
+
+    // --- ORIGINAL TRIAGE LOGIC BELOW ---
+    let agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
+    if (agentData === null) return;
+
     const now = new Date();
     const time = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ", " + now.toLocaleTimeString();
+    
+    // Create the standard Triage Dot
     createDot(`${mouseX - 8}px`, `${mouseY - 8}px`, currentType, agentData, time);
 }
 
@@ -757,3 +775,4 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
