@@ -40,6 +40,21 @@ touch-action: none;
 flex: 1; position: relative; overflow: hidden;
 background-color: #000; touch-action: none;
 height: calc(100vh - 160px);
+position: relative; /* CRITICAL */
+width: 100%;
+height: 50vh; /* Or whatever your design uses */
+background-image: url('CMSHS-SDRRM-PLAN.jpg');
+background-size: contain;
+background-repeat: no-repeat;
+background-position: center;
+border: 2px solid var(--oracle-gold);
+overflow: hidden;
+}
+
+/* Ensure markers are visible over the dark grid */
+.map-marker {
+    z-index: 99;
+    pointer-events: none; /* Let clicks pass through if needed */
 }
 
 #map-img {
@@ -755,3 +770,4 @@ color: #000 !important;
 .marker-delayed { background: #ffcc00; }
 .marker-immediate { background: #ff3333; }
 .marker-hazard { background: #ff8000; border: 2px solid white; }
+
