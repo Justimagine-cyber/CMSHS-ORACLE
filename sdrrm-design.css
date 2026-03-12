@@ -732,3 +732,26 @@ color: #000 !important;
 .corner-bl { bottom: 0; left: 0; border-width: 0 0 2px 2px; }
 .corner-br { bottom: 0; right: 0; border-width: 0 2px 2px 0; }
 
+/* Triage/Hazard Markers on the PNG Map */
+.map-marker {
+    position: absolute;
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 10px rgba(0, 255, 102, 0.8);
+    animation: pulse 1.5s infinite;
+}
+
+.marker-label {
+    position: absolute;
+    top: -20px; left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px; font-weight: bold;
+    color: white; white-space: nowrap;
+}
+
+/* Color Coding for START Triage */
+.marker-minor { background: #00ff66; }
+.marker-delayed { background: #ffcc00; }
+.marker-immediate { background: #ff3333; }
+.marker-hazard { background: #ff8000; border: 2px solid white; }
