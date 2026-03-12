@@ -1,5 +1,5 @@
-const CACHE_NAME = 'oracle-cmshs-v17.1442';
-const urlsToCache = [
+const CACHE_NAME = 'oracle-cmshs-v17.145';
+const assets = [
   '/',
   'index.html',
   'sdrrm-design.css',
@@ -46,6 +46,7 @@ self.addEventListener('fetch', evt => {
     })
   );
 });
+
 
 
 
