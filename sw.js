@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oracle-cmshs-v17.143';
+const CACHE_NAME = 'oracle-cmshs-v17.144';
 const urlsToCache = [
   '/',
   'index.html',
@@ -46,6 +46,7 @@ self.addEventListener('fetch', evt => {
     })
   );
 });
+
 
 
 
