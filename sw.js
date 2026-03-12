@@ -1,12 +1,13 @@
-const CACHE_NAME = 'oracle-cmshs-v17.13421';
-const assets = [
-  './',
-  './index.html',
-  './sdrrm-design.css',
-  './sdrrm-events.js',
-  './CMSHS_LOGO.png',
-  './CMSHS-SDRRM-PLAN.png',
-  './CMSHS_ORACLE.png'
+const CACHE_NAME = 'oracle-cmshs-v17.14';
+const urlsToCache = [
+  '/',
+  'index.html',
+  'sdrrm-design.css',
+  'sdrrm-events.js',
+  'oracle-kernel.js',    // New Kernel
+  'coordinate_map.js',   // New Spatial Logic
+  'CMSHS-SDRRM-PLAN.jpg', // Your Map
+  'CMSHS_LOGO.png'
 ];
 
 // 🏛️ INSTALL: Pre-caching the system files
@@ -45,5 +46,6 @@ self.addEventListener('fetch', evt => {
     })
   );
 });
+
 
 
