@@ -581,6 +581,28 @@ function syncStatsWithKernel(label) {
     }
 }
 
+// THIS IS THE BRIDGE THAT MAKES THE LOGIC WORK
+function setStatus(typeIndex) {
+    // 1. Get the Label from our Kernel
+    // (Assuming 0=Minor, 1=Delayed, 2=Immediate, 3=Deceased)
+    const labels = ["Minor", "Delayed", "Immediate", "Deceased"];
+    const currentLabel = labels[typeIndex];
+
+    // 2. For the demo, we need to know WHERE the status is.
+    // We can use a prompt to simulate the ArUco scan location for now.
+    const roomID = prompt("ENTER ROOM ID / SCAN ARUCO (1-12):");
+
+    if (roomID && oracleKernel) {
+        // DROP THE PIN ON THE MAP
+        dropMarkerOnPng(roomID, currentLabel);
+        
+        // UPDATE THE COUNTS IN YOUR HUD
+        syncStatsWithKernel(currentLabel);
+        
+        console.log(`TACTICAL UPDATE: ${currentLabel} status confirmed at Room ${roomID}`);
+    }
+}
+
 // 3. UPDATED registerNewFiducial (Fixes missing ID Tag cleanup)
 async function registerNewFiducial(id) {
     const name = prompt(`NEW FIDUCIAL (ID: ${id})\nASSIGN IDENTITY:`, "e.g. ROOM 302");
@@ -863,3 +885,4 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
