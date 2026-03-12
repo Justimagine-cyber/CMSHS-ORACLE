@@ -1,48 +1,45 @@
-const CACHE_NAME = 'oracle-cmshs-v17.1452';
-const assets = [
-  '/',
-  'index.html',
-  'sdrrm-design.css',
-  'sdrrm-events.js',
-  'oracle-kernel.js',    // New Kernel
-  'coordinate_map.js',   // New Spatial Logic
-  'CMSHS-SDRRM-PLAN.png', // Your Map
-  'CMSHS_LOGO.png'
+/* 🏛️ CMSHS ORACLE: SERVICE WORKER - SHIELD V2.0 */
+const CACHE_NAME = 'oracle-cache-v' + Date.now(); // 🚀 AUTO-INCREMENTING VERSION
+const ASSETS = [
+  './',
+  './index.html',
+  './sdrrm-design.css',
+  './sdrrm-events.js',
+  './oracle-kernel.js',
+  './coordinate_map.js',
+  './CMSHS_LOGO.png'
 ];
 
-// 🏛️ INSTALL: Pre-caching the system files
-self.addEventListener('install', evt => {
-  evt.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('ORACLE: Caching tactical assets...');
-      return cache.addAll(assets);
+// 1. INSTALL: Force the new Service Worker to take over immediately
+self.addEventListener('install', (event) => {
+  self.skipWaiting(); 
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => {
+      console.log('ORACLE: SECURING ASSETS...');
+      return cache.addAll(ASSETS);
     })
   );
-  self.skipWaiting(); // Forces the new service worker to become active immediately
 });
 
-// 🏛️ ACTIVATE: Cleaning up old caches (The "Scrub" Protocol)
-self.addEventListener('activate', evt => {
-  evt.waitUntil(
-    caches.keys().then(keys => {
+// 2. ACTIVATE: 🛡️ THE CACHE-BUSTER 🛡️
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
       return Promise.all(
-        keys.filter(key => key !== CACHE_NAME)
-            .map(key => caches.delete(key))
+        cacheNames.map((cache) => {
+          if (cache !== CACHE_NAME) {
+            console.log('ORACLE: PURGING OLD DATA CORE...', cache);
+            return caches.delete(cache);
+          }
+        })
       );
-    })
+    }).then(() => self.clients.claim()) // Immediate control without reload
   );
-  return self.clients.claim(); // Immediately takes control of all open tabs
 });
 
-// 🏛️ FETCH: Cache-First Strategy (The "Bunker" Mode)
-self.addEventListener('fetch', evt => {
-  evt.respondWith(
-    caches.match(evt.request).then(cacheRes => {
-      // Return cached file if found, otherwise try to fetch from network
-      return cacheRes || fetch(evt.request).catch(() => {
-        // Optional: If both fail (total offline and not in cache), 
-        // you could return a custom offline page here.
-      });
-    })
+// 3. FETCH: Network-First (Safe for Development)
+self.addEventListener('fetch', (event) => {
+  event.respondWith(
+    fetch(event.request).catch(() => caches.match(event.request))
   );
 });
