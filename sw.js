@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oracle-cmshs-v17.145';
+const CACHE_NAME = 'oracle-cmshs-v17.1451';
 const assets = [
   '/',
   'index.html',
@@ -46,6 +46,7 @@ self.addEventListener('fetch', evt => {
     })
   );
 });
+
 
 
 
