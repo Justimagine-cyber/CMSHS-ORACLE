@@ -384,6 +384,53 @@ function closeGhostModal() {
     document.getElementById('ghost-modal').style.display = 'none';
 }
 
+// --- 🛰️ ORACLE VISION DRIVER (AUTONOMOUS SCAN) ---
+let isProcessingFrame = false;
+
+function startVisionLoop() {
+    if (typeof AR === 'undefined') {
+        console.warn("Vision Library (jsaruco) not loaded.");
+        return;
+    }
+
+    const detector = new AR.Detector();
+    const video = document.getElementById("scanner-video");
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+
+    function capture() {
+        // Only process if the scanner modal is actually open
+        const modal = document.getElementById('ghost-modal');
+        if (modal && modal.style.display !== 'none' && video.readyState === video.HAVE_ENOUGH_DATA) {
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const markers = detector.detect(imageData);
+
+            if (markers.length > 0) {
+                const detectedID = markers[0].id;
+                
+                // Update the UI input so the user sees what was seen
+                const idInput = document.getElementById('aruco-id-input');
+                if (idInput && idInput.value != detectedID) {
+                    idInput.value = detectedID;
+                    
+                    // Trigger the existing kernel logic you wrote!
+                    handleManualAruco(); 
+                    
+                    // Tactile Haptic Feedback (S10 5G has great vibration motors)
+                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                }
+            }
+        }
+        requestAnimationFrame(capture);
+    }
+    capture();
+}
+
 initializeSystem();
 
 // --- 🏛️ SYSTEM OVERLAYS & UTILITIES ---
@@ -591,4 +638,3 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
-
