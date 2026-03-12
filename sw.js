@@ -1,4 +1,4 @@
-const CACHE_NAME = 'oracle-cmshs-v17.14';
+const CACHE_NAME = 'oracle-cmshs-v17.142';
 const urlsToCache = [
   '/',
   'index.html',
@@ -6,7 +6,7 @@ const urlsToCache = [
   'sdrrm-events.js',
   'oracle-kernel.js',    // New Kernel
   'coordinate_map.js',   // New Spatial Logic
-  'CMSHS-SDRRM-PLAN.jpg', // Your Map
+  'CMSHS-SDRRM-PLAN.png', // Your Map
   'CMSHS_LOGO.png'
 ];
 
@@ -46,6 +46,7 @@ self.addEventListener('fetch', evt => {
     })
   );
 });
+
 
 
 
