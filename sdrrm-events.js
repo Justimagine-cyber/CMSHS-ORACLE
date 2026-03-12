@@ -31,33 +31,6 @@ let initialPinchDist = -1;
 let wasPinching = false;
 let isDraggingMobile = false; 
 let touchStartPos = { x: 0, y: 0 };
-let oracleKernel;
-
-// Initialize the C++ WASM Module
-Module().then((instance) => {
-    oracleKernel = new instance.OracleKernel();
-    console.log("🏛️ ORACLE C++ KERNEL: ONLINE");
-});
-
-// CONNECTING TO YOUR EXISTING UI
-function handleManualAruco() {
-    const idInput = document.getElementById('aruco-id-input');
-    const id = parseInt(idInput.value);
-    
-    if (oracleKernel && !isNaN(id)) {
-        // CALLING THE C++ LOGIC
-        const label = oracleKernel.processDetection(id);
-        
-        // UPDATE YOUR HUD
-        document.getElementById('scanner-status').innerText = `DETECTED: ${label}`;
-        
-        // SYNC WITH YOUR SDRRM-PLAN.PNG
-        dropMarkerOnPng(id, label);
-        
-        // Log to your existing casualty counts if in Triage mode
-        if (label === "Immediate") updateCount('r-c');
-    }
-}
 
 // --- 🛡️ BOOT SEQUENCE ---
 function initializeSystem() {
@@ -909,5 +882,6 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
 
 
