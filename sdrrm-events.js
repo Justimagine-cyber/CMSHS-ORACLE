@@ -608,12 +608,11 @@ function createHazardMarker(x, y, type, id = null, isSilent = false) {
     hazard.id = hazardId;
     hazard.style.left = x;
     hazard.style.top = y;
-    hazard.dataset.type = type;
+    hazard.dataset.type = type; // Critical for saving
 
     const icons = { fire: '🔥', flood: '🌊', bio: '☣️', structure: '🏗️', electric: '⚡' };
     hazard.innerHTML = `<div class="hazard-icon">${icons[type]}</div>`;
 
-    // UPDATE & DELETE (The CRUD menu for Hazards)
     hazard.onclick = (e) => {
         e.stopPropagation();
         showHazardIntel(hazardId, type);
@@ -621,9 +620,9 @@ function createHazardMarker(x, y, type, id = null, isSilent = false) {
 
     document.getElementById('map-img').appendChild(hazard);
     
+    // 💾 SAVE TRIGGER
     if (!isSilent) {
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        saveOperationalData(); // Custom save that includes hazards
+        saveHazards(); 
     }
 }
 
@@ -660,8 +659,27 @@ function saveOperationalData() {
 function loadHazards() {
     try {
         const savedHazards = JSON.parse(localStorage.getItem('ORACLE_HAZARD_DATA') || "[]");
-        savedHazards.forEach(h => createHazardMarker(h.x, h.y, h.type, h.id, true));
-    } catch (e) { console.error("Hazard Load Failed", e); }
+        savedHazards.forEach(h => {
+            // We pass 'true' as a "silent" flag so it doesn't trigger a re-save loop
+            createHazardMarker(h.x, h.y, h.type, h.id, true);
+        });
+        console.log(`ORACLE: ${savedHazards.length} HAZARDS RESTORED.`);
+    } catch (e) {
+        console.error("HAZARD RECOVERY FAILED", e);
+    }
+}
+
+function saveHazards() {
+    const hazards = [];
+    document.querySelectorAll('.hazard-marker').forEach(h => {
+        hazards.push({
+            x: h.style.left,
+            y: h.style.top,
+            type: h.dataset.type,
+            id: h.id
+        });
+    });  
+    localStorage.setItem('ORACLE_HAZARD_DATA', JSON.stringify(hazards));
 }
 
 // --- 🛑 MODIFIED RESET OPERATIONAL DATA ---
@@ -892,5 +910,3 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
-
-
