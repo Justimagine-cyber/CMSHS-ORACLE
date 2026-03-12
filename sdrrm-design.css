@@ -722,3 +722,111 @@ color: #000 !important;
     from { opacity: 0; transform: scale(1.05); }
     to { opacity: 1; transform: scale(1); }
 }
+
+/* Sidebar Tab */
+#sidebar-tab {
+    position: fixed; right: 0; top: 40%;
+    background: #ff8000; color: #000; padding: 15px 5px;
+    border-radius: 8px 0 0 8px; z-index: 10001; cursor: pointer;
+    font-weight: 900; writing-mode: vertical-rl;
+    box-shadow: -2px 0 15px rgba(255, 128, 0, 0.4);
+}
+
+/* Sidebar Drawer */
+.sidebar {
+    position: fixed; right: -300px; top: 0;
+    width: 250px; height: 100%;
+    background: rgba(0, 10, 0, 0.98); border-left: 2px solid #ff8000;
+    z-index: 10002; transition: 0.4s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+    padding: 20px; display: flex; flex-direction: column;
+}
+
+.sidebar.active { right: 0; }
+
+.hazard-marker {
+    position: absolute; width: 35px; height: 35px;
+    border: 2px solid #ff8000; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 128, 0, 0.2);
+    transform: translate(-50%, -50%); cursor: pointer;
+    z-index: 98; animation: hazard-pulse 1.5s infinite ease-in-out;
+}
+
+/* --- 🏗️ TACTICAL HAZARD SELECTORS --- */
+
+.hazard-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 5px;
+}
+
+.hazard-select {
+    position: relative;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(255, 128, 0, 0.3);
+    color: #ff8000;
+    padding: 16px;
+    font-family: 'Montserrat', sans-serif;
+    font-weight: 900;
+    font-size: 0.75rem;
+    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    cursor: pointer;
+    overflow: hidden;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border-left: 5px solid #ff8000;
+}
+
+/* 🟢 Unique Glow Protocols per Type */
+.hazard-select.fire { border-left-color: #ff4500; color: #ff4500; }
+.hazard-select.flood { border-left-color: #0096ff; color: #0096ff; }
+.hazard-select.bio { border-left-color: #00ff66; color: #00ff66; }
+.hazard-select.structure { border-left-color: #ffff00; color: #ffff00; }
+.hazard-select.electric { border-left-color: #00ffff; color: #00ffff; }
+
+/* ⚡ Hover & Active Feedback (S10 Optimized) */
+.hazard-select:active {
+    transform: scale(0.96);
+    background: rgba(255, 128, 0, 0.2);
+}
+
+/* 🛰️ Holographic Scanline Effect on Buttons */
+.hazard-select::after {
+    content: "";
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: 0.5s;
+}
+
+.hazard-select:hover::after {
+    left: 100%;
+}
+
+/* ⚠️ The "Caution" Stripe Background (Subtle) */
+.hazard-select:hover {
+    background-image: repeating-linear-gradient(
+        45deg,
+        rgba(255, 128, 0, 0.05),
+        rgba(255, 128, 0, 0.05) 10px,
+        rgba(0, 0, 0, 0) 10px,
+        rgba(0, 0, 0, 0) 20px
+    );
+    border-color: #ff8000;
+    box-shadow: 0 0 15px rgba(255, 128, 0, 0.2);
+}
+
+/* 📍 REFINED MAP MARKER ICON STYLING */
+.hazard-icon {
+    font-size: 18px;
+    filter: drop-shadow(0 0 5px currentColor);
+    animation: marker-bounce 1s infinite alternate;
+}
+
+@keyframes marker-bounce {
+    from { transform: translateY(0); }
+    to { transform: translateY(-3px); }
+}
