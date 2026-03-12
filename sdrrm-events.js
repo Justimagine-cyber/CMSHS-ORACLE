@@ -449,6 +449,109 @@ function startVisionLoop() {
 
 initializeSystem();
 
+// --- ⚠️ HAZARD COMMAND ENGINE ---
+let currentHazardMode = null;
+
+function toggleSidebar() {
+    document.getElementById('hazard-sidebar').classList.toggle('active');
+}
+
+function setHazardType(type) {
+    currentHazardMode = type;
+    document.getElementById('hazard-status').innerText = `READY: ${type.toUpperCase()}`;
+    if (navigator.vibrate) navigator.vibrate(40);
+    toggleSidebar();
+    // Use your existing tacticalPrompt logic
+    tacticalPrompt("HAZARD READY", `PLOTTING: ${type.toUpperCase()}\nDouble-tap the map to deploy marker.`, false, "", true);
+}
+
+// CREATE & READ (Integrated into existing dot logic)
+function createHazardMarker(x, y, type, id = null, isSilent = false) {
+    const hazardId = id || `HAZARD-${Date.now()}`;
+    const hazard = document.createElement('div');
+    hazard.className = `hazard-marker hazard-${type}`;
+    hazard.id = hazardId;
+    hazard.style.left = x;
+    hazard.style.top = y;
+    hazard.dataset.type = type;
+
+    const icons = { fire: '🔥', flood: '🌊', bio: '☣️', structure: '🏗️', electric: '⚡' };
+    hazard.innerHTML = `<div class="hazard-icon">${icons[type]}</div>`;
+
+    // UPDATE & DELETE (The CRUD menu for Hazards)
+    hazard.onclick = (e) => {
+        e.stopPropagation();
+        showHazardIntel(hazardId, type);
+    };
+
+    document.getElementById('map-img').appendChild(hazard);
+    
+    if (!isSilent) {
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        saveOperationalData(); // Custom save that includes hazards
+    }
+}
+
+// UPDATE & DELETE MODAL LOGIC
+async function showHazardIntel(id, type) {
+    const choice = await tacticalPrompt(
+        "HAZARD INTEL", 
+        `TYPE: ${type.toUpperCase()}\n\n[DELETE] - REMOVE FROM GRID\n[CANCEL] - KEEP MARKER`, 
+        true, 
+        "TYPE 'DELETE' TO REMOVE"
+    );
+    
+    if (choice && choice.toUpperCase() === 'DELETE') {
+        const el = document.getElementById(id);
+        if (el) el.remove();
+        saveOperationalData();
+    }
+}
+
+// DATA PERSISTENCE (Wraps your existing saveState)
+function saveOperationalData() {
+    // Call your original saveState for triage dots
+    saveState(); 
+
+    // Now save Hazards separately
+    const hazards = [];
+    document.querySelectorAll('.hazard-marker').forEach(h => {
+        hazards.push({ x: h.style.left, y: h.style.top, type: h.dataset.type, id: h.id });
+    });
+    localStorage.setItem('ORACLE_HAZARD_DATA', JSON.stringify(hazards));
+}
+
+// LOAD HAZARDS (Run this in your initializeSystem or loadState)
+function loadHazards() {
+    try {
+        const savedHazards = JSON.parse(localStorage.getItem('ORACLE_HAZARD_DATA') || "[]");
+        savedHazards.forEach(h => createHazardMarker(h.x, h.y, h.type, h.id, true));
+    } catch (e) { console.error("Hazard Load Failed", e); }
+}
+
+// --- 🛑 MODIFIED RESET OPERATIONAL DATA ---
+// Update your existing clearMap() or replace the button onclick
+function clearMap() {
+    tacticalPrompt("NUCLEAR OPTION", "THIS WILL PURGE ALL TRIAGE AND HAZARD DATA. PROCEED?", true, "TYPE 'CONFIRM'")
+    .then(res => {
+        if(res && res.toUpperCase() === 'CONFIRM') {
+            // Clear Triage Dots
+            document.querySelectorAll('.triage-dot').forEach(d => d.remove());
+            // Clear Hazards
+            document.querySelectorAll('.hazard-marker').forEach(h => h.remove());
+            
+            // Clear Storage
+            localStorage.removeItem('ORACLE_GRID_DATA');
+            localStorage.removeItem('ORACLE_STATS');
+            localStorage.removeItem('ORACLE_HAZARD_DATA');
+            
+            counts = [0, 0, 0, 0];
+            updateHUD();
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        }
+    });
+}
+
 // --- 🏛️ SYSTEM OVERLAYS & UTILITIES ---
 function updateHUD() { ['g-c', 'y-c', 'r-c', 'b-c'].forEach((id, i) => { if(document.getElementById(id)) document.getElementById(id).innerText = counts[i]; }); }
 function updateMapTransform() { map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`; }
@@ -654,4 +757,3 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
-
