@@ -66,7 +66,7 @@
         <button class="triage-btn yellow" onclick="setStatus(1)">DELAYED</button>
         <button class="triage-btn red" onclick="setStatus(2)">IMMEDIATE</button>
         <button class="triage-btn black" onclick="setStatus(3)">DECEASED</button>
-        <button class="triage-btn aruco-trigger" onclick="initiateGhostTag()" style="border-color: #ffcc00; color: #ffcc00;">PIN AGENT TAG</button>
+        <button class="triage-btn aruco-trigger" onclick="initiateGhostTag()" style="border-color: #ffcc00; color: #ffcc00;">PIN AGENT TAG (BETA)</button>
         <button class="triage-btn sync-qr" onclick="generateTacticalQR()">SHARE REPORT</button>
         <button class="triage-btn" onclick="locateUser()" id="gps-btn" style="border-color: #0096ff; color: #0096ff;"><span id="gps-text">LOCATE ME</span></button>
         <button class="triage-btn intel-report" onclick="showIntelligenceReport()">SYSTEM UPDATES</button>
@@ -88,7 +88,7 @@
     <button onclick="deleteAgent()" class="btn-delete">DELETE AGENT</button>
 </div>
 
-<div id="ghost-modal" class="tactical-modal" style="display: none;">
+<div id="ghost-modal" class="tactical-modal" style="display: flex !important;">
     <div class="modal-content">
         <div class="modal-header">
             <h2 class="glitch-text">ARUCO VISION LINK</h2>
@@ -140,3 +140,4 @@
 </script>
 </body>
 </html>
+
