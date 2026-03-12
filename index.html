@@ -40,6 +40,27 @@
     </div>
 </div>
 
+<div id="hazard-sidebar" class="sidebar">
+    <div class="sidebar-header">
+        <h3 class="cinzel" style="color:#ff8000; margin:0;">HAZARD DEPOT</h3>
+        <button onclick="toggleSidebar()" class="close-sidebar" style="background:none; border:none; color:#ff8000; font-size:1.5rem;">×</button>
+    </div>
+    
+    <div class="hazard-grid">
+        <button class="hazard-select fire" onclick="setHazardType('fire')">🔥 FIRE</button>
+        <button class="hazard-select flood" onclick="setHazardType('flood')">🌊 FLOOD</button>
+        <button class="hazard-select bio" onclick="setHazardType('bio')">☣️ BIO</button>
+        <button class="hazard-select structure" onclick="setHazardType('structure')">🏗️ COLLAPSE</button>
+        <button class="hazard-select electric" onclick="setHazardType('electric')">⚡ SHOCK</button>
+    </div>
+
+    <div class="sidebar-info" style="margin-top:20px; font-size:0.7em; color:#888;">
+        <p>STATUS: <span id="hazard-status">WAITING FOR SELECTION</span></p>
+    </div>
+</div>
+
+<div id="sidebar-tab" onclick="toggleSidebar()">⚠️</div>
+    
 <div id="app">
     <header>
         <div class="brand-container">
@@ -140,5 +161,3 @@
 </script>
 </body>
 </html>
-
-
