@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>CMSHS ORACLE | OPERATIONAL READINESS</title>
     <link rel="stylesheet" href="sdrrm-design.css">
     <link rel="icon" type="image/png" href="CMSHS_ORACLE.png">
@@ -14,10 +14,9 @@
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-aruco@0.1.0/src/aruco.min.js"></script>
     
-    <script src="qrcode.min.js" defer></script>
-    <script src="sdrrm-events.js" defer></script>
     <script src="oracle-kernel.js"></script>
     <script src="coordinate_map.js"></script>
+    <script src="sdrrm-events.js" defer></script>
 </head>
 <body>
 
@@ -25,9 +24,7 @@
     <div class="modal-content">
         <h3 id="modal-title" style="font-family:'Cinzel', serif; color:#0f6; border-bottom:1px solid #333; padding-bottom:10px;">TACTICAL INPUT</h3>
         <p id="modal-desc" style="font-size:0.85em; color:#888; margin:10px 0;"></p>
-        
         <input type="text" id="modal-input" placeholder="e.g. JUAN - GYM" autocomplete="off">
-        
         <div class="modal-actions">
             <button id="modal-confirm" class="triage-btn">CONFIRM</button>
             <button id="modal-cancel" class="triage-btn reset">CANCEL</button> 
@@ -37,7 +34,7 @@
 
 <div id="boot-overlay">
     <div class="hologram-container">
-        <img src="CMSHS_LOGO.png" id="boot-logo"> 
+        <img src="CMSHS_LOGO.png" id="boot-logo" alt="CMSHS LOGO"> 
         <div class="boot-text" id="boot-text">INITIALIZING ORACLE SYSTEM...</div>
         <div class="scanline"></div>
     </div>
@@ -46,7 +43,7 @@
 <div id="app">
     <header>
         <div class="brand-container">
-            <img src="CMSHS_LOGO.png" class="header-logo">
+            <img src="CMSHS_LOGO.png" class="header-logo" alt="LOGO">
             <div class="brand">CMSHS ORACLE: OPERATIONAL READINESS</div>
         </div>
         <div class="status">STANDALONE MODE: SECURE</div>
@@ -79,24 +76,20 @@
     </div>
 </div>
 
-<div id="intel-overlay" class="triage-modal">
-    <h3 id ="agent-id" class="cinzel">AGENT:</h3>
-
+<div id="intel-overlay" class="triage-modal" style="display:none;">
+    <h3 id="agent-id" class="cinzel">AGENT:</h3>
     <div class="triage-update-grid">
         <button onclick="updateTriage('0')" class="btn-upd green">MINOR</button>
-        <button onclick ="updateTriage('1')" class="btn-upd yellow">DELAYED</button>
+        <button onclick="updateTriage('1')" class="btn-upd yellow">DELAYED</button>
         <button onclick="updateTriage('2')" class="btn-upd red">IMMEDIATE</button>
         <button onclick="updateTriage('3')" class="btn-upd black">DECEASED</button>
     </div>
-
     <hr class="tactical-divider">
-
     <button onclick="deleteAgent()" class="btn-delete">DELETE AGENT</button>
 </div>
 
 <div id="ghost-modal" class="tactical-modal" style="display: none;">
     <div class="modal-content">
-        
         <div class="modal-header">
             <h2 class="glitch-text">ARUCO VISION LINK</h2>
             <p id="scanner-status">INITIALIZING OPTICAL SENSORS...</p>
@@ -105,6 +98,13 @@
         <div class="scanner-container">
             <video id="scanner-video" autoplay playsinline muted></video>
             
+            <div id="vector-overlay" style="display: none;">
+                <div class="axis-x"></div>
+                <div class="axis-y"></div>
+                <div class="axis-z"></div>
+                <div id="floating-id-tag">ID: --</div>
+            </div>
+
             <div class="scan-overlay">
                 <div class="corner-tl"></div>
                 <div class="corner-tr"></div>
@@ -112,8 +112,6 @@
                 <div class="corner-br"></div>
             </div>
         </div>
-
-        <div id="marker-boundary"></div>
 
         <div class="input-section">
             <label for="aruco-id-input">ENTER FIDUCIAL ID (0-11)</label>
@@ -129,31 +127,15 @@
         <div class="modal-footer">
             <button class="abort-btn" onclick="closeGhostModal()">TERMINATE LINK</button>
         </div>
-
     </div>
 </div>
 
-    <div class="scanner-container">
-    <video id="scanner-video" autoplay playsinline muted></video>
-    
-    <div id="vector-overlay" style="display: none;">
-        <div class="axis-x"></div>
-        <div class="axis-y"></div>
-        <div class="axis-z"></div>
-        <div id="floating-id-tag">ID: --</div>
-    </div>
-
-    <div class="scan-overlay"></div>
-    </div>
-
 <script>
-  // 🛡️ IMPROVED OFFLINE SHIELD (Protocol Aware)
+  // 🛡️ OFFLINE SHIELD REFINED
   if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js')
       .then(() => console.log("ORACLE SHIELD: ACTIVE"))
       .catch(err => console.log("ORACLE SHIELD: STANDBY", err));
-  } else {
-    console.log("ORACLE SHIELD: LOCAL FILE MODE (SW DISABLED)");
   }
 </script>
 </body>
