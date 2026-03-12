@@ -542,61 +542,42 @@ async function initiateGhostTag() {
 function handleManualAruco() {
     const idInput = document.getElementById('aruco-id-input');
     const id = idInput.value;
-    const vectorOverlay = document.getElementById('vector-overlay');
-    const boundary = document.getElementById('marker-boundary');
-    const idTag = document.getElementById('floating-id-tag');
-    const statusText = document.getElementById('scanner-status'); // Added definition
+    
+    if (id !== "") {
+        // CALLING THE KERNEL
+        const resultLabel = oracleKernel.processDetection(id);
+        
+        // 1. UPDATE SCANNER UI
+        document.getElementById('scanner-status').innerText = `IDENTIFIED: ${resultLabel}`;
+        
+        // 2. DROP PIN ON THE CMSHS MAP (Using the coordinate_map.js logic)
+        if (typeof dropMarkerOnPng === "function") {
+            dropMarkerOnPng(id, resultLabel);
+        }
 
-    // 1. CLEARANCE
-    if (!id || id === "") {
-        if (vectorOverlay) vectorOverlay.style.display = "none";
-        if (boundary) boundary.style.display = "none";
-        statusText.innerText = "SCANNING...";
-        return;
+        // 3. UPDATE STATS HUD (If Triage)
+        if (oracleKernel.mode === 0) {
+            syncStatsWithKernel(resultLabel);
+        }
     }
+}
 
-    // 2. POSE ESTIMATION LOCK-ON (The Visual Flex)
-    if (boundary && vectorOverlay) {
-        boundary.style.display = "block";
-        vectorOverlay.style.display = "block";
-        idTag.innerText = `ID: ${id}`;
-        
-        // Dynamic "Tracking" Jitter
-        const driftX = (Math.random() - 0.5) * 6;
-        const driftY = (Math.random() - 0.5) * 6;
-        const rot = (Math.random() - 0.5) * 3;
-        
-        const trackingTransform = `translate(calc(-50% + ${driftX}px), calc(-50% + ${driftY}px)) rotate(${rot}deg)`;
-        boundary.style.transform = trackingTransform;
-        vectorOverlay.style.transform = trackingTransform;
-    }
-
-    // 3. REGISTRY CHECK & SYNC
-    if (ARUCO_REGISTRY[id]) {
-        // Cleaned up redundant status updates
-        statusText.innerText = `VERIFIED: ${ARUCO_REGISTRY[id].name}`;
-        statusText.style.color = "#00ff66";
-        
-        setTimeout(() => { 
-            if(idInput.value === id) {
-                executeArUcoPin(ARUCO_REGISTRY[id]); 
-                
-                // Cleanup UI after pin drop
-                idInput.value = ""; 
-                if (vectorOverlay) vectorOverlay.style.display = "none";
-                if (boundary) boundary.style.display = "none";
-            }
-        }, 1200); // 1.2s delay makes the "lock-on" feel authentic
-    } 
-    else {
-        statusText.innerText = "NEW ASSET DETECTED";
-        statusText.style.color = "#ffcc00";
-        
-        setTimeout(() => {
-            if(idInput.value === id) {
-                registerNewFiducial(id);
-            }
-        }, 600);
+function syncStatsWithKernel(label) {
+    // Map labels to your existing HUD IDs
+    const idMap = {
+        "Minor": "g-c",
+        "Delayed": "y-c",
+        "Immediate": "r-c",
+        "Deceased": "b-c"
+    };
+    
+    const elementId = idMap[label];
+    if (elementId) {
+        const el = document.getElementById(elementId);
+        el.innerText = parseInt(el.innerText) + 1;
+        // Optional: Add a pulse effect to the count
+        el.classList.add('pulse-text');
+        setTimeout(() => el.classList.remove('pulse-text'), 500);
     }
 }
 
@@ -882,6 +863,3 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
-
-
-
