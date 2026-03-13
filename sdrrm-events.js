@@ -67,26 +67,34 @@ function initializeSystem() {
     typeWriter();
 
     // 4. THE SMOOTH DISMOUNT
-    setTimeout(() => {
-        if (bootOverlay) {
-            bootOverlay.style.opacity = '0';
-            bootOverlay.style.pointerEvents = 'none'; 
-            
-            setTimeout(() => {
-                bootOverlay.style.display = 'none';
-                sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
-                // Ensure map state is synced after overlay is gone
-                loadState();
-                loadHazards();
+setTimeout(() => {
 
-                setTimeout(() => {
-                restoreSidebarState();
-                }, 100);
-                updateMapTransform();
-            }, 800);
-        }
-    }, 3800); // 3.8s allows full text to finish before fade
-}
+    if (!bootOverlay) return;
+
+    // Fade overlay
+    bootOverlay.style.opacity = '0';
+    bootOverlay.style.pointerEvents = 'none';
+
+    setTimeout(() => {
+
+        // Remove overlay from layout
+        bootOverlay.style.display = 'none';
+
+        sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
+
+        // Restore system state
+        loadState();
+        loadHazards();
+        updateMapTransform();
+
+        // Restore sidebar AFTER layout stabilizes
+        requestAnimationFrame(() => {
+            restoreSidebarState();
+        });
+
+    }, 800); // overlay fade duration
+
+}, 3800); // full boot sequence duration
 
 // --- 📡 GLOBAL LISTENERS ---
 window.addEventListener('load', initializeSystem);
@@ -1052,3 +1060,4 @@ window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 window.addEventListener('load', initializeSystem);
+
