@@ -511,87 +511,59 @@ async function deleteAgent() {
     }
 }
 
-// ARUCO SECTIONALS (WIP)
-async function initiateGhostTag() {
-    const modal = document.getElementById('ghost-modal');
-    modal.style.display = 'flex'; // Move this to the top!
-    modal.classList.add('active');
-    
-    // Now try the camera
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" } 
-        });
-        document.getElementById('scanner-video').srcObject = stream;
-    } catch (err) {
-        document.getElementById('scanner-status').innerText = "CAMERA BLOCKED";
-    }
-}
-
-// --- ARUCO / KERNEL INTEGRATION ---
-function handleManualAruco() {
-    const idInput = document.getElementById('aruco-id-input');
-    const id = idInput.value;
-    if (id !== "" && typeof oracleKernel !== 'undefined') {
-        const resultLabel = oracleKernel.processDetection(id);
-        document.getElementById('scanner-status').innerText = `IDENTIFIED: ${resultLabel}`;
-        if (typeof dropMarkerOnPng === "function") dropMarkerOnPng(id, resultLabel);
-        if (oracleKernel.mode === 0) syncStatsWithKernel(resultLabel);
-    }
-}
-
-function syncStatsWithKernel(label) {
-    const idMap = { "Minor": 0, "Delayed": 1, "Immediate": 2, "Deceased": 3 };
-    const idx = idMap[label];
-    if (idx !== undefined) {
-        counts[idx]++;
-        saveState();
-        const elementId = ['g-c', 'y-c', 'r-c', 'b-c'][idx];
-        const el = document.getElementById(elementId);
-        if (el) { el.classList.add('pulse-text'); setTimeout(() => el.classList.remove('pulse-text'), 500); }
-    }
-}
-
-// --- CLEANUP & MODALS ---
-function closeGhostModal() {
-    if (stream) { stream.getTracks().forEach(track => track.stop()); stream = null; }
-    document.getElementById('ghost-modal').style.display = 'none';
-}
-
-/* 📶 OFFLINE AUTO-SAFEGUARD */
-window.addEventListener('offline', () => {
-    // If the vision link is open when we go offline, kill it.
-    // We don't want a frozen camera feed stalling the CMSHS ORACLE.
-    const visionPopup = document.getElementById('aruco-vision-popup');
-    
-    if (visionPopup && visionPopup.style.display !== 'none') {
-        console.warn("OFFLINE DETECTED: Terminating Vision Link to preserve memory.");
-        terminateVisionLink();
-        
-        // Show a tactical alert so the user knows WHY it closed
-        tacticalPrompt("SIGNAL LOST", "Vision Link requires 5G/WiFi. Reverting to Offline Grid Mode.", false, "", true);
-    }
-});
-
-// --- 🛰️ ORACLE VISION DRIVER (AUTONOMOUS SCAN) ---
+/* 🏛️ ORACLE VISION ENGINE & KERNEL INTEGRATION */
+let stream = null;
 let isProcessingFrame = false;
 
+// 1. INITIATE SCANNER (With High-Priority Modal Display)
+async function initiateGhostTag() {
+    const modal = document.getElementById('ghost-modal');
+    if (!modal) return;
+
+    // Force display immediately before hardware access
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+    
+    // 📶 OFFLINE CHECK: If offline, don't even try the camera
+    if (!navigator.onLine) {
+        document.getElementById('scanner-status').innerText = "OFFLINE: VISION DISABLED";
+        return;
+    }
+
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", focusMode: "continuous" } 
+        });
+        const videoEl = document.getElementById('scanner-video');
+        videoEl.srcObject = stream;
+        
+        // Start the autonomous detection loop once video plays
+        videoEl.onloadedmetadata = () => startVisionLoop();
+        
+    } catch (err) {
+        console.error("Camera Error:", err);
+        document.getElementById('scanner-status').innerText = "HARDWARE BLOCKED";
+    }
+}
+
+// 2. THE AUTONOMOUS VISION LOOP (Refined jsaruco integration)
 function startVisionLoop() {
     if (typeof AR === 'undefined') {
-        console.warn("Vision Library (jsaruco) not loaded.");
+        console.warn("ORACLE: AR Library missing.");
         return;
     }
 
     const detector = new AR.Detector();
     const video = document.getElementById("scanner-video");
-    const canvas = document.createElement("canvas");
+    const canvas = document.createElement("canvas"); // Offscreen processing
     const context = canvas.getContext("2d");
 
     function capture() {
-        // Only process if the scanner modal is actually open
         const modal = document.getElementById('ghost-modal');
-        if (modal && modal.style.display !== 'none' && video.readyState === video.HAVE_ENOUGH_DATA) {
-            
+        // Stop the loop if modal is closed or hardware is lost
+        if (!modal || modal.style.display === 'none' || !stream) return;
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -601,16 +573,12 @@ function startVisionLoop() {
 
             if (markers.length > 0) {
                 const detectedID = markers[0].id;
-                
-                // Update the UI input so the user sees what was seen
                 const idInput = document.getElementById('aruco-id-input');
+                
+                // Only trigger if it's a new detection to prevent spamming the kernel
                 if (idInput && idInput.value != detectedID) {
                     idInput.value = detectedID;
-                    
-                    // Trigger the existing kernel logic you wrote!
-                    handleManualAruco(); 
-                    
-                    // Tactile Haptic Feedback (S10 5G has great vibration motors)
+                    handleManualAruco(); // Trigger kernel processing
                     if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
                 }
             }
@@ -620,17 +588,68 @@ function startVisionLoop() {
     capture();
 }
 
-/* 🏛️ OFFLINE BOOT RECOVERY */
-if (!navigator.onLine) {
-    const visionPopup = document.getElementById('aruco-vision-popup');
-    if (visionPopup) {
-        visionPopup.style.display = 'none';
-        visionPopup.classList.remove('active');
-        console.log("ORACLE: Offline boot detected. Vision Link suppressed.");
+// 3. KERNEL PROCESSING (Binds Vision Data to Map & Stats)
+function handleManualAruco() {
+    const idInput = document.getElementById('aruco-id-input');
+    const id = idInput.value;
+    
+    // Check if oracleKernel exists (should be defined in your main kernel logic)
+    if (id !== "" && typeof oracleKernel !== 'undefined') {
+        const resultLabel = oracleKernel.processDetection(id);
+        document.getElementById('scanner-status').innerText = `IDENTIFIED: ${resultLabel}`;
+        
+        // Update Grid & Stats
+        if (typeof dropMarkerOnPng === "function") dropMarkerOnPng(id, resultLabel);
+        syncStatsWithKernel(resultLabel);
     }
 }
 
-initializeSystem();
+function syncStatsWithKernel(label) {
+    const idMap = { "Minor": 0, "Delayed": 1, "Immediate": 2, "Deceased": 3 };
+    const idx = idMap[label];
+    
+    if (idx !== undefined) {
+        counts[idx]++; // Increment your global triage counters
+        if (typeof updateHUD === 'function') updateHUD(); 
+        if (typeof saveState === 'function') saveState();
+
+        const elementId = ['g-c', 'y-c', 'r-c', 'b-c'][idx];
+        const el = document.getElementById(elementId);
+        if (el) { 
+            el.classList.add('pulse-text'); 
+            setTimeout(() => el.classList.remove('pulse-text'), 500); 
+        }
+    }
+}
+
+// 4. CLEANUP (The "Emergency Eject" Logic)
+function closeGhostModal() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    const modal = document.getElementById('ghost-modal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('active');
+    }
+    // Hard reset status for next use
+    document.getElementById('scanner-status').innerText = "WAITING FOR SCAN...";
+    document.getElementById('aruco-id-input').value = "";
+}
+
+// 5. BOOT PROTECTOR: FORCE KILL IF OFFLINE REFRESH
+window.addEventListener('load', () => {
+    if (!navigator.onLine) {
+        const modal = document.getElementById('ghost-modal');
+        if (modal) {
+            modal.style.display = 'none';
+            sessionStorage.removeItem('VISION_LINK_ACTIVE');
+        }
+    }
+    // Only initialize the full system if not already handled
+    if (typeof initializeSystem === 'function') initializeSystem();
+});
 
 // --- ⚠️ HAZARD COMMAND ENGINE ---
 let currentHazardMode = null;
@@ -984,6 +1003,7 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
 
 
 
