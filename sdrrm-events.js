@@ -656,36 +656,50 @@ window.addEventListener('load', () => {
 // --- ⚠️ HAZARD COMMAND ENGINE ---
 let currentHazardMode = null;
 
-// --- 🛰️ SIDEBAR STATE REGISTRY ---
+// 1. TACTICAL SIDEBAR REGISTRY
 function toggleSidebar() {
     const sidebar = document.getElementById('hazard-sidebar');
+    if (!sidebar) return; // Safety check
+    
     const isActive = sidebar.classList.toggle('active');
     
-    // Save the state: 'true' if open, 'false' if closed
+    // Save state for offline persistence
     localStorage.setItem('ORACLE_SIDEBAR_STATUS', isActive);
     
     if (navigator.vibrate) navigator.vibrate(40);
 }
 
-// Add this to your initializeSystem() or window.load sequence
+// 2. OFFLINE PERSISTENCE RESTORE
 function restoreSidebarState() {
     const sidebar = document.getElementById('hazard-sidebar');
     const savedStatus = localStorage.getItem('ORACLE_SIDEBAR_STATUS');
 
-    // If it was explicitly saved as 'true', force it open
-    if (savedStatus === 'true') {
+    // Strict boolean check
+    if (sidebar && savedStatus === 'true') {
         sidebar.classList.add('active');
-        console.log("ORACLE: Sidebar State Restored (Offline Persistence).");
+        console.log("ORACLE: Sidebar State Restored.");
     }
 }
 
+// 3. HAZARD DEPLOYMENT MODE
 function setHazardType(type) {
-    currentHazardMode = type;
-    document.getElementById('hazard-status').innerText = `READY: ${type.toUpperCase()}`;
-    if (navigator.vibrate) navigator.vibrate(40);
+    // If the user taps the same type twice, "Disarm" the mode (Stoic Toggle)
+    if (currentHazardMode === type) {
+        currentHazardMode = null;
+        document.getElementById('hazard-status').innerText = "SYSTEM: STANDBY";
+        tacticalPrompt("MODE DISARMED", "Hazard plotting disabled.", false, "", true);
+    } else {
+        currentHazardMode = type;
+        document.getElementById('hazard-status').innerText = `READY: ${type.toUpperCase()}`;
+        
+        // Haptic feedback for S10
+        if (navigator.vibrate) navigator.vibrate([30, 50]); 
+        
+        tacticalPrompt("HAZARD READY", `PLOTTING: ${type.toUpperCase()}\nDouble-tap the map to deploy marker.`, false, "", true);
+    }
+    
+    // Auto-close sidebar after selection to clear the view for plotting
     toggleSidebar();
-    // Use your existing tacticalPrompt logic
-    tacticalPrompt("HAZARD READY", `PLOTTING: ${type.toUpperCase()}\nDouble-tap the map to deploy marker.`, false, "", true);
 }
 
 // CREATE & READ (Integrated into existing dot logic)
@@ -1023,3 +1037,4 @@ window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 window.addEventListener('load', initializeSystem);
+
