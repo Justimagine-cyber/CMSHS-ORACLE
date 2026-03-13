@@ -568,31 +568,22 @@ async function deleteAgent() {
 
 /* 🏛️ ORACLE VISION ENGINE & KERNEL INTEGRATION */
 let stream = null;
-let isProcessingFrame = false;
 
-// 1. INITIATE SCANNER (With High-Priority Modal Display)
+// 1. INITIATE SCANNER
 async function initiateGhostTag() {
     const modal = document.getElementById('ghost-modal');
     if (!modal) return;
 
-    // Force display immediately before hardware access
     modal.style.display = 'flex';
     modal.classList.add('active');
     
-    // 📶 OFFLINE CHECK: If offline, don't even try the camera
-    if (!navigator.onLine) {
-        document.getElementById('scanner-status').innerText = "OFFLINE: VISION DISABLED";
-        return;
-    }
-
+    // NOTE: ArUco processing is OFFLINE. We only check hardware.
     try {
         stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment", focusMode: "continuous" } 
+            video: { facingMode: "environment" } 
         });
         const videoEl = document.getElementById('scanner-video');
         videoEl.srcObject = stream;
-        
-        // Start the autonomous detection loop once video plays
         videoEl.onloadedmetadata = () => startVisionLoop();
         
     } catch (err) {
@@ -601,21 +592,17 @@ async function initiateGhostTag() {
     }
 }
 
-// 2. THE AUTONOMOUS VISION LOOP (Refined jsaruco integration)
+// 2. THE AUTONOMOUS VISION LOOP
 function startVisionLoop() {
-    if (typeof AR === 'undefined') {
-        console.warn("ORACLE: AR Library missing.");
-        return;
-    }
+    if (typeof AR === 'undefined') return;
 
     const detector = new AR.Detector();
     const video = document.getElementById("scanner-video");
-    const canvas = document.createElement("canvas"); // Offscreen processing
+    const canvas = document.createElement("canvas"); 
     const context = canvas.getContext("2d");
 
     function capture() {
         const modal = document.getElementById('ghost-modal');
-        // Stop the loop if modal is closed or hardware is lost
         if (!modal || modal.style.display === 'none' || !stream) return;
 
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
@@ -630,11 +617,11 @@ function startVisionLoop() {
                 const detectedID = markers[0].id;
                 const idInput = document.getElementById('aruco-id-input');
                 
-                // Only trigger if it's a new detection to prevent spamming the kernel
+                // Prevent duplicate processing of the same frame
                 if (idInput && idInput.value != detectedID) {
                     idInput.value = detectedID;
-                    handleManualAruco(); // Trigger kernel processing
-                    if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
+                    if (navigator.vibrate) navigator.vibrate([100, 50]);
+                    handleManualAruco(); 
                 }
             }
         }
@@ -643,24 +630,30 @@ function startVisionLoop() {
     capture();
 }
 
-// 3. KERNEL PROCESSING (Binds Vision Data to Map & Stats)
+// 3. KERNEL PROCESSING (Now with Atlas Localization)
 function handleManualAruco() {
     const idInput = document.getElementById('aruco-id-input');
-    const id = idInput.value;
+    const id = parseInt(idInput.value); // Ensure it's a number for the Atlas
     
-    // Check if oracleKernel exists (should be defined in your main kernel logic)
-    if (id !== "" && typeof oracleKernel !== 'undefined') {
-        const resultLabel = oracleKernel.processDetection(id);
-        document.getElementById('scanner-status').innerText = `IDENTIFIED: ${resultLabel}`;
-        
-        // Inside your ArUco detection success logic:
-        const detectedId = marker.id; // Or however your library returns it
-        executeIndoorLocalization(detectedId);
-        
-        // Update Grid & Stats
-        if (typeof dropMarkerOnPng === "function") dropMarkerOnPng(id, resultLabel);
-        syncStatsWithKernel(resultLabel);
+    if (isNaN(id)) return;
+
+    // A. TRIGGER INDOOR LOCALIZATION (The Snap-to-Room Feature)
+    if (typeof executeIndoorLocalization === 'function') {
+        executeIndoorLocalization(id);
     }
+
+    // B. TARGET LABEL RETRIEVAL (From your existing kernel)
+    let resultLabel = "UNKNOWN";
+    if (typeof oracleKernel !== 'undefined') {
+        resultLabel = oracleKernel.processDetection(id);
+        document.getElementById('scanner-status').innerText = `IDENTIFIED: ${resultLabel}`;
+    } else {
+        document.getElementById('scanner-status').innerText = `MARKER ${id} RECOGNIZED`;
+    }
+
+    // C. UPDATE TRIAGE STATS & MARKERS
+    if (typeof dropMarkerOnPng === "function") dropMarkerOnPng(id, resultLabel);
+    syncStatsWithKernel(resultLabel);
 }
 
 function syncStatsWithKernel(label) {
@@ -668,7 +661,7 @@ function syncStatsWithKernel(label) {
     const idx = idMap[label];
     
     if (idx !== undefined) {
-        counts[idx]++; // Increment your global triage counters
+        if (typeof counts !== 'undefined') counts[idx]++; 
         if (typeof updateHUD === 'function') updateHUD(); 
         if (typeof saveState === 'function') saveState();
 
@@ -681,7 +674,7 @@ function syncStatsWithKernel(label) {
     }
 }
 
-// 4. CLEANUP (The "Emergency Eject" Logic)
+// 4. CLEANUP
 function closeGhostModal() {
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
@@ -692,23 +685,9 @@ function closeGhostModal() {
         modal.style.display = 'none';
         modal.classList.remove('active');
     }
-    // Hard reset status for next use
     document.getElementById('scanner-status').innerText = "WAITING FOR SCAN...";
     document.getElementById('aruco-id-input').value = "";
 }
-
-// 5. BOOT PROTECTOR: FORCE KILL IF OFFLINE REFRESH
-window.addEventListener('load', () => {
-    if (!navigator.onLine) {
-        const modal = document.getElementById('ghost-modal');
-        if (modal) {
-            modal.style.display = 'none';
-            sessionStorage.removeItem('VISION_LINK_ACTIVE');
-        }
-    }
-    // Only initialize the full system if not already handled
-    if (typeof initializeSystem === 'function') initializeSystem();
-});
 
 // --- ⚠️ HAZARD COMMAND ENGINE ---
 let currentHazardMode = null;
