@@ -600,10 +600,14 @@ function startVisionLoop() {
     const video = document.getElementById("scanner-video");
     const canvas = document.createElement("canvas"); 
     const context = canvas.getContext("2d");
+    
+    // 🏛️ EXECUTION LOCK: Prevents the "Infinite Snap" glitch
+    let isDetected = false;
 
     function capture() {
         const modal = document.getElementById('ghost-modal');
-        if (!modal || modal.style.display === 'none' || !stream) return;
+        // If modal is hidden or we already locked a target, stop the loop
+        if (!modal || modal.style.display === 'none' || !stream || isDetected) return;
 
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
             canvas.width = video.videoWidth;
@@ -614,14 +618,32 @@ function startVisionLoop() {
             const markers = detector.detect(imageData);
 
             if (markers.length > 0) {
+                // LOCK THE LOOP IMMEDIATELY
+                isDetected = true; 
+
                 const detectedID = markers[0].id;
                 const idInput = document.getElementById('aruco-id-input');
                 
-                // Prevent duplicate processing of the same frame
-                if (idInput && idInput.value != detectedID) {
+                if (idInput) {
                     idInput.value = detectedID;
-                    if (navigator.vibrate) navigator.vibrate([100, 50]);
+                    console.log("ORACLE: Marker " + detectedID + " Locked.");
+                    
+                    // 1. Trigger the map snap
                     handleManualAruco(); 
+                    
+                    // 2. Tactical haptic feedback
+                    if (navigator.vibrate) navigator.vibrate(200);
+                    
+                    // 3. Status update for the UI
+                    const statusText = document.getElementById('scanner-status');
+                    if (statusText) statusText.innerText = `LOCKED: ID ${detectedID}`;
+
+                    // 4. Auto-exit after 1 second
+                    setTimeout(() => {
+                        closeGhostModal();
+                        // Reset the lock for the next time the modal opens
+                        isDetected = false; 
+                    }, 1000);
                 }
             }
         }
