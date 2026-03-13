@@ -620,6 +620,16 @@ function startVisionLoop() {
     capture();
 }
 
+/* 🏛️ OFFLINE BOOT RECOVERY */
+if (!navigator.onLine) {
+    const visionPopup = document.getElementById('aruco-vision-popup');
+    if (visionPopup) {
+        visionPopup.style.display = 'none';
+        visionPopup.classList.remove('active');
+        console.log("ORACLE: Offline boot detected. Vision Link suppressed.");
+    }
+}
+
 initializeSystem();
 
 // --- ⚠️ HAZARD COMMAND ENGINE ---
@@ -974,5 +984,6 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 
 window.addEventListener('load', initializeSystem);
+
 
 
