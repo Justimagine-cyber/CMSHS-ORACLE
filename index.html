@@ -17,6 +17,31 @@
     <script src="oracle-kernel.js"></script>
     <script src="coordinate_map.js"></script>
     <script src="sdrrm-events.js" defer></script>
+
+    <script>
+        function forceKillVision() {
+            console.log("ORACLE: Executing Emergency Eject...");
+            
+            // 1. Force hide the container using inline styles to override CSS
+            const popup = document.getElementById('aruco-vision-popup');
+            if (popup) {
+                popup.style.display = 'none';
+                popup.style.visibility = 'hidden';
+                popup.style.opacity = '0';
+                popup.innerHTML = ""; // Hard clear to stop video ghosts
+            }
+            
+            // 2. Clear any session flags that might trigger it to reopen
+            sessionStorage.removeItem('VISION_LINK_ACTIVE');
+            
+            // 3. Tactile feedback for S10
+            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+
+            // 4. Stoic Reset: Refresh to clear the JS heap and show the Grid
+            window.location.reload(); 
+        }
+    </script>
+</body>
 </head>
 <body>
 
@@ -146,7 +171,7 @@
         </div>
 
         <div class="modal-footer">
-            <button class="abort-btn" onclick="closeGhostModal()">TERMINATE LINK</button>
+            <button id="terminate-link-btn" onclick="forceKillVision()">TERMINATE LINK</button>
         </div>
     </div>
 </div>
@@ -161,3 +186,4 @@
 </script>
 </body>
 </html>
+
