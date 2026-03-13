@@ -671,19 +671,32 @@ function toggleSidebar() {
 
 // 2. OFFLINE PERSISTENCE RESTORE
 function restoreSidebarState() {
-    // We use a small timeout to ensure the browser has finished painting the UI
-    setTimeout(() => {
-        const sidebar = document.getElementById('hazard-sidebar');
-        const savedStatus = localStorage.getItem('ORACLE_SIDEBAR_STATUS');
+    const sidebar = document.getElementById('hazard-sidebar');
+    const savedStatus = localStorage.getItem('ORACLE_SIDEBAR_STATUS');
 
-        if (sidebar && savedStatus === 'true') {
-            sidebar.classList.add('active');
-            // Force a style recalculation for mobile Brave
-            sidebar.style.display = 'flex'; 
-            console.log("ORACLE: Sidebar Persistence Confirmed.");
-        }
-    }, 100); // 100ms is enough to bypass the race condition
+    if (sidebar && savedStatus === 'true') {
+        // 1. Immediate Force-Show
+        applySidebarOpenStyles(sidebar);
+
+        // 2. The "Stoic Watchdog": Check again after the boot animation finishes
+        // This catches any scripts that try to hide it during the transition.
+        setTimeout(() => {
+            applySidebarOpenStyles(sidebar);
+            console.log("ORACLE: Watchdog confirmed Sidebar position.");
+        }, 4000); 
+    }
 }
+
+// Helper function to keep the logic clean
+function applySidebarOpenStyles(el) {
+    el.classList.add('active');
+    el.style.setProperty('right', '0px', 'important');
+    el.style.setProperty('display', 'flex', 'important');
+    el.style.setProperty('transform', 'translateX(0)', 'important');
+    el.style.setProperty('visibility', 'visible', 'important');
+    el.style.setProperty('opacity', '1', 'important');
+}
+
 // 3. HAZARD DEPLOYMENT MODE
 function setHazardType(type) {
     // If the user taps the same type twice, "Disarm" the mode (Stoic Toggle)
