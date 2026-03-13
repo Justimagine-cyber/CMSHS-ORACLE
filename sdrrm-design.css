@@ -739,7 +739,14 @@ color: #000 !important;
     to { opacity: 1; transform: scale(1); }
 }
 
-/* Sidebar Tab */
+/* 🛠️ OFFLINE PERSISTENCE LOCK */
+#hazard-sidebar.active {
+    transform: translateX(0) !important;
+    right: 0 !important;
+    visibility: visible !important;
+    display: flex !important;
+    opacity: 1 !important;
+}
 #sidebar-tab {
     position: fixed; right: 0; top: 40%;
     background: #ff8000; color: #000; padding: 15px 5px;
@@ -846,4 +853,3 @@ color: #000 !important;
     from { transform: translateY(0); }
     to { transform: translateY(-3px); }
 }
-
