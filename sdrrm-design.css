@@ -711,6 +711,22 @@ color: #000 !important;
     color: #fff;
 }
 
+#aruco-vision-popup {
+    pointer-events: none !important; /* Makes the container "pass-through" */
+}
+
+#aruco-vision-popup > * {
+    pointer-events: auto !important; /* Re-enables touch for the actual UI elements */
+}
+
+#terminate-link-btn {
+    position: relative !important;
+    z-index: 99999 !important; /* Higher than any Aruco canvas */
+    background: rgba(255, 0, 0, 0.2);
+    border: 1px solid red;
+    pointer-events: all !important;
+}
+
 /* 🔄 ANIMATIONS */
 @keyframes scanMove {
     0% { top: 0%; opacity: 0; }
@@ -830,3 +846,4 @@ color: #000 !important;
     from { transform: translateY(0); }
     to { transform: translateY(-3px); }
 }
+
