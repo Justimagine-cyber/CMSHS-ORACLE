@@ -28,13 +28,20 @@ let wasPinching = false;
 let isDraggingMobile = false; 
 let touchStartPos = { x: 0, y: 0 };
 
-/* 🏛️ ORACLE KERNEL: SYSTEM INITIALIZATION & BOOT PROTECTOR */
+/* 🏛️ ORACLE SYSTEM INITIALIZATION & BOOT PROTECTOR */
 let bootInitiated = false;
 
 function initializeSystem() {
     // 1. PREVENT DOUBLE-BOOT LOCK
     if (bootInitiated) return;
     bootInitiated = true;
+
+    console.log("ORACLE: Commencing System Boot...");
+
+    // 🚀 IMMEDIATE RECOVERY: Load data before the animation starts
+    // This fixes the "Disappearing Hazard" bug by injecting them into the DOM early.
+    if (typeof loadHazards === 'function') loadHazards(); 
+    if (typeof restoreSidebarState === 'function') restoreSidebarState();
 
     const bootOverlay = document.getElementById('boot-overlay');
     const bootText = document.getElementById('boot-text') || document.querySelector('.boot-text');
@@ -44,7 +51,8 @@ function initializeSystem() {
     if (isSessionActive) {
         if (bootOverlay) bootOverlay.style.display = 'none';
         loadState(); 
-        if (typeof loadHazards === 'function') loadHazards(); // Restore Hazards
+        if (typeof loadHazards === 'function') loadHazards(); 
+        if (typeof restoreSidebarState === 'function') restoreSidebarState();
         updateMapTransform();
         return;
     }
@@ -52,49 +60,40 @@ function initializeSystem() {
     // 3. THE CLEAN TYPEWRITER PROTOCOL
     const fullText = "INITIALIZING CMSHS GRID...\nACCESSING CMSHS ORACLE...\nSUCCESSFUL INITIALIZATION!";
     let i = 0;
-    if (bootText) bootText.innerHTML = ""; // Clear any ghost chars
+    if (bootText) bootText.innerHTML = ""; 
 
     function typeWriter() {
         if (bootText && i < fullText.length) {
             bootText.innerHTML += fullText.charAt(i);
             i++;
-            // Smooth typing speed for S10 display
             setTimeout(typeWriter, 40); 
         }
     }
 
-    // Execute Typing
     typeWriter();
 
     // 4. THE SMOOTH DISMOUNT
-setTimeout(() => {
-
-    if (!bootOverlay) return;
-
-    // Fade overlay
-    bootOverlay.style.opacity = '0';
-    bootOverlay.style.pointerEvents = 'none';
-
     setTimeout(() => {
+        if (!bootOverlay) return;
 
-        // Remove overlay from layout
-        bootOverlay.style.display = 'none';
+        bootOverlay.style.opacity = '0';
+        bootOverlay.style.pointerEvents = 'none';
 
-        sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
+        setTimeout(() => {
+            bootOverlay.style.display = 'none';
+            sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
 
-        // Restore system state
-        loadState();
-        loadHazards();
-        updateMapTransform();
+            // Final Sync to ensure nothing was missed during the fade
+            loadState();
+            loadHazards();
+            updateMapTransform();
 
-        // Restore sidebar AFTER layout stabilizes
-        requestAnimationFrame(() => {
-            restoreSidebarState();
-        });
-
-    }, 800); // overlay fade duration
-
-}, 3800); // full boot sequence duration
+            requestAnimationFrame(() => {
+                restoreSidebarState();
+            });
+        }, 800); 
+    }, 3800); 
+}
 
 // --- 📡 GLOBAL LISTENERS ---
 window.addEventListener('load', initializeSystem);
@@ -1060,4 +1059,5 @@ window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 window.addEventListener('load', initializeSystem);
+
 
