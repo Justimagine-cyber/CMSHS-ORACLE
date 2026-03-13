@@ -1,6 +1,4 @@
-/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V22.8 - MASTER COMPILATION
-    - Refined for S10 5G Performance & WebAssembly-Style Kernel Integration
-*/
+/* 🏛️ CMSHS ORACLE: TACTICAL ENGINE V22.8 - MASTER COMPILATION */
 
 console.log("ORACLE SYSTEM: ONLINE - ALL MODULES INTEGRATED");
 
@@ -80,9 +78,10 @@ function initializeSystem() {
                 // Ensure map state is synced after overlay is gone
                 loadState();
                 loadHazards();
-                restoreSidebarState();
-                if (typeof loadHazards === 'function') loadHazards();
 
+                setTimeout(() => {
+                restoreSidebarState();
+                }, 100);
                 updateMapTransform();
             }, 800);
         }
@@ -664,7 +663,7 @@ function toggleSidebar() {
     const isActive = sidebar.classList.toggle('active');
     
     // Save state for offline persistence
-    localStorage.setItem('ORACLE_SIDEBAR_STATUS', isActive);
+    localStorage.setItem('ORACLE_SIDEBAR_STATUS', isActive ? "true" : "false");
     
     if (navigator.vibrate) navigator.vibrate(40);
 }
