@@ -671,16 +671,19 @@ function toggleSidebar() {
 
 // 2. OFFLINE PERSISTENCE RESTORE
 function restoreSidebarState() {
-    const sidebar = document.getElementById('hazard-sidebar');
-    const savedStatus = localStorage.getItem('ORACLE_SIDEBAR_STATUS');
+    // We use a small timeout to ensure the browser has finished painting the UI
+    setTimeout(() => {
+        const sidebar = document.getElementById('hazard-sidebar');
+        const savedStatus = localStorage.getItem('ORACLE_SIDEBAR_STATUS');
 
-    // Strict boolean check
-    if (sidebar && savedStatus === 'true') {
-        sidebar.classList.add('active');
-        console.log("ORACLE: Sidebar State Restored.");
-    }
+        if (sidebar && savedStatus === 'true') {
+            sidebar.classList.add('active');
+            // Force a style recalculation for mobile Brave
+            sidebar.style.display = 'flex'; 
+            console.log("ORACLE: Sidebar Persistence Confirmed.");
+        }
+    }, 100); // 100ms is enough to bypass the race condition
 }
-
 // 3. HAZARD DEPLOYMENT MODE
 function setHazardType(type) {
     // If the user taps the same type twice, "Disarm" the mode (Stoic Toggle)
@@ -1037,4 +1040,3 @@ window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 window.addEventListener('load', initializeSystem);
-
