@@ -267,6 +267,53 @@ function focusOnUser(x, y) {
     updateMapTransform();
 }
 
+/* 🏛️ ORACLE SPATIAL ATLAS: MAPPING ARUCO IDs TO PIXEL COORDS */
+const CMSHS_SPATIAL_INDEX = {
+    0: { name: "MAIN GATE / DEPOT", x: 200, y: 1500 },
+    1: { name: "CMSHS GYMNASIUM", x: 1200, y: 850 },
+    2: { name: "SCIENCE LAB", x: 450, y: 320 },
+    3: { name: "COMPUTER LAB", x: 2100, y: 400 },
+    4: { name: "ADMINISTRATION BLDG", x: 1800, y: 1200 },
+    // Add IDs 5-11 based on your floor plan
+};
+
+function executeIndoorLocalization(markerId) {
+    const landmark = CMSHS_SPATIAL_INDEX[markerId];
+
+    if (landmark) {
+        console.log(`ORACLE: Landmark Locked - ${landmark.name}`);
+
+        // 1. UPDATE USER COORDINATES
+        // Assuming 'userPos' is your global object for the blue dot
+        userPos.x = landmark.x;
+        userPos.y = landmark.y;
+
+        // 2. RE-RENDER MAP
+        updateMapTransform();
+        renderUserLocation(); // Function that draws the blue dot
+
+        // 3. TACTICAL FEEDBACK
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        
+        // Update the HUD so the user knows where they are
+        const statusSpan = document.getElementById('hazard-status');
+        if (statusSpan) {
+            statusSpan.innerText = `LOCATED: ${landmark.name}`;
+            statusSpan.style.color = "#00aaff";
+        }
+
+        // 4. AUTO-CLOSE THE VISION LINK
+        setTimeout(() => {
+            closeGhostModal();
+            tacticalPrompt("LOCATION SYNCED", `TRANSFERRED TO ${landmark.name}`, false);
+        }, 1500);
+
+    } else {
+        console.warn(`ORACLE: Unknown Marker ID ${markerId}`);
+    }
+}
+
+
 // --- 📱 TOUCH ENGINE (OPTIMIZED) ---
 viewport.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
@@ -605,6 +652,10 @@ function handleManualAruco() {
     if (id !== "" && typeof oracleKernel !== 'undefined') {
         const resultLabel = oracleKernel.processDetection(id);
         document.getElementById('scanner-status').innerText = `IDENTIFIED: ${resultLabel}`;
+        
+        // Inside your ArUco detection success logic:
+        const detectedId = marker.id; // Or however your library returns it
+        executeIndoorLocalization(detectedId);
         
         // Update Grid & Stats
         if (typeof dropMarkerOnPng === "function") dropMarkerOnPng(id, resultLabel);
@@ -1059,5 +1110,3 @@ window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 window.addEventListener('load', initializeSystem);
-
-
