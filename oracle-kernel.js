@@ -39,3 +39,18 @@ class OracleKernel {
 
 // Initialize globally so other files can see it
 const oracleKernel = new OracleKernel();
+
+/* 📶 OFFLINE AUTO-SAFEGUARD */
+window.addEventListener('offline', () => {
+    // If the vision link is open when we go offline, kill it.
+    // We don't want a frozen camera feed stalling the CMSHS ORACLE.
+    const visionPopup = document.getElementById('aruco-vision-popup');
+    
+    if (visionPopup && visionPopup.style.display !== 'none') {
+        console.warn("OFFLINE DETECTED: Terminating Vision Link to preserve memory.");
+        terminateVisionLink();
+        
+        // Show a tactical alert so the user knows WHY it closed
+        tacticalPrompt("SIGNAL LOST", "Vision Link requires 5G/WiFi. Reverting to Offline Grid Mode.", false, "", true);
+    }
+});
