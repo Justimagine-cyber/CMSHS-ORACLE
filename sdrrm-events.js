@@ -74,20 +74,20 @@ function initializeSystem() {
             bootOverlay.style.opacity = '0';
             bootOverlay.style.pointerEvents = 'none'; 
             
-            // 🚀 BOOT SIDEBAR IMMEDIATELY HERE (Don't wait for the 800ms fade)
-            restoreSidebarState(); 
-
             setTimeout(() => {
                 bootOverlay.style.display = 'none';
                 sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
-                
-                // Sync the rest of the data
-                loadState(); 
+                // Ensure map state is synced after overlay is gone
+                loadState();
                 loadHazards();
+                restoreSidebarState();
+                if (typeof loadHazards === 'function') loadHazards();
+
                 updateMapTransform();
             }, 800);
         }
-    }, 3800);
+    }, 3800); // 3.8s allows full text to finish before fade
+}
 
 // --- 📡 GLOBAL LISTENERS ---
 window.addEventListener('load', initializeSystem);
@@ -656,37 +656,33 @@ window.addEventListener('load', () => {
 // --- ⚠️ HAZARD COMMAND ENGINE ---
 let currentHazardMode = null;
 
+// 1. TACTICAL SIDEBAR REGISTRY
 function toggleSidebar() {
     const sidebar = document.getElementById('hazard-sidebar');
+    if (!sidebar) return; // Safety check
+    
     const isActive = sidebar.classList.toggle('active');
     
-    if (isActive) {
-        localStorage.setItem('ORACLE_SIDEBAR_STATUS', 'true'); // Explicit String
-        sidebar.style.right = "0px";
-    } else {
-        localStorage.setItem('ORACLE_SIDEBAR_STATUS', 'false'); // Explicit String
-        sidebar.style.right = "-300px"; // Match your hidden CSS value
-    }
+    // Save state for offline persistence
+    localStorage.setItem('ORACLE_SIDEBAR_STATUS', isActive);
     
     if (navigator.vibrate) navigator.vibrate(40);
 }
 
 // 2. OFFLINE PERSISTENCE RESTORE
-    function restoreSidebarState() {
-    const sidebar = document.getElementById('hazard-sidebar');
-    const savedStatus = localStorage.getItem('ORACLE_SIDEBAR_STATUS');
+function restoreSidebarState() {
+    // We use a small timeout to ensure the browser has finished painting the UI
+    setTimeout(() => {
+        const sidebar = document.getElementById('hazard-sidebar');
+        const savedStatus = localStorage.getItem('ORACLE_SIDEBAR_STATUS');
 
-    if (sidebar && savedStatus === 'true') {
-        // 🛠️ FORCE INJECTION: This overrides ALL CSS rules
-        sidebar.classList.add('active');
-        sidebar.style.right = "0px";
-        sidebar.style.display = "flex";
-        sidebar.style.visibility = "visible";
-        sidebar.style.opacity = "1";
-        sidebar.style.transform = "translateX(0)";
-        
-        console.log("ORACLE: Sidebar Hard-Restored.");
-    }
+        if (sidebar && savedStatus === 'true') {
+            sidebar.classList.add('active');
+            // Force a style recalculation for mobile Brave
+            sidebar.style.display = 'flex'; 
+            console.log("ORACLE: Sidebar Persistence Confirmed.");
+        }
+    }, 100); // 100ms is enough to bypass the race condition
 }
 // 3. HAZARD DEPLOYMENT MODE
 function setHazardType(type) {
@@ -1044,4 +1040,3 @@ window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 window.addEventListener('load', initializeSystem);
-
