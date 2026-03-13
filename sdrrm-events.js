@@ -78,8 +78,11 @@ function initializeSystem() {
                 bootOverlay.style.display = 'none';
                 sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
                 // Ensure map state is synced after overlay is gone
-                loadState(); 
+                loadState();
+                loadHazards();
+                restoreSidebarState();
                 if (typeof loadHazards === 'function') loadHazards();
+
                 updateMapTransform();
             }, 800);
         }
@@ -95,7 +98,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- 🛰️ ORACLE GEOSPATIAL ENGINE: CALIBRATED HYBRID ---
-
 const CMSHS_CONFIG = {
     centerLat: 14.568851,
     centerLng: 121.035180,
@@ -654,8 +656,27 @@ window.addEventListener('load', () => {
 // --- ⚠️ HAZARD COMMAND ENGINE ---
 let currentHazardMode = null;
 
+// --- 🛰️ SIDEBAR STATE REGISTRY ---
 function toggleSidebar() {
-    document.getElementById('hazard-sidebar').classList.toggle('active');
+    const sidebar = document.getElementById('hazard-sidebar');
+    const isActive = sidebar.classList.toggle('active');
+    
+    // Save the state: 'true' if open, 'false' if closed
+    localStorage.setItem('ORACLE_SIDEBAR_STATUS', isActive);
+    
+    if (navigator.vibrate) navigator.vibrate(40);
+}
+
+// Add this to your initializeSystem() or window.load sequence
+function restoreSidebarState() {
+    const sidebar = document.getElementById('hazard-sidebar');
+    const savedStatus = localStorage.getItem('ORACLE_SIDEBAR_STATUS');
+
+    // If it was explicitly saved as 'true', force it open
+    if (savedStatus === 'true') {
+        sidebar.classList.add('active');
+        console.log("ORACLE: Sidebar State Restored (Offline Persistence).");
+    }
 }
 
 function setHazardType(type) {
@@ -897,7 +918,7 @@ function showSystemData(type) {
                 
                 <p style="color:#0f6; font-weight:bold; margin-top:10px;">GEOSPATIAL COMMAND</p>
                 <ul style="padding-left:15px; margin-bottom:10px;">
-                    <li><b>live Fix:</b> LOCATE ME -> LIVE. Real-time tracking of location. Turn on your location mode in settings.</li>
+                    <li><b>Live Fix:</b> LOCATE ME -> LIVE. Real-time tracking of location. Turn on your location mode in settings.</li>
                     <li><b>Mock Roaming:</b> LOCATE ME -> MOCK. Simulates a 5-point patrol across the CMSHS grid for training.</li>
                     <li><b>Map Navigation:</b> Single-finger drag to pan. Pinch-to-zoom (Mobile) or Scroll Wheel (Desktop).</li>
                 </ul>
@@ -917,9 +938,9 @@ function showSystemData(type) {
 
                 <p style="color:#ff3333; font-weight:bold;">TROUBLESHOOTING</p>
                 <ul style="padding-left:15px; margin-bottom:10px;">
-                    <li><b>GPS Sync Fail:</b> On Samsung/Android, ensure "Precise Location" is enabled in App Info > Permissions. Ensure site is served over <b>HTTPS</b>.</li>
-                    <li><b>System Drift:</b> If the map becomes unresponsive, use "Refresh" to recalibrate the viewport.</li>
-                    <li><b>Data Wipe:</b> Use the RESET OPERATIONAL DATA function to clear the local grid for a new operation.</li>
+                    <li><b>GPS Sync Fail:</b> Ensure "Precise Location" is enabled in App Info > Permissions. Ensure site is served over <b>HTTPS</b>.</li>
+                    <li><b>System Drift:</b> If the map becomes unresponsive, refresh to recalibrate the viewport.</li>
+                    <li><b>Data Wipe:</b> Perform RESET OPERATIONAL DATA function to clear the local grid for a new operation.</li>
                 </ul>
 
                 <p style="font-size:0.75rem; font-style:italic; opacity:0.7; text-align:center; margin-top:20px;">
@@ -1001,9 +1022,4 @@ window.updateTriage = updateTriage;
 window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
-
 window.addEventListener('load', initializeSystem);
-
-
-
-
