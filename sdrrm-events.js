@@ -528,34 +528,58 @@ const CMSHS_SPATIAL_INDEX = {
     4: { name: "SCHOOL CLINIC", x: 880, y: 300 }     // Far Right JHS
 };
 
-/* 🏛️ CORE LOCALIZATION ENGINE */
+/**
+ * 🏛️ ORACLE: UNIFIED INDOOR LOCALIZATION KERNEL
+ * Merges Spatial Mapping, Global State, and Hardware Haptics.
+ */
 function executeIndoorLocalization(markerId) {
     const landmark = CMSHS_SPATIAL_INDEX[markerId];
-    if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
+    
+    // 1. VALIDATION PROTOCOL
+    if (!landmark) {
+        console.warn(`ORACLE: Unknown ID ${markerId} - External to Spatial Atlas.`);
+        return;
+    }
 
-    // 1. UPDATE REAL GLOBAL COORDINATES
-    // Ensure 'userPos' is declared at the top of your MAIN script
+    console.log(`ORACLE: LOCKING ONTO ${landmark.name} (ID: ${markerId})`);
+
+    // 2. UPDATE GLOBAL COORDINATE STATE
+    // This ensures other systems (like hazard marking) know where you are.
     if (typeof userPos !== 'undefined') {
         userPos.x = landmark.x;
         userPos.y = landmark.y;
     }
 
-    // 2. TRIGGER GPU-ACCELERATED RE-RENDER
-    // Call the real functions defined in your main map logic
+    // 3. TRIGGER GPU-ACCELERATED RENDER
+    // Snap the blue dot and adjust map zoom/pan if necessary.
+    if (typeof renderUserLocation === 'function') {
+        renderUserLocation(); 
+    } else {
+        // Fallback: Direct DOM manipulation if render function isn't ready
+        const userDot = document.getElementById('user-dot');
+        if (userDot) {
+            userDot.style.transform = `translate(${landmark.x}px, ${landmark.y}px)`;
+        }
+    }
+    
     if (typeof updateMapTransform === 'function') updateMapTransform();
-    if (typeof renderUserLocation === 'function') renderUserLocation();
 
-    // 3. CLEANUP HARDWARE
-    closeGhostModal();
+    // 4. UI & HARDWARE FEEDBACK
+    // Close the scanner modal now that we have a lock.
+    if (typeof closeGhostModal === 'function') closeGhostModal();
 
-    // 4. TACTICAL HUD UPDATE
-    const statusSpan = document.getElementById('hazard-status');
+    // Update the HUD Status
+    const statusSpan = document.getElementById('hazard-status') || document.getElementById('scanner-status');
     if (statusSpan) {
         statusSpan.innerText = `LOCATED: ${landmark.name}`;
-        statusSpan.style.color = "#00aaff";
+        statusSpan.style.color = "#00aaff"; // Cyan for 'Locked' status
     }
 
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    // HAPTIC CONFIRMATION
+    if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]); 
+    }
+
     console.log(`ORACLE: Snap-to-Room Successful: ${landmark.name}`);
 }
 
