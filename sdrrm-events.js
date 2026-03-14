@@ -1136,7 +1136,33 @@ window.updateTriage = updateTriage;
 window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
-window.addEventListener('load', initializeSystem);
+window.addEventListener('load', () => {
+    console.log("ORACLE: Hard-Clear Initiated...");
+    
+    // 1. Force remove the boot screen
+    const bootOverlay = document.getElementById('boot-overlay');
+    if (bootOverlay) {
+        bootOverlay.style.opacity = '0';
+        setTimeout(() => {
+            bootOverlay.style.display = 'none';
+        }, 500);
+    }
+
+    // 2. Ensure Map Visibility
+    const mapImg = document.getElementById('map-img');
+    if (mapImg) {
+        mapImg.style.visibility = 'visible';
+        mapImg.style.opacity = '1';
+    }
+
+    // 3. Reset Viewport Variables
+    // If these are undefined, you can't pan or plot
+    if (typeof mapPos !== 'undefined') {
+        mapPos = { x: 0, y: 0 };
+        zoom = 0.6; // Start zoomed out slightly for S10
+        updateMapTransform();
+    }
+});
 
 // Fallback for Service Worker re-renders
 document.addEventListener('DOMContentLoaded', () => {
