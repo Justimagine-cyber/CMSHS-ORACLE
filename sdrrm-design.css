@@ -33,28 +33,18 @@ font-size: 1em;
 }
 .status { font-size: 0.7em; color: #00ff66; opacity: 0.8; font-weight: 700; }
 
-/* 🏛️ THE VIEWPORT */
+/* --- THE VIEWPORT --- */
 #viewport {
-    flex: 1; 
-    position: relative; 
-    overflow: hidden;
-    background-color: #000; 
-    /* 🏛️ This calculation ensures it perfectly fills the gap between header and footer */
-    height: calc(100vh - 170px); 
-    margin-top: 0; 
-    border-top: 1px solid rgba(0, 255, 102, 0.3); /* Subtle divider */
+-webkit-overflow-scrolling: touch;
+touch-action: none;
+flex: 1; position: relative; overflow: hidden;
+background-color: #000; touch-action: none;
+height: calc(100vh - 160px);
 }
 
-/* 🏛️ THE TACTICAL ORACLE LAYER */
 #map-img {
-    position: absolute; 
-    width: 2500px; 
-    height: 1800px;
-    transform-origin: 0 0; 
-    /* 🏛️ REVERT SCALE: This makes the map visible on mobile screens */
-    transform: scale(0.25) translate(0px, 0px); 
-    transition: transform 0.3s ease-out;
-    z-index: 1;
+position: absolute; width: 2500px; height: 1800px;
+transform-origin: 0 0; transition: transform 0.1s ease-out; z-index: 1;
 }
 
 #map-img::before {
@@ -62,23 +52,20 @@ content: ""; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
 background:
 linear-gradient(rgba(0, 255, 102, 0.05) 1px, transparent 1px),
 linear-gradient(90deg, rgba(0, 255, 102, 0.05) 1px, transparent 1px),
+url('CMSHS-SDRRM-PLAN.png');
 background-size: 50px 50px, 50px 50px, contain;
 background-repeat: no-repeat;
 filter: brightness(0.7) contrast(1.2) saturate(1.2); z-index: -1;
 }
 
-/* 🏛️ REVERT STATS HUD POSITIONING */
+/* --- Tactical HUD OVERLAYS --- */
 #stats-hud {
-    position: absolute; 
-    top: 10px; /* Reduced from 20px to keep it away from the header line */
-    left: 15px;
-    background: rgba(0, 15, 0, 0.95); /* Slightly darker for better contrast */
-    padding: 12px;
-    border: 1px solid #00ff66; 
-    border-left: 6px solid #00ff66; /* Thinner border to save space */
-    font-size: 0.7em; 
-    z-index: 1000; /* Ensure it stays above the map but below modals */
-    pointer-events: none;
+position: absolute; top: 20px; left: 20px;
+background: rgba(0, 15, 0, 0.9); padding: 15px;
+border: 1px solid #00ff66; border-left: 8px solid #00ff66;
+font-size: 0.75em; z-index: 50; pointer-events: none;
+font-weight: 900; letter-spacing: 1px;
+box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
 }
 
 /* --- UNIVERSAL Tactical FOOTER (7-BUTTON GRID) --- */
@@ -867,22 +854,21 @@ color: #000 !important;
     to { transform: translateY(-3px); }
 }
 
-/* 🏛️ THE USER POSITION TRACKER */
 #user-dot {
     position: absolute;
-    width: 20px;
-    height: 20px;
+    top: 0;
+    left: 0;
+    width: 15px;
+    height: 15px;
     background: #00aaff;
-    border: 3px solid #fff;
     border-radius: 50%;
-    z-index: 999; /* HIGHEST LAYER - Must be above map */
-    box-shadow: 0 0 15px #00aaff, 0 0 30px #00aaff;
-    pointer-events: none; /* So it doesn't block clicks */
-    transform: translate(-50%, -50%); /* Centers the dot on the X/Y */
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Smooth glide */
+    box-shadow: 0 0 15px #00aaff;
+    will-change: transform; /* 🚀 Tells the GPU to pre-load this element */
+    transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1); /* Smooth snap */
+    z-index: 999;
 }
 
 @keyframes ping {
     0% { transform: scale(1); opacity: 1; }
     100% { transform: scale(3); opacity: 0; }
-}
+    }
