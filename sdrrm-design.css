@@ -875,3 +875,13 @@ color: #000 !important;
     0% { transform: scale(1); opacity: 1; }
     100% { transform: scale(3); opacity: 0; }
 }
+
+#route-layer polyline {
+    stroke-dasharray: 20;
+    animation: flow 2s linear infinite;
+}
+
+@keyframes flow {
+    from { stroke-dashoffset: 40; }
+    to { stroke-dashoffset: 0; }
+}
