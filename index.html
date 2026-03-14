@@ -177,15 +177,29 @@
 </div>
 
 <script>
-  // 🛡️ OFFLINE SHIELD REFINED
-  if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
-    navigator.serviceWorker.register('sw.js')
-      .then(() => console.log("ORACLE SHIELD: ACTIVE"))
-      .catch(err => console.log("ORACLE SHIELD: STANDBY", err));
-  }
+  // 🛡️ ORACLE SHIELD: ACTIVE VERSION TRACKING
+if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+        console.log("ORACLE SHIELD: INITIALIZED");
+
+        // Detect if a new version is waiting to take over
+        reg.onupdatefound = () => {
+            const installingWorker = reg.installing;
+            installingWorker.onstatechange = () => {
+                if (installingWorker.state === 'installed') {
+                    if (navigator.serviceWorker.controller) {
+                        // 🚀 TACTICAL NOTIFICATION
+                        console.log("ORACLE: NEW CORE DETECTED. SYNCING...");
+                        // Optional: You can trigger a custom prompt here
+                        // alert("System Update: Vision Link & Sidebar Patch ready.");
+                        window.location.reload(); 
+                    }
+                }
+            };
+        };
+    }).catch(err => console.log("ORACLE SHIELD: OFFLINE FAILURE", err));
+ }
 </script>
 </body>
 </html>
-
-
 
