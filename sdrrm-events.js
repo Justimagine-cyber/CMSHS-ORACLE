@@ -29,6 +29,8 @@ let isDraggingMobile = false;
 let touchStartPos = { x: 0, y: 0 };
 
 // --- 🚨 NAVIGATION STATE ---
+let stream = null;
+let currentHazardMode = null;
 let currentMarkerId = null;   // The ArUco ID currently locked
 let lastDetectedNode = null;  // For the "Path Blocked" logic
 let activeHazards = new Set();
@@ -524,54 +526,41 @@ const CAMPUS_GRAPH = {
     "4": ["1"]            // Admin connects to Gym
 }; 
 
-/* 🏛️ VISION ENGINE INITIALIZER */
-let stream = null;
-
+/* 👁 VISION ENGINE */
 async function initiateGhostTag() {
+    const video = document.getElementById('scanner-video');
     const modal = document.getElementById('ghost-modal');
-    if (!modal) return console.error("ORACLE: Ghost Modal DOM missing.");
     
-    // Show the UI
+    if (!video || !modal) return console.error("ORACLE: Optical hardware missing from DOM.");
+
     modal.style.display = 'flex';
-    modal.classList.add('active');
-    
+
     try {
-        // Request Camera Access (Optimized for S10/Redmi Pad)
+        // Initialize the stream safely
         stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-                facingMode: "environment", 
-                width: { ideal: 640 }, 
-                height: { ideal: 480 } 
-            } 
+            video: { facingMode: "environment" } 
         });
-        
-        const videoElement = document.getElementById('scanner-video');
-        if (videoElement) {
-            videoElement.srcObject = stream;
-            // Start the ArUco scanning loop
-            startVisionLoop();
-        }
+        video.srcObject = stream;
+        console.log("ORACLE: Vision Link Established.");
     } catch (err) {
         console.error("ORACLE: Optical hardware access denied.", err);
-        const status = document.getElementById('scanner-status');
-        if (status) status.innerText = "CAMERA ERROR: CHECK PERMISSIONS";
+        document.getElementById('scanner-status').innerText = "ERROR: SENSOR BLOCKED";
     }
 }
 
-/* 🏛️ OPTICAL SHUTDOWN */
 function closeGhostModal() {
+    const modal = document.getElementById('ghost-modal');
+    if (modal) modal.style.display = 'none';
+
+    // 🛡️ Safe shutdown check
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
-        stream = null;
-    }
-    const modal = document.getElementById('ghost-modal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => { modal.style.display = 'none'; }, 300);
+        stream = null; // Reset so it can be re-initialized
+        console.log("ORACLE: Optical sensors offline.");
     }
 }
 
-/* 👁 VISION ENGINE */
+
 function startVisionLoop() {
     // 🛡️ Ensure the ArUco library (aruco.js) is loaded
     if (typeof AR === 'undefined') {
@@ -734,9 +723,6 @@ function reportBlockedPath() {
 }
 
 // --- ⚠️ HAZARD COMMAND ENGINE ---
-let currentHazardMode = null;
-
-// 1. TACTICAL SIDEBAR REGISTRY
 function toggleSidebar() {
     const sidebar = document.getElementById('hazard-sidebar');
     if (!sidebar) return; // Safety check
