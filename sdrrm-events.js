@@ -267,53 +267,6 @@ function focusOnUser(x, y) {
     updateMapTransform();
 }
 
-/* 🏛️ ORACLE SPATIAL ATLAS: MAPPING ARUCO IDs TO PIXEL COORDS */
-const CMSHS_SPATIAL_INDEX = {
-    0: { name: "MAIN GATE / DEPOT", x: 200, y: 1500 },
-    1: { name: "CMSHS GYMNASIUM", x: 1200, y: 850 },
-    2: { name: "SCIENCE LAB", x: 450, y: 320 },
-    3: { name: "COMPUTER LAB", x: 2100, y: 400 },
-    4: { name: "ADMINISTRATION BLDG", x: 1800, y: 1200 },
-    // Add IDs 5-11 based on your floor plan
-};
-
-function executeIndoorLocalization(markerId) {
-    const landmark = CMSHS_SPATIAL_INDEX[markerId];
-
-    if (landmark) {
-        console.log(`ORACLE: Landmark Locked - ${landmark.name}`);
-
-        // 1. UPDATE USER COORDINATES
-        // Assuming 'userPos' is your global object for the blue dot
-        userPos.x = landmark.x;
-        userPos.y = landmark.y;
-
-        // 2. RE-RENDER MAP
-        updateMapTransform();
-        renderUserLocation(); // Function that draws the blue dot
-
-        // 3. TACTICAL FEEDBACK
-        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        
-        // Update the HUD so the user knows where they are
-        const statusSpan = document.getElementById('hazard-status');
-        if (statusSpan) {
-            statusSpan.innerText = `LOCATED: ${landmark.name}`;
-            statusSpan.style.color = "#00aaff";
-        }
-
-        // 4. AUTO-CLOSE THE VISION LINK
-        setTimeout(() => {
-            closeGhostModal();
-            tacticalPrompt("LOCATION SYNCED", `TRANSFERRED TO ${landmark.name}`, false);
-        }, 1500);
-
-    } else {
-        console.warn(`ORACLE: Unknown Marker ID ${markerId}`);
-    }
-}
-
-
 // --- 📱 TOUCH ENGINE (OPTIMIZED) ---
 viewport.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
@@ -566,121 +519,113 @@ async function deleteAgent() {
     }
 }
 
-/* 🏛️ ORACLE VISION ENGINE & KERNEL INTEGRATION */
+    
+    // Reset status for next use
+    document.getElementById('scanner-status').innerText = "WAITING FOR SCAN...";
+    document.getElementById('aruco-id-input').value = "";
+}
+
+/* 🏛️ ORACLE SPATIAL ATLAS: COORDINATE DICTIONARY */
+const CMSHS_SPATIAL_INDEX = {
+    0: { name: "MAIN GATE / DEPOT", x: 200, y: 1500 },
+    1: { name: "CMSHS GYMNASIUM", x: 1200, y: 850 },
+    2: { name: "SCIENCE LAB", x: 450, y: 320 },
+    3: { name: "COMPUTER LAB", x: 2100, y: 400 },
+    4: { name: "ADMINISTRATION BLDG", x: 1800, y: 1200 }
+};
+
+/* 🏛️ CORE LOCALIZATION ENGINE */
+function executeIndoorLocalization(markerId) {
+    const landmark = CMSHS_SPATIAL_INDEX[markerId];
+    if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
+
+    // 1. UPDATE REAL GLOBAL COORDINATES
+    // Ensure 'userPos' is declared at the top of your MAIN script
+    if (typeof userPos !== 'undefined') {
+        userPos.x = landmark.x;
+        userPos.y = landmark.y;
+    }
+
+    // 2. TRIGGER GPU-ACCELERATED RE-RENDER
+    // Call the real functions defined in your main map logic
+    if (typeof updateMapTransform === 'function') updateMapTransform();
+    if (typeof renderUserLocation === 'function') renderUserLocation();
+
+    // 3. CLEANUP HARDWARE
+    closeGhostModal();
+
+    // 4. TACTICAL HUD UPDATE
+    const statusSpan = document.getElementById('hazard-status');
+    if (statusSpan) {
+        statusSpan.innerText = `LOCATED: ${landmark.name}`;
+        statusSpan.style.color = "#00aaff";
+    }
+
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    console.log(`ORACLE: Snap-to-Room Successful: ${landmark.name}`);
+}
+
+/* 🏛️ VISION ENGINE (Integrated) */
 let stream = null;
 
-// 1. INITIATE SCANNER
 async function initiateGhostTag() {
     const modal = document.getElementById('ghost-modal');
     if (!modal) return;
-
     modal.style.display = 'flex';
     modal.classList.add('active');
     
     try {
-        // Optimized for S10/Redmi: 720p is the sweet spot for ArUco speed vs accuracy
-        const constraints = { 
-            video: { 
-                facingMode: "environment",
-                width: { ideal: 1280 },
-                height: { ideal: 720 }
-            } 
-        };
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-        const videoEl = document.getElementById('scanner-video');
-        videoEl.srcObject = stream;
-        videoEl.onloadedmetadata = () => startVisionLoop();
-        
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "environment", width: 640, height: 480 } 
+        });
+        document.getElementById('scanner-video').srcObject = stream;
+        startVisionLoop();
     } catch (err) {
-        console.error("Camera Error:", err);
         document.getElementById('scanner-status').innerText = "HARDWARE BLOCKED";
     }
 }
 
-// 2. THE AUTONOMOUS VISION LOOP (Optimized)
 function startVisionLoop() {
     if (typeof AR === 'undefined') return;
-
     const detector = new AR.Detector();
     const video = document.getElementById("scanner-video");
-    const canvas = document.createElement("canvas"); 
+    const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
-    
     let isDetected = false;
 
     function capture() {
-        const modal = document.getElementById('ghost-modal');
-        if (!modal || modal.style.display === 'none' || !stream || isDetected) return;
+        if (!stream || isDetected || document.getElementById('ghost-modal').style.display === 'none') return;
 
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            // Speed Trick: Processing at a fixed 640x480 keeps the framerate high
-            canvas.width = 640;
-            canvas.height = 480;
+            canvas.width = 640; canvas.height = 480;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-            const markers = detector.detect(imageData);
+            const markers = detector.detect(context.getImageData(0, 0, 640, 480));
 
             if (markers.length > 0) {
-                isDetected = true; // Lock immediately
+                isDetected = true;
                 const detectedID = markers[0].id;
-                
-                // Tactical UI Feedback
-                if (navigator.vibrate) navigator.vibrate(200);
+                document.getElementById('aruco-id-input').value = detectedID;
                 document.getElementById('scanner-status').innerText = `LOCKED: ID ${detectedID}`;
                 
-                // Update hidden input for reference
-                const idInput = document.getElementById('aruco-id-input');
-                if (idInput) idInput.value = detectedID;
-
-                // 🚀 THE SNAP SEQUENCE: 
-                // We fire handleManualAruco which now handles its own timing/cleanup
-                handleManualAruco();
+                // EXECUTE REAL LOCALIZATION
+                executeIndoorLocalization(detectedID);
             }
         }
-        if (!isDetected) requestAnimationFrame(capture);
+        requestAnimationFrame(capture);
     }
     capture();
 }
 
-// 3. KERNEL PROCESSING (Atlas & Triage Sync)
-function handleManualAruco() {
-    const idInput = document.getElementById('aruco-id-input');
-    const id = parseInt(idInput.value);
-    if (isNaN(id)) return;
-
-    // A. IDENTIFY LABEL
-    let resultLabel = "UNKNOWN";
-    if (typeof oracleKernel !== 'undefined') {
-        resultLabel = oracleKernel.processDetection(id);
-    }
-
-    // B. SNAP TO MAP (This handles the closeGhostModal internally now)
-    if (typeof executeIndoorLocalization === 'function') {
-        executeIndoorLocalization(id);
-    }
-
-    // C. UPDATE UI & STATE
-    if (typeof dropMarkerOnPng === "function") dropMarkerOnPng(id, resultLabel);
-    syncStatsWithKernel(resultLabel);
-}
-
-// 4. THE CLEANUP (The "Emergency Eject" Logic)
 function closeGhostModal() {
-    // 🏛️ STOIC SAFETY: Stop stream before hiding UI to prevent lag
     if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(t => t.stop());
         stream = null;
     }
     const modal = document.getElementById('ghost-modal');
     if (modal) {
         modal.classList.remove('active');
-        setTimeout(() => { modal.style.display = 'none'; }, 300); // Wait for CSS fade-out
+        setTimeout(() => { modal.style.display = 'none'; }, 300);
     }
-    
-    // Reset status for next use
-    document.getElementById('scanner-status').innerText = "WAITING FOR SCAN...";
-    document.getElementById('aruco-id-input').value = "";
 }
 
 // --- ⚠️ HAZARD COMMAND ENGINE ---
