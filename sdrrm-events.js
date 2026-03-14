@@ -577,11 +577,16 @@ async function initiateGhostTag() {
     modal.style.display = 'flex';
     modal.classList.add('active');
     
-    // NOTE: ArUco processing is OFFLINE. We only check hardware.
     try {
-        stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" } 
-        });
+        // Optimized for S10/Redmi: 720p is the sweet spot for ArUco speed vs accuracy
+        const constraints = { 
+            video: { 
+                facingMode: "environment",
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            } 
+        };
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
         const videoEl = document.getElementById('scanner-video');
         videoEl.srcObject = stream;
         videoEl.onloadedmetadata = () => startVisionLoop();
@@ -592,7 +597,7 @@ async function initiateGhostTag() {
     }
 }
 
-// 2. THE AUTONOMOUS VISION LOOP
+// 2. THE AUTONOMOUS VISION LOOP (Optimized)
 function startVisionLoop() {
     if (typeof AR === 'undefined') return;
 
@@ -601,112 +606,79 @@ function startVisionLoop() {
     const canvas = document.createElement("canvas"); 
     const context = canvas.getContext("2d");
     
-    // 🏛️ EXECUTION LOCK: Prevents the "Infinite Snap" glitch
     let isDetected = false;
 
     function capture() {
         const modal = document.getElementById('ghost-modal');
-        // If modal is hidden or we already locked a target, stop the loop
         if (!modal || modal.style.display === 'none' || !stream || isDetected) return;
 
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+            // Speed Trick: Processing at a fixed 640x480 keeps the framerate high
+            canvas.width = 640;
+            canvas.height = 480;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             
             const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
             const markers = detector.detect(imageData);
 
             if (markers.length > 0) {
-                // LOCK THE LOOP IMMEDIATELY
-                isDetected = true; 
-
+                isDetected = true; // Lock immediately
                 const detectedID = markers[0].id;
-                const idInput = document.getElementById('aruco-id-input');
                 
-                if (idInput) {
-                    idInput.value = detectedID;
-                    console.log("ORACLE: Marker " + detectedID + " Locked.");
-                    
-                    // 1. Trigger the map snap
-                    handleManualAruco(); 
-                    
-                    // 2. Tactical haptic feedback
-                    if (navigator.vibrate) navigator.vibrate(200);
-                    
-                    // 3. Status update for the UI
-                    const statusText = document.getElementById('scanner-status');
-                    if (statusText) statusText.innerText = `LOCKED: ID ${detectedID}`;
+                // Tactical UI Feedback
+                if (navigator.vibrate) navigator.vibrate(200);
+                document.getElementById('scanner-status').innerText = `LOCKED: ID ${detectedID}`;
+                
+                // Update hidden input for reference
+                const idInput = document.getElementById('aruco-id-input');
+                if (idInput) idInput.value = detectedID;
 
-                    // 4. Auto-exit after 1 second
-                    setTimeout(() => {
-                        closeGhostModal();
-                        // Reset the lock for the next time the modal opens
-                        isDetected = false; 
-                    }, 1000);
-                }
+                // 🚀 THE SNAP SEQUENCE: 
+                // We fire handleManualAruco which now handles its own timing/cleanup
+                handleManualAruco();
             }
         }
-        requestAnimationFrame(capture);
+        if (!isDetected) requestAnimationFrame(capture);
     }
     capture();
 }
 
-// 3. KERNEL PROCESSING (Now with Atlas Localization)
+// 3. KERNEL PROCESSING (Atlas & Triage Sync)
 function handleManualAruco() {
     const idInput = document.getElementById('aruco-id-input');
-    const id = parseInt(idInput.value); // Ensure it's a number for the Atlas
-    
+    const id = parseInt(idInput.value);
     if (isNaN(id)) return;
 
-    // A. TRIGGER INDOOR LOCALIZATION (The Snap-to-Room Feature)
+    // A. IDENTIFY LABEL
+    let resultLabel = "UNKNOWN";
+    if (typeof oracleKernel !== 'undefined') {
+        resultLabel = oracleKernel.processDetection(id);
+    }
+
+    // B. SNAP TO MAP (This handles the closeGhostModal internally now)
     if (typeof executeIndoorLocalization === 'function') {
         executeIndoorLocalization(id);
     }
 
-    // B. TARGET LABEL RETRIEVAL (From your existing kernel)
-    let resultLabel = "UNKNOWN";
-    if (typeof oracleKernel !== 'undefined') {
-        resultLabel = oracleKernel.processDetection(id);
-        document.getElementById('scanner-status').innerText = `IDENTIFIED: ${resultLabel}`;
-    } else {
-        document.getElementById('scanner-status').innerText = `MARKER ${id} RECOGNIZED`;
-    }
-
-    // C. UPDATE TRIAGE STATS & MARKERS
+    // C. UPDATE UI & STATE
     if (typeof dropMarkerOnPng === "function") dropMarkerOnPng(id, resultLabel);
     syncStatsWithKernel(resultLabel);
 }
 
-function syncStatsWithKernel(label) {
-    const idMap = { "Minor": 0, "Delayed": 1, "Immediate": 2, "Deceased": 3 };
-    const idx = idMap[label];
-    
-    if (idx !== undefined) {
-        if (typeof counts !== 'undefined') counts[idx]++; 
-        if (typeof updateHUD === 'function') updateHUD(); 
-        if (typeof saveState === 'function') saveState();
-
-        const elementId = ['g-c', 'y-c', 'r-c', 'b-c'][idx];
-        const el = document.getElementById(elementId);
-        if (el) { 
-            el.classList.add('pulse-text'); 
-            setTimeout(() => el.classList.remove('pulse-text'), 500); 
-        }
-    }
-}
-
-// 4. CLEANUP
+// 4. THE CLEANUP (The "Emergency Eject" Logic)
 function closeGhostModal() {
+    // 🏛️ STOIC SAFETY: Stop stream before hiding UI to prevent lag
     if (stream) {
         stream.getTracks().forEach(track => track.stop());
         stream = null;
     }
     const modal = document.getElementById('ghost-modal');
     if (modal) {
-        modal.style.display = 'none';
         modal.classList.remove('active');
+        setTimeout(() => { modal.style.display = 'none'; }, 300); // Wait for CSS fade-out
     }
+    
+    // Reset status for next use
     document.getElementById('scanner-status').innerText = "WAITING FOR SCAN...";
     document.getElementById('aruco-id-input').value = "";
 }
