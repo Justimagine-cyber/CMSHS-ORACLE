@@ -11,8 +11,8 @@ const colors = ['#00ff66', '#ffff00', '#ff3333', '#888888'];
 const map = document.getElementById('map-img');
 const viewport = document.getElementById('viewport');
 
-let mapPos = { x: 0, y: 0 };
-let zoom = 1;
+window.mapPos = { x: 0, y: 0 }; 
+window.zoom = 0.5;
 const ZOOM_SPEED = 0.08;
 let isDragging = false;
 let lastMouse = { x: 0, y: 0 };
@@ -33,16 +33,6 @@ let currentMarkerId = null;   // The ArUco ID currently locked
 let lastDetectedNode = null;  // For the "Path Blocked" logic
 let activeHazards = new Set();
 
-// 🛰️ GLOBAL COORDINATES
-window.mapPos = { x: 0, y: 0 }; 
-window.zoom = 0.5;
-
-// 🚨 NAVIGATION & STATE
-let currentMarkerId = null;
-let lastDetectedNode = null;
-let activeHazards = new Set(); // Ensure this is only declared ONCE here.
-let counts = [0, 0, 0, 0]; 
-const colors = ['#0f6', '#ff0', '#f33', '#888'];
 /* 🏛️ ORACLE SYSTEM INITIALIZATION & BOOT PROTECTOR */
 let bootInitiated = false;
 
