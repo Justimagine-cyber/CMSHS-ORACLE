@@ -267,29 +267,22 @@ function focusOnUser(x, y) {
     updateMapTransform();
 }
 
-// --- 📱 TOUCH ENGINE (OPTIMIZED) ---
-viewport.addEventListener('touchstart', e => {
-    if (e.touches.length === 1) {
-        isDraggingMobile = false;
-        touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-        lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    } else if (e.touches.length === 2) {
-        wasPinching = true; 
-        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
-    }
-}, { passive: true });
-
+// --- 🏛️ TOUCH ENGINE (Synced with Offset) ---
 viewport.addEventListener('touchmove', e => {
     if (e.touches.length === 1 && !wasPinching) {
         const touch = e.touches[0];
         const moveDist = Math.hypot(touch.clientX - touchStartPos.x, touch.clientY - touchStartPos.y);
+        
         if (moveDist > 5) isDraggingMobile = true;
-        mapPos.x += touch.clientX - lastMouse.x;
-        mapPos.y += touch.clientY - lastMouse.y;
+
+        // 🎯 Update 'offset' instead of 'mapPos'
+        offset.x += touch.clientX - lastMouse.x;
+        offset.y += touch.clientY - lastMouse.y;
+        
         updateMapTransform();
         lastMouse = { x: touch.clientX, y: touch.clientY };
     } else if (e.touches.length === 2) {
-        e.preventDefault();
+        e.preventDefault(); // Prevent browser zoom
         const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
         if (initialPinchDist > 0) {
             const diff = dist - initialPinchDist;
@@ -300,60 +293,40 @@ viewport.addEventListener('touchmove', e => {
     }
 }, { passive: false });
 
-viewport.addEventListener('touchend', (e) => {
-    if (wasPinching && e.touches.length === 0) {
-        setTimeout(() => { wasPinching = false; }, 100);
-        initialPinchDist = -1;
-        return;
-    }
-    if (!isDraggingMobile && !wasPinching && e.touches.length === 0) {
-        const currentTime = new Date().getTime();
-        if (currentTime - lastTap < 300) {
-            e.preventDefault(); 
-            handlePlotting(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-        }
-        lastTap = currentTime;
-    }
-});
-
-// --- CORE PLOTTING LOGIC ---
+// --- 🏛️ CORE PLOTTING LOGIC (Refined) ---
 async function handlePlotting(clientX, clientY) {
     if (!viewport) return;
     const rect = viewport.getBoundingClientRect();
     
-    // Calculate precise coordinates on the 2500x1800 grid
-    const mouseX = (clientX - rect.left - mapPos.x) / zoom;
-    const mouseY = (clientY - rect.top - mapPos.y) / zoom;
+    // 🎯 Use 'offset' consistently to match updateMapTransform
+    const mouseX = (clientX - rect.left - offset.x) / zoom;
+    const mouseY = (clientY - rect.top - offset.y) / zoom;
 
-    // ⚠️ THE HAZARD BYPASS
     if (currentHazardMode) {
-        // If a hazard is selected in the sidebar, we skip the name prompt
+        // createHazardMarker should append to #map-container
         createHazardMarker(`${mouseX}px`, `${mouseY}px`, currentHazardMode);
-        
-        // Stoic Reset: Clear the mode so you don't accidentally plot 10 fires
         currentHazardMode = null; 
-        document.getElementById('hazard-status').innerText = "WAITING FOR SELECTION";
+        const status = document.getElementById('hazard-status');
+        if(status) status.innerText = "WAITING FOR SELECTION";
         return; 
     }
 
-    // --- ORIGINAL TRIAGE LOGIC BELOW ---
     let agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
     if (agentData === null) return;
 
     const now = new Date();
     const time = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ", " + now.toLocaleTimeString();
     
-    // Create the standard Triage Dot
+    // Center the dot by offsetting half its width (8px)
     createDot(`${mouseX - 8}px`, `${mouseY - 8}px`, currentType, agentData, time);
 }
 
 function updateMapTransform() {
-    // We apply the transform to the CONTAINER, not just the image
     const container = document.getElementById('map-container');
-    const transformValue = `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`;
-    
-    container.style.transform = transformValue;
-}
+    if (!container) return;
+    // GPU Accelerated transform
+    container.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`;
+        }
 
 // --- NAVIGATION HANDLERS ---
 viewport.addEventListener('wheel', e => {
