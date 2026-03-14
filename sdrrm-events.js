@@ -540,6 +540,53 @@ const CAMPUS_GRAPH = {
 /* ⚠️ ACTIVE HAZARD REGISTRY */
 let activeHazards = new Set(); // Stores IDs of rooms that are blocked/unsafe
 
+/* 🏛️ VISION ENGINE INITIALIZER */
+let stream = null;
+
+async function initiateGhostTag() {
+    const modal = document.getElementById('ghost-modal');
+    if (!modal) return console.error("ORACLE: Ghost Modal DOM missing.");
+    
+    // Show the UI
+    modal.style.display = 'flex';
+    modal.classList.add('active');
+    
+    try {
+        // Request Camera Access (Optimized for S10/Redmi Pad)
+        stream = await navigator.mediaDevices.getUserMedia({ 
+            video: { 
+                facingMode: "environment", 
+                width: { ideal: 640 }, 
+                height: { ideal: 480 } 
+            } 
+        });
+        
+        const videoElement = document.getElementById('scanner-video');
+        if (videoElement) {
+            videoElement.srcObject = stream;
+            // Start the ArUco scanning loop
+            startVisionLoop();
+        }
+    } catch (err) {
+        console.error("ORACLE: Optical hardware access denied.", err);
+        const status = document.getElementById('scanner-status');
+        if (status) status.innerText = "CAMERA ERROR: CHECK PERMISSIONS";
+    }
+}
+
+/* 🏛️ OPTICAL SHUTDOWN */
+function closeGhostModal() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+    }
+    const modal = document.getElementById('ghost-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => { modal.style.display = 'none'; }, 300);
+    }
+}
+
 /* 👁 VISION ENGINE */
 function startVisionLoop() {
     // 🛡️ Ensure the ArUco library (aruco.js) is loaded
