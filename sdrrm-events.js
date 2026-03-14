@@ -348,7 +348,11 @@ async function handlePlotting(clientX, clientY) {
 }
 
 function updateMapTransform() {
-    if(map) map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
+    // We apply the transform to the CONTAINER, not just the image
+    const container = document.getElementById('map-container');
+    const transformValue = `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`;
+    
+    container.style.transform = transformValue;
 }
 
 // --- NAVIGATION HANDLERS ---
@@ -629,35 +633,55 @@ function startVisionLoop() {
 }
 
 /**
- * 🏛️ CORE LOCALIZATION & ROUTING ENGINE
+ * 🏛️ CORE LOCALIZATION & ROUTING ENGINE (The "Seamless" Merge)
  */
 function executeIndoorLocalization(markerId) {
     const landmark = CMSHS_SPATIAL_INDEX[markerId];
     if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
 
-    // 1. UPDATE GLOBAL STATE
+    // 1. POSITION THE DOT ON THE TACTICAL SURFACE
+    const dot = document.getElementById('user-dot');
+    if (dot) {
+        // Set coordinates based on the 2500x1800 map dictionary
+        dot.style.left = `${landmark.x}px`;
+        dot.style.top = `${landmark.y}px`;
+        dot.style.display = "block"; 
+    }
+
+    // Update Global State for other modules
     if (typeof userPos !== 'undefined') {
         userPos.x = landmark.x;
         userPos.y = landmark.y;
     }
 
-    // 2. TRIGGER GPU RE-RENDER (Blue Dot Snap)
+    // 2. AUTO-CENTER VIEWPORT (Snap Logic)
+    // Centers the detected room on the S10/Redmi screen
+    if (typeof zoom !== 'undefined' && typeof offset !== 'undefined') {
+        offset.x = (window.innerWidth / 2) - (landmark.x * zoom);
+        offset.y = (window.innerHeight / 2) - (landmark.y * zoom);
+    }
+
+    // 3. TRIGGER GPU RE-RENDER
+    // Refreshes the map container's transform: translate() and scale()
     if (typeof updateMapTransform === 'function') updateMapTransform();
-    if (typeof renderUserLocation === 'function') renderUserLocation();
 
-    // 3. 🚨 SMART EVACUATION ROUTING
-    // Automatically find path to Main Gate (ID 0)
+    // 4. 🚨 SMART EVACUATION ROUTING
+    // Automatically find path to Main Gate (Node ID 0) using BFS
     const safePath = findSafestRoute(markerId.toString(), "0");
-    renderEvacuationPath(safePath);
+    if (typeof renderEvacuationPath === 'function') {
+        renderEvacuationPath(safePath);
+    }
 
-    // 4. CLEANUP & HUD
-    closeGhostModal();
+    // 5. HARDWARE CLEANUP & TACTICAL HUD
+    closeGhostModal(); // Shut down camera to save battery
+    
     const statusSpan = document.getElementById('hazard-status');
     if (statusSpan) {
         statusSpan.innerText = `LOCATED: ${landmark.name}`;
         statusSpan.style.color = "#00aaff";
     }
 
+    // Haptic Confirmation (Vibration)
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     console.log(`ORACLE: Navigation Locked for ${landmark.name}`);
 }
@@ -714,6 +738,50 @@ function renderEvacuationPath(path) {
     polyline.style.filter = "drop-shadow(0 0 8px #00ff66)";
     
     svg.appendChild(polyline);
+}
+
+/**
+ * 🏛️ ORACLE: DYNAMIC REROUTE
+ * Call this if the user encounters a fire/blockage on their current path.
+ */
+function reportBlockedPath(nodeId) {
+    console.warn(`ORACLE: Rerouting... Node ${nodeId} is now a HAZARD.`);
+    
+    // 1. Add to the hazard registry
+    activeHazards.add(nodeId.toString());
+
+    // 2. Re-run localization logic using the CURRENT userPos
+    // This will trigger findSafestRoute() again, but it will now avoid the hazard.
+    if (typeof userPos !== 'undefined' && currentMarkerId) {
+        const newPath = findSafestRoute(currentMarkerId.toString(), "0");
+        renderEvacuationPath(newPath);
+    }
+}
+
+/**
+ * 🏛️ ORACLE: SAFETY STATUS CONFIRMATION
+ * Resets the tactical interface once the user reaches the depot.
+ */
+function confirmSafety() {
+    // 1. Clear the SVG Route Layer
+    const svg = document.getElementById('route-layer');
+    if (svg) svg.innerHTML = "";
+
+    // 2. Reset the Blue Dot (Optional: Keep it or hide it)
+    const dot = document.getElementById('user-dot');
+    if (dot) dot.style.display = "none";
+
+    // 3. Update HUD Status
+    const statusSpan = document.getElementById('hazard-status');
+    if (statusSpan) {
+        statusSpan.innerText = "STATUS: SECURE (SAFE ZONE)";
+        statusSpan.style.color = "#00ff66"; // Success Green
+    }
+
+    // 4. Haptic Feedback (A long pulse for relief)
+    if (navigator.vibrate) navigator.vibrate(500);
+
+    console.log("ORACLE: User confirmed safety. Tactical reset complete.");
 }
 
 // --- ⚠️ HAZARD COMMAND ENGINE ---
