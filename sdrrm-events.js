@@ -543,6 +543,7 @@ const CAMPUS_GRAPH = {
 
 /* ⚠️ ACTIVE HAZARD REGISTRY */
 let activeHazards = new Set(); // Stores IDs of rooms that are blocked/unsafe
+let currentMarkerId = null; 
 
 /* 🏛️ VISION ENGINE INITIALIZER */
 let stream = null;
@@ -740,48 +741,42 @@ function renderEvacuationPath(path) {
     svg.appendChild(polyline);
 }
 
-/**
- * 🏛️ ORACLE: DYNAMIC REROUTE
- * Call this if the user encounters a fire/blockage on their current path.
- */
-function reportBlockedPath(nodeId) {
-    console.warn(`ORACLE: Rerouting... Node ${nodeId} is now a HAZARD.`);
-    
-    // 1. Add to the hazard registry
-    activeHazards.add(nodeId.toString());
+/** 🟢 MISSION COMPLETE LOGIC */
+function confirmSafety() {
+    const svg = document.getElementById('route-layer');
+    const dot = document.getElementById('user-dot');
+    const status = document.getElementById('hazard-status');
 
-    // 2. Re-run localization logic using the CURRENT userPos
-    // This will trigger findSafestRoute() again, but it will now avoid the hazard.
-    if (typeof userPos !== 'undefined' && currentMarkerId) {
-        const newPath = findSafestRoute(currentMarkerId.toString(), "0");
-        renderEvacuationPath(newPath);
+    if (svg) svg.innerHTML = "";
+    if (dot) dot.style.display = "none";
+    
+    // Safety check for the innerText error
+    if (status) {
+        status.innerText = "STATUS: USER SECURED";
+        status.style.color = "#00ff66";
     }
+
+    currentMarkerId = null; // Reset location state
+    console.log("ORACLE: Evacuation Success confirmed.");
+    if (navigator.vibrate) navigator.vibrate([100, 50, 500]);
 }
 
-/**
- * 🏛️ ORACLE: SAFETY STATUS CONFIRMATION
- * Resets the tactical interface once the user reaches the depot.
- */
-function confirmSafety() {
-    // 1. Clear the SVG Route Layer
-    const svg = document.getElementById('route-layer');
-    if (svg) svg.innerHTML = "";
-
-    // 2. Reset the Blue Dot (Optional: Keep it or hide it)
-    const dot = document.getElementById('user-dot');
-    if (dot) dot.style.display = "none";
-
-    // 3. Update HUD Status
-    const statusSpan = document.getElementById('hazard-status');
-    if (statusSpan) {
-        statusSpan.innerText = "STATUS: SECURE (SAFE ZONE)";
-        statusSpan.style.color = "#00ff66"; // Success Green
+/** 🟠 DYNAMIC REROUTE LOGIC */
+function reportBlockedPath() {
+    // 🛡️ Guard: Don't reroute if we aren't even located yet
+    if (currentMarkerId === null) {
+        console.warn("ORACLE: Reroute failed - No active location.");
+        return; 
     }
 
-    // 4. Haptic Feedback (A long pulse for relief)
-    if (navigator.vibrate) navigator.vibrate(500);
-
-    console.log("ORACLE: User confirmed safety. Tactical reset complete.");
+    console.warn(`ORACLE: Rerouting from marker ${currentMarkerId}...`);
+    
+    // Logic: Find the first node in the current path that ISN'T the user's current node
+    // For now, let's just assume the Gym (ID 1) is blocked for the demo
+    activeHazards.add("1"); 
+    
+    // Re-run the localization to find a new path
+    executeIndoorLocalization(currentMarkerId);
 }
 
 // --- ⚠️ HAZARD COMMAND ENGINE ---
