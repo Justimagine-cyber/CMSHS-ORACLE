@@ -79,6 +79,16 @@
         <button class="hazard-select electric" onclick="setHazardType('electric')">⚡ SHOCK</button>
     </div>
 
+    <div class="safety-controls">
+    <button class="tactical-btn safe-btn" onclick="confirmSafety()">
+        ✅ I'M SAFE!
+    </button>
+
+    <button class="tactical-btn hazard-btn" onclick="reportBlockedPath(lastDetectedNode)">
+        ⚠️ PATH BLOCKED
+    </button>
+    </div>
+    
     <div class="sidebar-info" style="margin-top:20px; font-size:0.7em; color:#888;">
         <p>STATUS: <span id="hazard-status">WAITING FOR SELECTION</span></p>
     </div>
