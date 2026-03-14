@@ -876,12 +876,25 @@ color: #000 !important;
     100% { transform: scale(3); opacity: 0; }
 }
 
-#route-layer polyline {
-    stroke-dasharray: 20;
-    animation: flow 2s linear infinite;
+#route-layer {
+    pointer-events: none; /* 🖱️ Crucial: Stops the SVG from blocking map pans */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 2500px; /* 📏 Must match your #map-img width */
+    height: 1800px; /* 📏 Must match your #map-img height */
+    z-index: 998;  /* 🔝 Above the map (1), but below the UI (1000) */
+    overflow: visible;
 }
 
-@keyframes flow {
-    from { stroke-dashoffset: 40; }
+/* 🛰️ The Pulsing Evacuation Effect */
+#route-layer polyline {
+    stroke-dasharray: 15;
+    stroke-dashoffset: 0;
+    animation: dash-flow 2s linear infinite;
+}
+
+@keyframes dash-flow {
+    from { stroke-dashoffset: 30; }
     to { stroke-dashoffset: 0; }
 }
