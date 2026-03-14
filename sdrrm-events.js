@@ -1150,13 +1150,25 @@ window.addEventListener('load', () => {
     }
 });
 
-// Ensure the DOM is fully born before touching it
+// 🏛️ STOIC SHIELD: Wait for the DOM to be ready
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("ORACLE: DOM fully loaded. Binding listeners...");
+
     const viewport = document.getElementById('viewport');
+
+    // ONLY attach if the viewport actually exists
     if (viewport) {
-        viewport.addEventListener('touchstart', e => { /* touch logic */ });
-        // Add your other listeners here...
+        viewport.addEventListener('touchstart', e => {
+            if (e.touches.length === 1) {
+                isDraggingMobile = false;
+                touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }
+        }, { passive: true });
+
+        // Add your 'touchmove' and 'touchend' here inside the if(viewport) block
+        console.log("ORACLE: Touch Engine Active.");
     } else {
-        console.warn("ORACLE: Viewport not found. Postponing listeners.");
+        console.error("ORACLE: Critical Failure - Viewport element not found!");
     }
 });
