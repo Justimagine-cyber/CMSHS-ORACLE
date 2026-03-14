@@ -28,6 +28,11 @@ let wasPinching = false;
 let isDraggingMobile = false; 
 let touchStartPos = { x: 0, y: 0 };
 
+// --- 🚨 NAVIGATION STATE ---
+let currentMarkerId = null;   // The ArUco ID currently locked
+let lastDetectedNode = null;  // For the "Path Blocked" logic
+let activeHazards = new Set();
+
 /* 🏛️ ORACLE SYSTEM INITIALIZATION & BOOT PROTECTOR */
 let bootInitiated = false;
 
@@ -94,14 +99,6 @@ function initializeSystem() {
         }, 800); 
     }, 3800); 
 }
-
-// --- 📡 GLOBAL LISTENERS ---
-window.addEventListener('load', initializeSystem);
-
-// Fallback for Service Worker re-renders
-document.addEventListener('DOMContentLoaded', () => {
-    if (!bootInitiated) initializeSystem();
-});
 
 // --- 🛰️ ORACLE GEOSPATIAL ENGINE: CALIBRATED HYBRID ---
 const CMSHS_CONFIG = {
@@ -625,54 +622,27 @@ function startVisionLoop() {
  */
 function executeIndoorLocalization(markerId) {
     const landmark = CMSHS_SPATIAL_INDEX[markerId];
-    if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
+    if (!landmark) return;
 
-    // 1. POSITION THE USER DOT
-    const dot = document.getElementById('user-dot');
-    if (dot) {
-        dot.style.left = `${landmark.x}px`;
-        dot.style.top = `${landmark.y}px`;
-        dot.style.display = "block"; 
-    }
+    // 1. UPDATE STATE
+    currentMarkerId = markerId;
+    lastDetectedNode = markerId.toString(); // 🎯 FIX: Define this for the Reroute button
 
-    // Update Global State for Persistence/Triage
-    if (typeof userPos !== 'undefined') {
-        userPos.x = landmark.x;
-        userPos.y = landmark.y;
-    }
-
-    // 2. AUTO-CENTER VIEWPORT (Snap Logic)
-    // We use mapPos here to prevent 'ReferenceError: offset is not defined'
-    if (typeof zoom !== 'undefined' && typeof mapPos !== 'undefined') {
-        mapPos.x = (window.innerWidth / 2) - (landmark.x * zoom);
-        mapPos.y = (window.innerHeight / 2) - (landmark.y * zoom);
-    }
-
-    // 3. TRIGGER GPU RE-RENDER
-    // This moves the #map-container to the new mapPos coordinates
-    if (typeof updateMapTransform === 'function') updateMapTransform();
-
-    // 4. 🚨 SMART EVACUATION ROUTING
-    // Automatically find path to Main Gate (Node ID 0) using BFS
-    if (typeof findSafestRoute === 'function') {
-        const safePath = findSafestRoute(markerId.toString(), "0");
-        if (typeof renderEvacuationPath === 'function') {
-            renderEvacuationPath(safePath);
-        }
-    }
-
-    // 5. HARDWARE CLEANUP & TACTICAL HUD
-    if (typeof closeGhostModal === 'function') closeGhostModal(); 
+    // 2. SNAP CAMERA
+    // Using mapPos to match the touch engine
+    mapPos.x = (window.innerWidth / 2) - (landmark.x * zoom);
+    mapPos.y = (window.innerHeight / 2) - (landmark.y * zoom);
     
-    const statusSpan = document.getElementById('hazard-status');
-    if (statusSpan) {
-        statusSpan.innerText = `LOCATED: ${landmark.name}`;
-        statusSpan.style.color = "#00aaff";
-    }
+    updateMapTransform();
 
-    // 📱 Haptic Confirmation
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);  
-    console.log(`ORACLE: Navigation Locked for ${landmark.name}`);
+    // 3. ROUTE
+    const path = findSafestRoute(lastDetectedNode, "0");
+    renderEvacuationPath(path);
+
+    // 4. UI CLEANUP
+    closeGhostModal();
+    const status = document.getElementById('hazard-status');
+    if (status) status.innerText = `LOCATED: ${landmark.name}`;
 }
  
 /**
@@ -1167,3 +1137,8 @@ window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 window.addEventListener('load', initializeSystem);
+
+// Fallback for Service Worker re-renders
+document.addEventListener('DOMContentLoaded', () => {
+    if (!bootInitiated) initializeSystem();
+});
