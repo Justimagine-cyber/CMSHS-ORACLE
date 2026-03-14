@@ -1,15 +1,14 @@
-/* 🏛️ CMSHS ORACLE: SERVICE WORKER - SHIELD V2.0 */
-const CACHE_NAME = 'oracle-cache-v' + Date.now(); // 🚀 AUTO-INCREMENTING VERSION
+/* 🏛️ CMSHS ORACLE: SERVICE WORKER - SHIELD V2 */
+const CACHE_NAME = 'oracle-cache-v2';
 const ASSETS = [
   './',
   './index.html',
   './sdrrm-design.css',
   './sdrrm-events.js',
-  './oracle-kernel.js',
-  './coordinate_map.js',
-  './CMSHS_LOGO.png'
+  './CMSHS_LOGO.png',
+  './js/cv.js',    
+  './js/aruco.js'
 ];
-
 // 1. INSTALL: Force the new Service Worker to take over immediately
 self.addEventListener('install', (event) => {
   self.skipWaiting(); 
