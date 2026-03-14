@@ -33,13 +33,23 @@ font-size: 1em;
 }
 .status { font-size: 0.7em; color: #00ff66; opacity: 0.8; font-weight: 700; }
 
-/* --- THE VIEWPORT --- */
+/* 🏛️ THE MAIN APP CONTAINER */
+#app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh; /* Full mobile screen */
+    overflow: hidden;
+    background: #000;
+}
+
+/* 🏛️ THE MAP VIEWPORT (Middle Section) */
 #viewport {
--webkit-overflow-scrolling: touch;
-touch-action: none;
-flex: 1; position: relative; overflow: hidden;
-background-color: #000; touch-action: none;
-height: calc(100vh - 160px);
+    flex-grow: 1; /* Take all available space */
+    position: relative;
+    overflow: hidden; /* Clips the 2500px map */
+    background: #050505;
+    border-top: 2px solid #00ff66;
+    border-bottom: 2px solid #00ff66;
 }
 
 #map-img {
@@ -58,14 +68,16 @@ background-repeat: no-repeat;
 filter: brightness(0.7) contrast(1.2) saturate(1.2); z-index: -1;
 }
 
-/* --- Tactical HUD OVERLAYS --- */
+/* 🏛️ THE FIXED HUD (Casualty Counts) */
 #stats-hud {
-position: absolute; top: 20px; left: 20px;
-background: rgba(0, 15, 0, 0.9); padding: 15px;
-border: 1px solid #00ff66; border-left: 8px solid #00ff66;
-font-size: 0.75em; z-index: 50; pointer-events: none;
-font-weight: 900; letter-spacing: 1px;
-box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    z-index: 1001; /* Stay above everything */
+    background: rgba(0, 20, 0, 0.8);
+    border: 1px solid #00ff66;
+    padding: 10px;
+    pointer-events: none; /* Let clicks pass to the map */
 }
 
 /* --- UNIVERSAL Tactical FOOTER (7-BUTTON GRID) --- */
@@ -73,7 +85,7 @@ box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
 position: fixed; bottom: 0; left: 0; width: 100%;
 background: rgba(0, 5, 0, 0.98); border-top: 2px solid #00ff66;
 display: grid;
-grid-template-columns: repeat(4, 1fr);
+grid-template-columns: reeat(4, fr);
 gap: 6px;
 padding: 10px;
 z-index: 10000; box-sizing: border-box;
@@ -897,4 +909,14 @@ color: #000 !important;
 @keyframes dash-flow {
     from { stroke-dashoffset: 30; }
     to { stroke-dashoffset: 0; }
+}
+
+/* 🏛️ THE BUTTON GRID (Bottom Section) */
+.controls-grid {
+    height: 35vh; /* Keep controls at the bottom 35% */
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 5px;
+    padding: 10px;
+    background: #000;
 }
