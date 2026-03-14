@@ -48,13 +48,13 @@ font-size: 1em;
 /* 🏛️ THE TACTICAL ORACLE LAYER */
 #map-img {
     position: absolute; 
-    width: 2500px; /* High-res scale for detailed campus markers */
+    width: 2500px; 
     height: 1800px;
-    display: block;
-    z-index: 1; /* Sits below UI overlays and the Blue Dot */
     transform-origin: 0 0; 
-    transition: transform 0.1s ease-out; 
-    pointer-events: auto;
+    /* 🏛️ REVERT SCALE: This makes the map visible on mobile screens */
+    transform: scale(0.25) translate(0px, 0px); 
+    transition: transform 0.3s ease-out;
+    z-index: 1;
 }
 
 #map-img::before {
