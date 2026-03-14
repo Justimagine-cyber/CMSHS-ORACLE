@@ -858,17 +858,20 @@ color: #000 !important;
     position: absolute;
     top: 0;
     left: 0;
-    width: 15px;
-    height: 15px;
+    width: 20px;
+    height: 20px;
     background: #00aaff;
+    border: 3px solid #fff;
     border-radius: 50%;
     box-shadow: 0 0 15px #00aaff;
-    will-change: transform; /* 🚀 Tells the GPU to pre-load this element */
-    transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1); /* Smooth snap */
-    z-index: 999;
+    z-index: 9999;
+    display: block; /* Ensure it's not hidden */
+    pointer-events: none;
+    will-change: transform;
+    transform: translate(-50%, -50%); /* Centers the dot on the coordinate */
 }
 
 @keyframes ping {
     0% { transform: scale(1); opacity: 1; }
     100% { transform: scale(3); opacity: 0; }
-    }
+}
