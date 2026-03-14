@@ -519,12 +519,6 @@ async function deleteAgent() {
     }
 }
 
-    
-    // Reset status for next use
-    document.getElementById('scanner-status').innerText = "WAITING FOR SCAN...";
-    document.getElementById('aruco-id-input').value = "";
-}
-
 /* 🏛️ ORACLE SPATIAL ATLAS: COORDINATE DICTIONARY */
 const CMSHS_SPATIAL_INDEX = {
     0: { name: "MAIN GATE / DEPOT", x: 200, y: 1500 },
