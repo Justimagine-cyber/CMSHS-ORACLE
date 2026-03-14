@@ -11,7 +11,7 @@ const colors = ['#00ff66', '#ffff00', '#ff3333', '#888888'];
 const map = document.getElementById('map-img');
 const viewport = document.getElementById('viewport');
 
-let mapPos = { x: -400, y: -300 };
+let mapPos = { x: 0, y: 0 };
 let zoom = 1;
 const ZOOM_SPEED = 0.08;
 let isDragging = false;
