@@ -42,6 +42,10 @@ font-size: 1em;
     background: #000;
 }
 
+#map-container {
+    will-change: transform; /* Boosts performance on your Redmi/S10 */
+    cursor: crosshair;
+}
 /* 🏛️ THE MAP VIEWPORT (Middle Section) */
 #viewport {
     flex-grow: 1; /* Take all available space */
