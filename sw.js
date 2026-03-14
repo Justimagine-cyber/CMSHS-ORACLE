@@ -1,5 +1,5 @@
 /* 🏛️ CMSHS ORACLE: SERVICE WORKER - SHIELD */
-const CACHE_NAME = 'oracle-cache-v3';
+const CACHE_NAME = 'oracle-cache-v3.1';
 const ASSETS = [
   './',
   './index.html',
@@ -9,6 +9,7 @@ const ASSETS = [
   './js/cv.js',    
   './js/aruco.js'
 ];
+
 // 1. INSTALL: Force the new Service Worker to take over immediately
 self.addEventListener('install', (event) => {
   self.skipWaiting(); 
