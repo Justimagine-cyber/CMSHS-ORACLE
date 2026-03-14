@@ -522,11 +522,7 @@ const CAMPUS_GRAPH = {
     "2": ["1", "3"],      // Science Lab connects to Gym, Comp Lab
     "3": ["2"],           // Comp Lab connects to Science Lab
     "4": ["1"]            // Admin connects to Gym
-};
-
-/* ⚠️ ACTIVE HAZARD REGISTRY */
-let activeHazards = new Set(); // Stores IDs of rooms that are blocked/unsafe
-let currentMarkerId = null; 
+}; 
 
 /* 🏛️ VISION ENGINE INITIALIZER */
 let stream = null;
