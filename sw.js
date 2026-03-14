@@ -1,5 +1,5 @@
 /* 🏛️ CMSHS ORACLE: SERVICE WORKER - SHIELD V2 */
-const CACHE_NAME = 'oracle-cache-v2';
+const CACHE_NAME = 'oracle-cache-v2.1';
 const ASSETS = [
   './',
   './index.html',
