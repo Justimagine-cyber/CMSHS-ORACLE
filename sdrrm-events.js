@@ -521,11 +521,11 @@ async function deleteAgent() {
 
 /* 🏛️ ORACLE SPATIAL ATLAS: COORDINATE DICTIONARY */
 const CMSHS_SPATIAL_INDEX = {
-    0: { name: "MAIN GATE / DEPOT", x: 200, y: 1500 },
-    1: { name: "CMSHS GYMNASIUM", x: 1200, y: 850 },
-    2: { name: "SCIENCE LAB", x: 450, y: 320 },
-    3: { name: "COMPUTER LAB", x: 2100, y: 400 },
-    4: { name: "ADMINISTRATION BLDG", x: 1800, y: 1200 }
+    0: { name: "MAIN ENTRANCE/EXIT", x: 900, y: 950 }, // Bottom Right
+    1: { name: "CMSHS GYMNASIUM", x: 450, y: 500 },    // Gym Center
+    2: { name: "SHS LAB 1", x: 550, y: 750 },     // SHS Building
+    3: { name: "PRINCIPAL OFFICE", x: 600, y: 300 }, // JHS Building
+    4: { name: "SCHOOL CLINIC", x: 880, y: 300 }     // Far Right JHS
 };
 
 /* 🏛️ CORE LOCALIZATION ENGINE */
