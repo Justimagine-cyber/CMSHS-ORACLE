@@ -528,81 +528,52 @@ const CMSHS_SPATIAL_INDEX = {
     4: { name: "ADMINISTRATION BLDG", x: 1800, y: 1200 }
 };
 
-/* 🏛️ CORE LOCALIZATION ENGINE */
-function executeIndoorLocalization(markerId) {
-    const landmark = CMSHS_SPATIAL_INDEX[markerId];
-    if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
+/* 🏛️ CAMPUS CONNECTIVITY GRAPH (Nodes & Edges) */
+const CAMPUS_GRAPH = {
+    "0": ["1"],           // Main Gate connects to Gym
+    "1": ["0", "2", "4"], // Gym connects to Gate, Science Lab, Admin
+    "2": ["1", "3"],      // Science Lab connects to Gym, Comp Lab
+    "3": ["2"],           // Comp Lab connects to Science Lab
+    "4": ["1"]            // Admin connects to Gym
+};
 
-    // 1. UPDATE REAL GLOBAL COORDINATES
-    // Ensure 'userPos' is declared at the top of your MAIN script
-    if (typeof userPos !== 'undefined') {
-        userPos.x = landmark.x;
-        userPos.y = landmark.y;
-    }
+/* ⚠️ ACTIVE HAZARD REGISTRY */
+let activeHazards = new Set(); // Stores IDs of rooms that are blocked/unsafe
 
-    // 2. TRIGGER GPU-ACCELERATED RE-RENDER
-    // Call the real functions defined in your main map logic
-    if (typeof updateMapTransform === 'function') updateMapTransform();
-    if (typeof renderUserLocation === 'function') renderUserLocation();
-
-    // 3. CLEANUP HARDWARE
-    closeGhostModal();
-
-    // 4. TACTICAL HUD UPDATE
-    const statusSpan = document.getElementById('hazard-status');
-    if (statusSpan) {
-        statusSpan.innerText = `LOCATED: ${landmark.name}`;
-        statusSpan.style.color = "#00aaff";
-    }
-
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-    console.log(`ORACLE: Snap-to-Room Successful: ${landmark.name}`);
-}
-
-/* 🏛️ VISION ENGINE (Integrated) */
-let stream = null;
-
-async function initiateGhostTag() {
-    const modal = document.getElementById('ghost-modal');
-    if (!modal) return;
-    modal.style.display = 'flex';
-    modal.classList.add('active');
-    
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment", width: 640, height: 480 } 
-        });
-        document.getElementById('scanner-video').srcObject = stream;
-        startVisionLoop();
-    } catch (err) {
-        document.getElementById('scanner-status').innerText = "HARDWARE BLOCKED";
-    }
-}
-
+/* 👁 VISION ENGINE */
 function startVisionLoop() {
-    if (typeof AR === 'undefined') return;
+    // 🛡️ Ensure the ArUco library (aruco.js) is loaded
+    if (typeof AR === 'undefined') {
+        console.error("ORACLE: ArUco Library not found! Check js/ folder.");
+        return;
+    }
+
     const detector = new AR.Detector();
     const video = document.getElementById("scanner-video");
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
-    let isDetected = false;
 
     function capture() {
-        if (!stream || isDetected || document.getElementById('ghost-modal').style.display === 'none') return;
+        // Only run if the modal is actually open
+        if (document.getElementById('ghost-modal').style.display === 'none') return;
 
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = 640; canvas.height = 480;
+            canvas.width = 480; // Lower res = Faster scanning on S10
+            canvas.height = 360;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const markers = detector.detect(context.getImageData(0, 0, 640, 480));
+            
+            // 🔎 THE CORE ENGINE CALL
+            const markers = detector.detect(context.getImageData(0, 0, canvas.width, canvas.height));
 
             if (markers.length > 0) {
-                isDetected = true;
                 const detectedID = markers[0].id;
-                document.getElementById('aruco-id-input').value = detectedID;
-                document.getElementById('scanner-status').innerText = `LOCKED: ID ${detectedID}`;
                 
-                // EXECUTE REAL LOCALIZATION
+                // 🏛️ TRIGGER THE SPATIAL HANDSHAKE
                 executeIndoorLocalization(detectedID);
+                
+                // Auto-close after successful lock to save battery
+                closeGhostModal();
+                return; 
             }
         }
         requestAnimationFrame(capture);
@@ -610,16 +581,92 @@ function startVisionLoop() {
     capture();
 }
 
-function closeGhostModal() {
-    if (stream) {
-        stream.getTracks().forEach(t => t.stop());
-        stream = null;
+/**
+ * 🏛️ CORE LOCALIZATION & ROUTING ENGINE
+ */
+function executeIndoorLocalization(markerId) {
+    const landmark = CMSHS_SPATIAL_INDEX[markerId];
+    if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
+
+    // 1. UPDATE GLOBAL STATE
+    if (typeof userPos !== 'undefined') {
+        userPos.x = landmark.x;
+        userPos.y = landmark.y;
     }
-    const modal = document.getElementById('ghost-modal');
-    if (modal) {
-        modal.classList.remove('active');
-        setTimeout(() => { modal.style.display = 'none'; }, 300);
+
+    // 2. TRIGGER GPU RE-RENDER (Blue Dot Snap)
+    if (typeof updateMapTransform === 'function') updateMapTransform();
+    if (typeof renderUserLocation === 'function') renderUserLocation();
+
+    // 3. 🚨 SMART EVACUATION ROUTING
+    // Automatically find path to Main Gate (ID 0)
+    const safePath = findSafestRoute(markerId.toString(), "0");
+    renderEvacuationPath(safePath);
+
+    // 4. CLEANUP & HUD
+    closeGhostModal();
+    const statusSpan = document.getElementById('hazard-status');
+    if (statusSpan) {
+        statusSpan.innerText = `LOCATED: ${landmark.name}`;
+        statusSpan.style.color = "#00aaff";
     }
+
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    console.log(`ORACLE: Navigation Locked for ${landmark.name}`);
+}
+
+/**
+ * 🧠 PATHFINDING ALGORITHM: Breadth-First Search (BFS)
+ */
+function findSafestRoute(startNode, endNode) {
+    let queue = [[startNode]];
+    let visited = new Set([startNode]);
+
+    while (queue.length > 0) {
+        let path = queue.shift();
+        let node = path[path.length - 1];
+
+        if (node === endNode) return path;
+
+        const neighbors = CAMPUS_GRAPH[node] || [];
+        for (let neighbor of neighbors) {
+            // 🛑 CRITICAL: Algorithm "sees" hazards as walls and skips them
+            if (!visited.has(neighbor) && !activeHazards.has(neighbor)) {
+                visited.add(neighbor);
+                queue.push([...path, neighbor]);
+            }
+        }
+    }
+    return null; // No safe path possible
+}
+
+/**
+ * 🖌️ RENDER PATH TO SVG LAYER
+ */
+function renderEvacuationPath(path) {
+    const svg = document.getElementById('route-layer');
+    if (!svg) return;
+    svg.innerHTML = ""; 
+
+    if (!path) {
+        console.error("ORACLE: NO SAFE EVACUATION ROUTE FOUND!");
+        return;
+    }
+
+    let points = path.map(id => {
+        const coord = CMSHS_SPATIAL_INDEX[id];
+        return `${coord.x},${coord.y}`;
+    }).join(" ");
+
+    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    polyline.setAttribute("points", points);
+    polyline.setAttribute("stroke", "#00ff66");
+    polyline.setAttribute("stroke-width", "10");
+    polyline.setAttribute("fill", "none");
+    polyline.setAttribute("stroke-dasharray", "20,10"); // Tactical dashed line
+    polyline.style.filter = "drop-shadow(0 0 8px #00ff66)";
+    
+    svg.appendChild(polyline);
 }
 
 // --- ⚠️ HAZARD COMMAND ENGINE ---
