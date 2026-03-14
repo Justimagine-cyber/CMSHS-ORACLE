@@ -267,7 +267,7 @@ function focusOnUser(x, y) {
     updateMapTransform();
 }
 
-// --- 🏛️ TOUCH ENGINE (Synced with Offset) ---
+// --- 📱 TOUCH ENGINE (SYNCED WITH mapPos) ---
 viewport.addEventListener('touchmove', e => {
     if (e.touches.length === 1 && !wasPinching) {
         const touch = e.touches[0];
@@ -275,14 +275,14 @@ viewport.addEventListener('touchmove', e => {
         
         if (moveDist > 5) isDraggingMobile = true;
 
-        // 🎯 Update 'offset' instead of 'mapPos'
-        offset.x += touch.clientX - lastMouse.x;
-        offset.y += touch.clientY - lastMouse.y;
+        // 🎯 FIXED: Use mapPos instead of offset
+        mapPos.x += touch.clientX - lastMouse.x;
+        mapPos.y += touch.clientY - lastMouse.y;
         
         updateMapTransform();
         lastMouse = { x: touch.clientX, y: touch.clientY };
     } else if (e.touches.length === 2) {
-        e.preventDefault(); // Prevent browser zoom
+        e.preventDefault();
         const dist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
         if (initialPinchDist > 0) {
             const diff = dist - initialPinchDist;
@@ -292,6 +292,18 @@ viewport.addEventListener('touchmove', e => {
         }
     }
 }, { passive: false });
+
+// --- 🖱️ POINTER ENGINE (SYNCED WITH mapPos) ---
+viewport.addEventListener('pointermove', e => {
+    if (!isDragging) return;
+    
+    // 🎯 FIXED: Use mapPos instead of offset
+    mapPos.x += e.clientX - lastMouse.x;
+    mapPos.y += e.clientY - lastMouse.y;
+    
+    updateMapTransform();
+    lastMouse = { x: e.clientX, y: e.clientY };
+});
 
 // --- 🏛️ CORE PLOTTING LOGIC (Refined) ---
 async function handlePlotting(clientX, clientY) {
