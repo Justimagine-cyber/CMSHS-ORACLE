@@ -324,9 +324,10 @@ async function handlePlotting(clientX, clientY) {
 function updateMapTransform() {
     const container = document.getElementById('map-container');
     if (!container) return;
-    // GPU Accelerated transform
-    container.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`;
-        }
+    
+    // Using mapPos instead of offset
+    container.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
+}
 
 // --- NAVIGATION HANDLERS ---
 viewport.addEventListener('wheel', e => {
@@ -607,47 +608,49 @@ function startVisionLoop() {
 }
 
 /**
- * 🏛️ CORE LOCALIZATION & ROUTING ENGINE (The "Seamless" Merge)
+ * 🏛️ CORE LOCALIZATION & ROUTING ENGINE
+ * Merged & Refined for CMSHS ORACLE
  */
 function executeIndoorLocalization(markerId) {
     const landmark = CMSHS_SPATIAL_INDEX[markerId];
     if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
 
-    // 1. POSITION THE DOT ON THE TACTICAL SURFACE
+    // 1. POSITION THE USER DOT
     const dot = document.getElementById('user-dot');
     if (dot) {
-        // Set coordinates based on the 2500x1800 map dictionary
         dot.style.left = `${landmark.x}px`;
         dot.style.top = `${landmark.y}px`;
         dot.style.display = "block"; 
     }
 
-    // Update Global State for other modules
+    // Update Global State for Persistence/Triage
     if (typeof userPos !== 'undefined') {
         userPos.x = landmark.x;
         userPos.y = landmark.y;
     }
 
     // 2. AUTO-CENTER VIEWPORT (Snap Logic)
-    // Centers the detected room on the S10/Redmi screen
-    if (typeof zoom !== 'undefined' && typeof offset !== 'undefined') {
-        offset.x = (window.innerWidth / 2) - (landmark.x * zoom);
-        offset.y = (window.innerHeight / 2) - (landmark.y * zoom);
+    // We use mapPos here to prevent 'ReferenceError: offset is not defined'
+    if (typeof zoom !== 'undefined' && typeof mapPos !== 'undefined') {
+        mapPos.x = (window.innerWidth / 2) - (landmark.x * zoom);
+        mapPos.y = (window.innerHeight / 2) - (landmark.y * zoom);
     }
 
     // 3. TRIGGER GPU RE-RENDER
-    // Refreshes the map container's transform: translate() and scale()
+    // This moves the #map-container to the new mapPos coordinates
     if (typeof updateMapTransform === 'function') updateMapTransform();
 
     // 4. 🚨 SMART EVACUATION ROUTING
     // Automatically find path to Main Gate (Node ID 0) using BFS
-    const safePath = findSafestRoute(markerId.toString(), "0");
-    if (typeof renderEvacuationPath === 'function') {
-        renderEvacuationPath(safePath);
+    if (typeof findSafestRoute === 'function') {
+        const safePath = findSafestRoute(markerId.toString(), "0");
+        if (typeof renderEvacuationPath === 'function') {
+            renderEvacuationPath(safePath);
+        }
     }
 
     // 5. HARDWARE CLEANUP & TACTICAL HUD
-    closeGhostModal(); // Shut down camera to save battery
+    if (typeof closeGhostModal === 'function') closeGhostModal(); 
     
     const statusSpan = document.getElementById('hazard-status');
     if (statusSpan) {
@@ -655,11 +658,11 @@ function executeIndoorLocalization(markerId) {
         statusSpan.style.color = "#00aaff";
     }
 
-    // Haptic Confirmation (Vibration)
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    // 📱 Haptic Confirmation
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);  
     console.log(`ORACLE: Navigation Locked for ${landmark.name}`);
 }
-
+ 
 /**
  * 🧠 PATHFINDING ALGORITHM: Breadth-First Search (BFS)
  */
