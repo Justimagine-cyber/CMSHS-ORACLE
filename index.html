@@ -15,15 +15,16 @@
     <script src="https://cdn.jsdelivr.net/npm/js-aruco@0.1.0/src/aruco.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
-    <script src="sdrrm-events.js" defer></script>
+    
     <script src="js/cv.js"></script>
     <script src="js/aruco.js"></script>
+    <script src="sdrrm-events.js" defer></script>
 </head>
 <body>
 
 <div id="boot-overlay">
     <div class="hologram-container">
-        <img src="CMSHS_LOGO.png" id="boot-logo" alt="CMSHS-LOGO"> 
+        <img src="CMSHS_LOGO.png" id="boot-logo" alt="CMSHS LOGO"> 
         <div class="boot-text">INITIALIZING ORACLE SYSTEM...</div>
         <div class="scanline"></div>
     </div>
@@ -42,9 +43,9 @@
         <button class="hazard-select structure" onclick="setHazardType('structure')">🏗️ COLLAPSE</button>
     </div>
 
-    <div class="safety-controls" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
-        <button class="triage-btn safe-btn" onclick="confirmSafety()" style="border-color: #0f6; color: #0f6;">✅ I'M SAFE!</button>
-        <button class="triage-btn hazard-btn" onclick="reportBlockedPath()" style="border-color: #f80; color: #f80;">⚠️ PATH BLOCKED</button>
+    <div class="safety-controls">
+        <button class="triage-btn safe-btn" onclick="confirmSafety()">✅ I'M SAFE!</button>
+        <button class="triage-btn hazard-btn" onclick="reportBlockedPath()">⚠️ PATH BLOCKED</button>
     </div>
 </div>
 
@@ -61,23 +62,21 @@
 
     <div id="viewport">
         <div id="stats-hud">
-            [ CASUALTY COUNTS ]<br>
-            IMMEDIATE: <span id="r-c" class="r-text">0</span><br>
-            DELAYED:   <span id="y-c" class="y-text">0</span><br>
-            MINOR:     <span id="g-c" class="g-text">0</span><br>
-            DECEASED:  <span id="b-c" class="b-text">0</span>
-            <hr style="border: 0; border-top: 1px solid #333; margin: 5px 0;">
-            <span id="hazard-status" style="font-size: 0.8em; color: #00aaff;">ORACLE: READY</span>
+            <div class="hud-title">[ CASUALTY COUNTS ]</div>
+            IMMEDIATE: <span id="r-c">0</span><br>
+            DELAYED:   <span id="y-c">0</span><br>
+            MINOR:     <span id="g-c">0</span><br>
+            DECEASED:  <span id="b-c">0</span>
+            <hr class="hud-divider">
+            <span id="hazard-status">ORACLE: READY</span>
         </div>
 
-        <div id="map-container" style="position: absolute; transform-origin: 0 0;">
-            <img src="CMSHS-SDRRM-PLAN.png" id="map-img" style="display: block;">
+        <div id="map-container">
+            <img src="CMSHS-SDRRM-PLAN.png" id="map-img">
             
-            <svg id="route-layer" viewBox="0 0 2500 1800" 
-                 style="position:absolute; top:0; left:0; width:2500px; height:1800px; pointer-events:none; z-index:998;">
-            </svg>
+            <svg id="route-layer" viewBox="0 0 2500 1800"></svg>
 
-            <div id="user-dot"></div>
+            <div id="user-dot" style="display: none;"></div>
         </div>
     </div>
 
@@ -88,11 +87,11 @@
         <button class="triage-btn black" onclick="setStatus(3)">DECEASED</button>
         
         <button class="triage-btn aruco-trigger" onclick="initiateGhostTag()">
-            <span style="font-size: 1.2em;">👁️</span><br>VISION LINK
+            <span class="icon">👁️</span><br>VISION LINK
         </button>
         
         <button class="triage-btn sync-qr" onclick="generateTacticalQR()">SHARE REPORT</button>
-        <button class="triage-btn" onclick="locateUser()" id="gps-btn" style="border-color: #0096ff; color: #0096ff;">
+        <button class="triage-btn" onclick="locateUser()" id="gps-btn">
             <span id="gps-text">LOCATE ME</span>
         </button>
         <button class="triage-btn intel-report" onclick="showIntelligenceReport()">SYSTEM UPDATES</button>
@@ -103,10 +102,10 @@
 
 <div id="ghost-modal" class="tactical-modal" style="display: none;">
     <div class="modal-content">
-        <div class="modal-header">
-            <h2 class="glitch-text" style="color: #0f6; font-family: 'Cinzel';">VISION LINK</h2>
+        <header class="modal-header">
+            <h2 class="glitch-text">VISION LINK</h2>
             <p id="scanner-status">INITIALIZING OPTICAL SENSORS...</p>
-        </div>
+        </header>
 
         <div class="scanner-container">
             <video id="scanner-video" autoplay playsinline muted></video>
@@ -116,14 +115,13 @@
             </div>
         </div>
 
-        <div class="modal-footer">
+        <footer class="modal-footer">
             <button onclick="closeGhostModal()" class="close-btn">DISCONNECT</button>
-        </div>
+        </footer>
     </div>
 </div>
 
 <script>
-  // 🛡️ OFFLINE SERVICE WORKER
   if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js')
       .then(() => console.log("ORACLE SHIELD: ACTIVE"))
@@ -132,4 +130,4 @@
 </script>
 
 </body>
-</html>
+    </html>
