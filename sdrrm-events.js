@@ -1118,7 +1118,6 @@ window.updateTriage = updateTriage;
 window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
-window.addEventListener('load', initializeSystem);
 
 // 🏛️ FORCE RECOVERY LOGIC
 window.addEventListener('load', () => {
@@ -1148,5 +1147,16 @@ window.addEventListener('load', () => {
     if (mapImg && mapImg.naturalWidth === 0) {
         console.error("ORACLE: Map image failed to load. Check file path/case!");
         document.getElementById('hazard-status').innerText = "ERROR: MAP ASSET 404";
+    }
+});
+
+// Ensure the DOM is fully born before touching it
+document.addEventListener('DOMContentLoaded', () => {
+    const viewport = document.getElementById('viewport');
+    if (viewport) {
+        viewport.addEventListener('touchstart', e => { /* touch logic */ });
+        // Add your other listeners here...
+    } else {
+        console.warn("ORACLE: Viewport not found. Postponing listeners.");
     }
 });
