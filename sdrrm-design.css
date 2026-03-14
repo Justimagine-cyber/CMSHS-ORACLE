@@ -33,19 +33,16 @@ font-size: 1em;
 }
 .status { font-size: 0.7em; color: #00ff66; opacity: 0.8; font-weight: 700; }
 
-/* 🏛️ THE VIEWPORT ARCHITECTURE */
+/* 🏛️ THE VIEWPORT */
 #viewport {
     flex: 1; 
     position: relative; 
     overflow: hidden;
     background-color: #000; 
-    width: 100%;
-    height: calc(100vh - 160px); /* Adjusts for header and footer clearance */
-    touch-action: none;
-    -webkit-overflow-scrolling: touch;
-    display: flex;
-    justify-content: flex-start;
-    align-items: flex-start;
+    /* 🏛️ This calculation ensures it perfectly fills the gap between header and footer */
+    height: calc(100vh - 170px); 
+    margin-top: 0; 
+    border-top: 1px solid rgba(0, 255, 102, 0.3); /* Subtle divider */
 }
 
 /* 🏛️ THE TACTICAL ORACLE LAYER */
@@ -70,14 +67,18 @@ background-repeat: no-repeat;
 filter: brightness(0.7) contrast(1.2) saturate(1.2); z-index: -1;
 }
 
-/* --- Tactical HUD OVERLAYS --- */
+/* 🏛️ REVERT STATS HUD POSITIONING */
 #stats-hud {
-position: absolute; top: 20px; left: 20px;
-background: rgba(0, 15, 0, 0.9); padding: 15px;
-border: 1px solid #00ff66; border-left: 8px solid #00ff66;
-font-size: 0.75em; z-index: 50; pointer-events: none;
-font-weight: 900; letter-spacing: 1px;
-box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
+    position: absolute; 
+    top: 10px; /* Reduced from 20px to keep it away from the header line */
+    left: 15px;
+    background: rgba(0, 15, 0, 0.95); /* Slightly darker for better contrast */
+    padding: 12px;
+    border: 1px solid #00ff66; 
+    border-left: 6px solid #00ff66; /* Thinner border to save space */
+    font-size: 0.7em; 
+    z-index: 1000; /* Ensure it stays above the map but below modals */
+    pointer-events: none;
 }
 
 /* --- UNIVERSAL Tactical FOOTER (7-BUTTON GRID) --- */
