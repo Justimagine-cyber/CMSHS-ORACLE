@@ -521,65 +521,41 @@ async function deleteAgent() {
 
 /* 🏛️ ORACLE SPATIAL ATLAS: COORDINATE DICTIONARY */
 const CMSHS_SPATIAL_INDEX = {
-    0: { name: "MAIN ENTRANCE/EXIT", x: 900, y: 950 }, // Bottom Right
-    1: { name: "CMSHS GYMNASIUM", x: 450, y: 500 },    // Gym Center
-    2: { name: "SHS LAB 1", x: 550, y: 750 },     // SHS Building
-    3: { name: "PRINCIPAL OFFICE", x: 600, y: 300 }, // JHS Building
-    4: { name: "SCHOOL CLINIC", x: 880, y: 300 }     // Far Right JHS
+    0: { name: "MAIN GATE / DEPOT", x: 200, y: 1500 },
+    1: { name: "CMSHS GYMNASIUM", x: 1200, y: 850 },
+    2: { name: "SCIENCE LAB", x: 450, y: 320 },
+    3: { name: "COMPUTER LAB", x: 2100, y: 400 },
+    4: { name: "ADMINISTRATION BLDG", x: 1800, y: 1200 }
 };
 
-/**
- * 🏛️ ORACLE: UNIFIED INDOOR LOCALIZATION KERNEL
- * Merges Spatial Mapping, Global State, and Hardware Haptics.
- */
+/* 🏛️ CORE LOCALIZATION ENGINE */
 function executeIndoorLocalization(markerId) {
     const landmark = CMSHS_SPATIAL_INDEX[markerId];
-    
-    // 1. VALIDATION PROTOCOL
-    if (!landmark) {
-        console.warn(`ORACLE: Unknown ID ${markerId} - External to Spatial Atlas.`);
-        return;
-    }
+    if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
 
-    console.log(`ORACLE: LOCKING ONTO ${landmark.name} (ID: ${markerId})`);
-
-    // 2. UPDATE GLOBAL COORDINATE STATE
-    // This ensures other systems (like hazard marking) know where you are.
+    // 1. UPDATE REAL GLOBAL COORDINATES
+    // Ensure 'userPos' is declared at the top of your MAIN script
     if (typeof userPos !== 'undefined') {
         userPos.x = landmark.x;
         userPos.y = landmark.y;
     }
 
-    // 3. TRIGGER GPU-ACCELERATED RENDER
-    // Snap the blue dot and adjust map zoom/pan if necessary.
-    if (typeof renderUserLocation === 'function') {
-        renderUserLocation(); 
-    } else {
-        // Fallback: Direct DOM manipulation if render function isn't ready
-        const userDot = document.getElementById('user-dot');
-        if (userDot) {
-            userDot.style.transform = `translate(${landmark.x}px, ${landmark.y}px)`;
-        }
-    }
-    
+    // 2. TRIGGER GPU-ACCELERATED RE-RENDER
+    // Call the real functions defined in your main map logic
     if (typeof updateMapTransform === 'function') updateMapTransform();
+    if (typeof renderUserLocation === 'function') renderUserLocation();
 
-    // 4. UI & HARDWARE FEEDBACK
-    // Close the scanner modal now that we have a lock.
-    if (typeof closeGhostModal === 'function') closeGhostModal();
+    // 3. CLEANUP HARDWARE
+    closeGhostModal();
 
-    // Update the HUD Status
-    const statusSpan = document.getElementById('hazard-status') || document.getElementById('scanner-status');
+    // 4. TACTICAL HUD UPDATE
+    const statusSpan = document.getElementById('hazard-status');
     if (statusSpan) {
         statusSpan.innerText = `LOCATED: ${landmark.name}`;
-        statusSpan.style.color = "#00aaff"; // Cyan for 'Locked' status
+        statusSpan.style.color = "#00aaff";
     }
 
-    // HAPTIC CONFIRMATION
-    if (navigator.vibrate) {
-        navigator.vibrate([100, 50, 100]); 
-    }
-
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     console.log(`ORACLE: Snap-to-Room Successful: ${landmark.name}`);
 }
 

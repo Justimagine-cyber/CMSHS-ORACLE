@@ -12,11 +12,12 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-aruco@0.1.0/src/aruco.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
+    <script src="sdrrm-events.js" defer></script>
     <script src="js/cv.js"></script>
     <script src="js/aruco.js"></script>
-    <script src="sdrrm-events.js" defer></script>
     
     <script>
         function forceKillVision() {
@@ -94,10 +95,8 @@
         <div class="status">STANDALONE MODE: SECURE</div>
     </header>
 
-        <div id="viewport">
-           <img src="CMSHS-SDRRM-PLAN.png" id="map-img">
-           <div id="user-dot"></div>
-        </div>
+    <div id="viewport">
+        <div id="map-img"></div>
         
         <div id="stats-hud">
             [ CASUALTY COUNTS ]<br>
@@ -179,29 +178,15 @@
 </div>
 
 <script>
-  // 🛡️ ORACLE SHIELD: ACTIVE VERSION TRACKING
-if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
-    navigator.serviceWorker.register('sw.js').then(reg => {
-        console.log("ORACLE SHIELD: INITIALIZED");
-
-        // Detect if a new version is waiting to take over
-        reg.onupdatefound = () => {
-            const installingWorker = reg.installing;
-            installingWorker.onstatechange = () => {
-                if (installingWorker.state === 'installed') {
-                    if (navigator.serviceWorker.controller) {
-                        // 🚀 TACTICAL NOTIFICATION
-                        console.log("ORACLE: NEW CORE DETECTED. SYNCING...");
-                        // Optional: You can trigger a custom prompt here
-                        // alert("System Update: Vision Link & Sidebar Patch ready.");
-                        window.location.reload(); 
-                    }
-                }
-            };
-        };
-    }).catch(err => console.log("ORACLE SHIELD: OFFLINE FAILURE", err));
- }
+  // 🛡️ OFFLINE SHIELD REFINED
+  if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
+    navigator.serviceWorker.register('sw.js')
+      .then(() => console.log("ORACLE SHIELD: ACTIVE"))
+      .catch(err => console.log("ORACLE SHIELD: STANDBY", err));
+  }
 </script>
 </body>
 </html>
+
+
 
