@@ -195,6 +195,37 @@
     </div>
 </div>
 
+    <script>
+window.addEventListener('load', () => {
+    console.log("ORACLE: Finalizing Boot Sequence...");
+    
+    // 1. Force remove the boot screen after 1.5s
+    setTimeout(() => {
+        const boot = document.getElementById('boot-overlay');
+        if (boot) {
+            boot.style.transition = "opacity 0.5s ease";
+            boot.style.opacity = "0";
+            setTimeout(() => boot.style.display = "none", 500);
+        }
+    }, 1500);
+
+    // 2. Critical: Initialize mapPos and zoom if they aren't set
+    // This prevents the "Cannot read property of undefined" plotting errors
+    if (typeof mapPos === 'undefined') window.mapPos = { x: 0, y: 0 };
+    if (typeof zoom === 'undefined') window.zoom = 0.5;
+
+    // 3. Ensure map visibility
+    const mapImg = document.getElementById('map-img');
+    if (mapImg) {
+        mapImg.onload = () => console.log("ORACLE: Tactical Map Loaded.");
+        mapImg.onerror = () => {
+            console.error("ORACLE: MAP LOAD FAILURE. Check filename case-sensitivity.");
+            alert("Tactical Map Asset Missing!");
+        };
+    }
+});
+    </script>
+    
 <script>
   // 🛡️ OFFLINE SHIELD REFINED
   if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
