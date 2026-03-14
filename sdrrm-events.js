@@ -1134,18 +1134,33 @@ window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
 window.addEventListener('load', initializeSystem);
 
-// 🏛️ EMERGENCY UI RECOVERY
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("ORACLE: UI Recovery Initiated.");
+// 🏛️ FORCE RECOVERY LOGIC
+window.addEventListener('load', () => {
+    console.log("ORACLE: Executing Visual Recovery...");
+
+    // 1. Force the container to be visible and correctly sized
+    const container = document.getElementById('map-container');
+    const viewport = document.getElementById('viewport');
     
-    const boot = document.getElementById('boot-overlay');
-    if (boot) boot.style.display = 'none'; // Kill the boot screen
-    
-    const map = document.getElementById('map-img');
-    if (map) {
-        map.style.display = 'block';
-        map.style.visibility = 'visible';
+    if (container && viewport) {
+        viewport.style.minHeight = "400px"; // Ensure there is room to see
+        container.style.display = "block";
+        container.style.visibility = "visible";
+        container.style.opacity = "1";
     }
-    
-    if (typeof updateMapTransform === 'function') updateMapTransform();
+
+    // 2. Reset coordinates to center if they are broken
+    if (typeof mapPos !== 'undefined') {
+        mapPos.x = 20; 
+        mapPos.y = 20;
+        zoom = 0.5; // Zoom out so you can see the edges
+        if (typeof updateMapTransform === 'function') updateMapTransform();
+    }
+
+    // 3. Asset Check
+    const mapImg = document.getElementById('map-img');
+    if (mapImg && mapImg.naturalWidth === 0) {
+        console.error("ORACLE: Map image failed to load. Check file path/case!");
+        document.getElementById('hazard-status').innerText = "ERROR: MAP ASSET 404";
+    }
 });
