@@ -33,18 +33,31 @@ font-size: 1em;
 }
 .status { font-size: 0.7em; color: #00ff66; opacity: 0.8; font-weight: 700; }
 
-/* --- THE VIEWPORT --- */
+/* 🏛️ THE VIEWPORT ARCHITECTURE */
 #viewport {
--webkit-overflow-scrolling: touch;
-touch-action: none;
-flex: 1; position: relative; overflow: hidden;
-background-color: #000; touch-action: none;
-height: calc(100vh - 160px);
+    flex: 1; 
+    position: relative; 
+    overflow: hidden;
+    background-color: #000; 
+    width: 100%;
+    height: calc(100vh - 160px); /* Adjusts for header and footer clearance */
+    touch-action: none;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
 }
 
+/* 🏛️ THE TACTICAL ORACLE LAYER */
 #map-img {
-position: absolute; width: 2500px; height: 1800px;
-transform-origin: 0 0; transition: transform 0.1s ease-out; z-index: 1;
+    position: absolute; 
+    width: 2500px; /* High-res scale for detailed campus markers */
+    height: 1800px;
+    display: block;
+    z-index: 1; /* Sits below UI overlays and the Blue Dot */
+    transform-origin: 0 0; 
+    transition: transform 0.1s ease-out; 
+    pointer-events: auto;
 }
 
 #map-img::before {
@@ -853,24 +866,21 @@ color: #000 !important;
     to { transform: translateY(-3px); }
 }
 
+/* 🏛️ THE USER POSITION TRACKER */
 #user-dot {
     position: absolute;
-    /* 🏛️ CRITICAL: These must be 0 so the 'transform' logic in JS works */
-    top: 0; 
-    left: 0; 
     width: 20px;
     height: 20px;
     background: #00aaff;
     border: 3px solid #fff;
     border-radius: 50%;
-    box-shadow: 0 0 15px #00aaff, 0 0 30px rgba(0, 170, 255, 0.5);
-    z-index: 9999; /* 🏛️ Ensure it sits ABOVE the map layer (z-index: 1) */
-    pointer-events: none;
-    will-change: transform;
-    /* 🏛️ This makes the dot move from its CENTER, not its top-left corner */
-    transform: translate(-50%, -50%); 
-    transition: transform 0.6s cubic-bezier(0.19, 1, 0.22, 1);
+    z-index: 999; /* HIGHEST LAYER - Must be above map */
+    box-shadow: 0 0 15px #00aaff, 0 0 30px #00aaff;
+    pointer-events: none; /* So it doesn't block clicks */
+    transform: translate(-50%, -50%); /* Centers the dot on the X/Y */
+    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); /* Smooth glide */
 }
+
 @keyframes ping {
     0% { transform: scale(1); opacity: 1; }
     100% { transform: scale(3); opacity: 0; }
