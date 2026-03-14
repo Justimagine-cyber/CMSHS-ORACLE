@@ -18,49 +18,13 @@
     <script src="sdrrm-events.js" defer></script>
     <script src="js/cv.js"></script>
     <script src="js/aruco.js"></script>
-    
-    <script>
-        function forceKillVision() {
-            console.log("ORACLE: Executing Emergency Eject...");
-            
-            // 1. Force hide the container using inline styles to override CSS
-            const popup = document.getElementById('aruco-vision-popup');
-            if (popup) {
-                popup.style.display = 'none';
-                popup.style.visibility = 'hidden';
-                popup.style.opacity = '0';
-                popup.innerHTML = ""; // Hard clear to stop video ghosts
-            }
-            
-            // 2. Clear any session flags that might trigger it to reopen
-            sessionStorage.removeItem('VISION_LINK_ACTIVE');
-            
-            // 3. Tactile feedback for S10
-            if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-
-            // 4. Stoic Reset: Refresh to clear the JS heap and show the Grid
-            window.location.reload(); 
-        }
-    </script>
 </head>
 <body>
 
-<div id="custom-modal" class="modal-overlay" style="display:none;">
-    <div class="modal-content">
-        <h3 id="modal-title" style="font-family:'Cinzel', serif; color:#0f6; border-bottom:1px solid #333; padding-bottom:10px;">TACTICAL INPUT</h3>
-        <p id="modal-desc" style="font-size:0.85em; color:#888; margin:10px 0;"></p>
-        <input type="text" id="modal-input" placeholder="e.g. JUAN - GYM" autocomplete="off">
-        <div class="modal-actions">
-            <button id="modal-confirm" class="triage-btn">CONFIRM</button>
-            <button id="modal-cancel" class="triage-btn reset">CANCEL</button> 
-        </div>
-    </div>
-</div>
-
 <div id="boot-overlay">
     <div class="hologram-container">
-        <img src="CMSHS_LOGO.png" id="boot-logo" alt="CMSHS LOGO"> 
-        <div class="boot-text" id="boot-text">INITIALIZING ORACLE SYSTEM...</div>
+        <img src="CMSHS_LOGO.png" id="boot-logo" alt="CMSHS-LOGO"> 
+        <div class="boot-text">INITIALIZING ORACLE SYSTEM...</div>
         <div class="scanline"></div>
     </div>
 </div>
@@ -68,7 +32,7 @@
 <div id="hazard-sidebar" class="sidebar">
     <div class="sidebar-header">
         <h3 class="cinzel" style="color:#ff8000; margin:0;">HAZARD DEPOT</h3>
-        <button onclick="toggleSidebar()" class="close-sidebar" style="background:none; border:none; color:#ff8000; font-size:1.5rem;">×</button>
+        <button onclick="toggleSidebar()" class="close-sidebar">×</button>
     </div>
     
     <div class="hazard-grid">
@@ -76,26 +40,16 @@
         <button class="hazard-select flood" onclick="setHazardType('flood')">🌊 FLOOD</button>
         <button class="hazard-select bio" onclick="setHazardType('bio')">☣️ BIO</button>
         <button class="hazard-select structure" onclick="setHazardType('structure')">🏗️ COLLAPSE</button>
-        <button class="hazard-select electric" onclick="setHazardType('electric')">⚡ SHOCK</button>
     </div>
 
-    <div class="safety-controls">
-    <button class="tactical-btn safe-btn" onclick="confirmSafety()">
-        ✅ I'M SAFE!
-    </button>
-
-    <button class="tactical-btn hazard-btn" onclick="reportBlockedPath(lastDetectedNode)">
-        ⚠️ PATH BLOCKED
-    </button>
-    </div>
-    
-    <div class="sidebar-info" style="margin-top:20px; font-size:0.7em; color:#888;">
-        <p>STATUS: <span id="hazard-status">WAITING FOR SELECTION</span></p>
+    <div class="safety-controls" style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+        <button class="triage-btn safe-btn" onclick="confirmSafety()" style="border-color: #0f6; color: #0f6;">✅ I'M SAFE!</button>
+        <button class="triage-btn hazard-btn" onclick="reportBlockedPath()" style="border-color: #f80; color: #f80;">⚠️ PATH BLOCKED</button>
     </div>
 </div>
 
 <div id="sidebar-tab" onclick="toggleSidebar()">⚠️</div>
-    
+
 <div id="app">
     <header>
         <div class="brand-container">
@@ -106,22 +60,24 @@
     </header>
 
     <div id="viewport">
-    <div id="map-container" style="position: absolute; transform-origin: 0 0;">
-        <img src="CMSHS-SDRRM-PLAN.png" id="map-img" style="display: block;">
-        
-        <svg id="route-layer" viewBox="0 0 2500 1800" 
-             style="position:absolute; top:0; left:0; width:2500px; height:1800px; pointer-events:none; z-index:998;">
-        </svg>
-
-        <div id="user-dot"></div>
-    </div>
-        
         <div id="stats-hud">
             [ CASUALTY COUNTS ]<br>
             IMMEDIATE: <span id="r-c" class="r-text">0</span><br>
             DELAYED:   <span id="y-c" class="y-text">0</span><br>
             MINOR:     <span id="g-c" class="g-text">0</span><br>
             DECEASED:  <span id="b-c" class="b-text">0</span>
+            <hr style="border: 0; border-top: 1px solid #333; margin: 5px 0;">
+            <span id="hazard-status" style="font-size: 0.8em; color: #00aaff;">ORACLE: READY</span>
+        </div>
+
+        <div id="map-container" style="position: absolute; transform-origin: 0 0;">
+            <img src="CMSHS-SDRRM-PLAN.png" id="map-img" style="display: block;">
+            
+            <svg id="route-layer" viewBox="0 0 2500 1800" 
+                 style="position:absolute; top:0; left:0; width:2500px; height:1800px; pointer-events:none; z-index:998;">
+            </svg>
+
+            <div id="user-dot"></div>
         </div>
     </div>
 
@@ -130,78 +86,50 @@
         <button class="triage-btn yellow" onclick="setStatus(1)">DELAYED</button>
         <button class="triage-btn red" onclick="setStatus(2)">IMMEDIATE</button>
         <button class="triage-btn black" onclick="setStatus(3)">DECEASED</button>
-        <button class="triage-btn aruco-trigger" onclick="initiateGhostTag()"><span style="font-size: 1.2em;">👁️</span><br>VISION LINK</button>
+        
+        <button class="triage-btn aruco-trigger" onclick="initiateGhostTag()">
+            <span style="font-size: 1.2em;">👁️</span><br>VISION LINK
+        </button>
         
         <button class="triage-btn sync-qr" onclick="generateTacticalQR()">SHARE REPORT</button>
-        <button class="triage-btn" onclick="locateUser()" id="gps-btn" style="border-color: #0096ff; color: #0096ff;"><span id="gps-text">LOCATE ME</span></button>
+        <button class="triage-btn" onclick="locateUser()" id="gps-btn" style="border-color: #0096ff; color: #0096ff;">
+            <span id="gps-text">LOCATE ME</span>
+        </button>
         <button class="triage-btn intel-report" onclick="showIntelligenceReport()">SYSTEM UPDATES</button>
-        <button class="triage-btn oracle-manual" onclick="showHelp()">ORACLE MANUAL</button>
-        <button class="triage-btn about-btn" onclick="showAbout()" style="border-color: #8400ff; color: #8400ff;">ABOUT ORACLE</button>
-        <button class="triage-btn reset" onclick="clearMap()">RESET OPERATIONAL DATA</button>
+        <button class="triage-btn oracle-manual" onclick="showHelp()">MANUAL</button>
+        <button class="triage-btn reset" onclick="clearMap()">RESET DATA</button>
     </div>
-</div>
-
-<div id="intel-overlay" class="triage-modal" style="display:none;">
-    <h3 id="agent-id" class="cinzel">AGENT:</h3>
-    <div class="triage-update-grid">
-        <button onclick="updateTriage('0')" class="btn-upd green">MINOR</button>
-        <button onclick="updateTriage('1')" class="btn-upd yellow">DELAYED</button>
-        <button onclick="updateTriage('2')" class="btn-upd red">IMMEDIATE</button>
-        <button onclick="updateTriage('3')" class="btn-upd black">DECEASED</button>
-    </div>
-    <hr class="tactical-divider">
-    <button onclick="deleteAgent()" class="btn-delete">DELETE AGENT</button>
 </div>
 
 <div id="ghost-modal" class="tactical-modal" style="display: none;">
     <div class="modal-content">
         <div class="modal-header">
-            <h2 class="glitch-text">ARUCO VISION LINK</h2>
+            <h2 class="glitch-text" style="color: #0f6; font-family: 'Cinzel';">VISION LINK</h2>
             <p id="scanner-status">INITIALIZING OPTICAL SENSORS...</p>
         </div>
 
         <div class="scanner-container">
             <video id="scanner-video" autoplay playsinline muted></video>
-            
-            <div id="vector-overlay" style="display: none;">
-                <div class="axis-x"></div>
-                <div class="axis-y"></div>
-                <div class="axis-z"></div>
-                <div id="floating-id-tag">ID: --</div>
-            </div>
-
             <div class="scan-overlay">
-                <div class="corner-tl"></div>
-                <div class="corner-tr"></div>
-                <div class="corner-bl"></div>
-                <div class="corner-br"></div>
+                <div class="corner-tl"></div><div class="corner-tr"></div>
+                <div class="corner-bl"></div><div class="corner-br"></div>
             </div>
-        </div>
-
-        <div class="input-section">
-            <label for="aruco-id-input">ENTER FIDUCIAL ID (0-11)</label>
-            <input 
-                type="number" 
-                id="aruco-id-input" 
-                inputmode="numeric" 
-                placeholder="ID #" 
-                oninput="handleManualAruco()"
-            >
         </div>
 
         <div class="modal-footer">
-            <button onclick="closeGhostModal()" class="close-btn">X</button>
+            <button onclick="closeGhostModal()" class="close-btn">DISCONNECT</button>
         </div>
     </div>
 </div>
 
 <script>
-  // 🛡️ OFFLINE SHIELD REFINED
+  // 🛡️ OFFLINE SERVICE WORKER
   if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
     navigator.serviceWorker.register('sw.js')
       .then(() => console.log("ORACLE SHIELD: ACTIVE"))
       .catch(err => console.log("ORACLE SHIELD: STANDBY", err));
   }
 </script>
+
 </body>
 </html>
