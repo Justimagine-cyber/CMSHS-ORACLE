@@ -33,27 +33,13 @@ font-size: 1em;
 }
 .status { font-size: 0.7em; color: #00ff66; opacity: 0.8; font-weight: 700; }
 
-/* 🏛️ THE MAIN APP CONTAINER */
-#app-container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh; /* Full mobile screen */
-    overflow: hidden;
-    background: #000;
-}
-
-#map-container {
-    will-change: transform; /* Boosts performance on your Redmi/S10 */
-    cursor: crosshair;
-}
-/* 🏛️ THE MAP VIEWPORT (Middle Section) */
+/* --- THE VIEWPORT --- */
 #viewport {
-    flex-grow: 1; /* Take all available space */
-    position: relative;
-    overflow: hidden; /* Clips the 2500px map */
-    background: #050505;
-    border-top: 2px solid #00ff66;
-    border-bottom: 2px solid #00ff66;
+-webkit-overflow-scrolling: touch;
+touch-action: none;
+flex: 1; position: relative; overflow: hidden;
+background-color: #000; touch-action: none;
+height: calc(100vh - 160px);
 }
 
 #map-img {
@@ -72,16 +58,14 @@ background-repeat: no-repeat;
 filter: brightness(0.7) contrast(1.2) saturate(1.2); z-index: -1;
 }
 
-/* 🏛️ THE FIXED HUD (Casualty Counts) */
+/* --- Tactical HUD OVERLAYS --- */
 #stats-hud {
-    position: absolute;
-    top: 10px;
-    left: 10px;
-    z-index: 1001; /* Stay above everything */
-    background: rgba(0, 20, 0, 0.8);
-    border: 1px solid #00ff66;
-    padding: 10px;
-    pointer-events: none; /* Let clicks pass to the map */
+position: absolute; top: 20px; left: 20px;
+background: rgba(0, 15, 0, 0.9); padding: 15px;
+border: 1px solid #00ff66; border-left: 8px solid #00ff66;
+font-size: 0.75em; z-index: 50; pointer-events: none;
+font-weight: 900; letter-spacing: 1px;
+box-shadow: 5px 5px 15px rgba(0,0,0,0.5);
 }
 
 /* --- UNIVERSAL Tactical FOOTER (7-BUTTON GRID) --- */
@@ -89,7 +73,7 @@ filter: brightness(0.7) contrast(1.2) saturate(1.2); z-index: -1;
 position: fixed; bottom: 0; left: 0; width: 100%;
 background: rgba(0, 5, 0, 0.98); border-top: 2px solid #00ff66;
 display: grid;
-grid-template-columns: reeat(4, fr);
+grid-template-columns: repeat(4, 1fr);
 gap: 6px;
 padding: 10px;
 z-index: 10000; box-sizing: border-box;
@@ -874,53 +858,17 @@ color: #000 !important;
     position: absolute;
     top: 0;
     left: 0;
-    width: 20px;
-    height: 20px;
+    width: 15px;
+    height: 15px;
     background: #00aaff;
-    border: 3px solid #fff;
     border-radius: 50%;
     box-shadow: 0 0 15px #00aaff;
-    z-index: 9999;
-    display: block; /* Ensure it's not hidden */
-    pointer-events: none;
-    will-change: transform;
-    transform: translate(-50%, -50%); /* Centers the dot on the coordinate */
+    will-change: transform; /* 🚀 Tells the GPU to pre-load this element */
+    transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1); /* Smooth snap */
+    z-index: 999;
 }
 
 @keyframes ping {
     0% { transform: scale(1); opacity: 1; }
     100% { transform: scale(3); opacity: 0; }
-}
-
-#route-layer {
-    pointer-events: none; /* 🖱️ Crucial: Stops the SVG from blocking map pans */
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 2500px; /* 📏 Must match your #map-img width */
-    height: 1800px; /* 📏 Must match your #map-img height */
-    z-index: 998;  /* 🔝 Above the map (1), but below the UI (1000) */
-    overflow: visible;
-}
-
-/* 🛰️ The Pulsing Evacuation Effect */
-#route-layer polyline {
-    stroke-dasharray: 15;
-    stroke-dashoffset: 0;
-    animation: dash-flow 2s linear infinite;
-}
-
-@keyframes dash-flow {
-    from { stroke-dashoffset: 30; }
-    to { stroke-dashoffset: 0; }
-}
-
-/* 🏛️ THE BUTTON GRID (Bottom Section) */
-.controls-grid {
-    height: 35vh; /* Keep controls at the bottom 35% */
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 5px;
-    padding: 10px;
-    background: #000;
 }

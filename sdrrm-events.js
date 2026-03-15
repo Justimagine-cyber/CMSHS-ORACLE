@@ -11,8 +11,8 @@ const colors = ['#00ff66', '#ffff00', '#ff3333', '#888888'];
 const map = document.getElementById('map-img');
 const viewport = document.getElementById('viewport');
 
-window.mapPos = { x: 0, y: 0 }; 
-window.zoom = 0.5;
+let mapPos = { x: -400, y: -300 };
+let zoom = 1;
 const ZOOM_SPEED = 0.08;
 let isDragging = false;
 let lastMouse = { x: 0, y: 0 };
@@ -27,13 +27,6 @@ let initialPinchDist = -1;
 let wasPinching = false;
 let isDraggingMobile = false; 
 let touchStartPos = { x: 0, y: 0 };
-
-// --- 🚨 NAVIGATION STATE ---
-let stream = null;
-let currentHazardMode = null;
-let currentMarkerId = null;   // The ArUco ID currently locked
-let lastDetectedNode = null;  // For the "Path Blocked" logic
-let activeHazards = new Set();
 
 /* 🏛️ ORACLE SYSTEM INITIALIZATION & BOOT PROTECTOR */
 let bootInitiated = false;
@@ -101,6 +94,14 @@ function initializeSystem() {
         }, 800); 
     }, 3800); 
 }
+
+// --- 📡 GLOBAL LISTENERS ---
+window.addEventListener('load', initializeSystem);
+
+// Fallback for Service Worker re-renders
+document.addEventListener('DOMContentLoaded', () => {
+    if (!bootInitiated) initializeSystem();
+});
 
 // --- 🛰️ ORACLE GEOSPATIAL ENGINE: CALIBRATED HYBRID ---
 const CMSHS_CONFIG = {
@@ -266,18 +267,25 @@ function focusOnUser(x, y) {
     updateMapTransform();
 }
 
-// --- 📱 TOUCH ENGINE (SYNCED WITH mapPos) ---
+// --- 📱 TOUCH ENGINE (OPTIMIZED) ---
+viewport.addEventListener('touchstart', e => {
+    if (e.touches.length === 1) {
+        isDraggingMobile = false;
+        touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    } else if (e.touches.length === 2) {
+        wasPinching = true; 
+        initialPinchDist = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+    }
+}, { passive: true });
+
 viewport.addEventListener('touchmove', e => {
     if (e.touches.length === 1 && !wasPinching) {
         const touch = e.touches[0];
         const moveDist = Math.hypot(touch.clientX - touchStartPos.x, touch.clientY - touchStartPos.y);
-        
         if (moveDist > 5) isDraggingMobile = true;
-
-        // 🎯 FIXED: Use mapPos instead of offset
         mapPos.x += touch.clientX - lastMouse.x;
         mapPos.y += touch.clientY - lastMouse.y;
-        
         updateMapTransform();
         lastMouse = { x: touch.clientX, y: touch.clientY };
     } else if (e.touches.length === 2) {
@@ -292,52 +300,55 @@ viewport.addEventListener('touchmove', e => {
     }
 }, { passive: false });
 
-// --- 🖱️ POINTER ENGINE (SYNCED WITH mapPos) ---
-viewport.addEventListener('pointermove', e => {
-    if (!isDragging) return;
-    
-    // 🎯 FIXED: Use mapPos instead of offset
-    mapPos.x += e.clientX - lastMouse.x;
-    mapPos.y += e.clientY - lastMouse.y;
-    
-    updateMapTransform();
-    lastMouse = { x: e.clientX, y: e.clientY };
+viewport.addEventListener('touchend', (e) => {
+    if (wasPinching && e.touches.length === 0) {
+        setTimeout(() => { wasPinching = false; }, 100);
+        initialPinchDist = -1;
+        return;
+    }
+    if (!isDraggingMobile && !wasPinching && e.touches.length === 0) {
+        const currentTime = new Date().getTime();
+        if (currentTime - lastTap < 300) {
+            e.preventDefault(); 
+            handlePlotting(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+        }
+        lastTap = currentTime;
+    }
 });
 
-// --- 🏛️ CORE PLOTTING LOGIC (Refined) ---
+// --- CORE PLOTTING LOGIC ---
 async function handlePlotting(clientX, clientY) {
     if (!viewport) return;
     const rect = viewport.getBoundingClientRect();
     
-    // 🎯 Use 'offset' consistently to match updateMapTransform
-    const mouseX = (clientX - rect.left - offset.x) / zoom;
-    const mouseY = (clientY - rect.top - offset.y) / zoom;
+    // Calculate precise coordinates on the 2500x1800 grid
+    const mouseX = (clientX - rect.left - mapPos.x) / zoom;
+    const mouseY = (clientY - rect.top - mapPos.y) / zoom;
 
+    // ⚠️ THE HAZARD BYPASS
     if (currentHazardMode) {
-        // createHazardMarker should append to #map-container
+        // If a hazard is selected in the sidebar, we skip the name prompt
         createHazardMarker(`${mouseX}px`, `${mouseY}px`, currentHazardMode);
+        
+        // Stoic Reset: Clear the mode so you don't accidentally plot 10 fires
         currentHazardMode = null; 
-        const status = document.getElementById('hazard-status');
-        if(status) status.innerText = "WAITING FOR SELECTION";
+        document.getElementById('hazard-status').innerText = "WAITING FOR SELECTION";
         return; 
     }
 
+    // --- ORIGINAL TRIAGE LOGIC BELOW ---
     let agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
     if (agentData === null) return;
 
     const now = new Date();
     const time = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ", " + now.toLocaleTimeString();
     
-    // Center the dot by offsetting half its width (8px)
+    // Create the standard Triage Dot
     createDot(`${mouseX - 8}px`, `${mouseY - 8}px`, currentType, agentData, time);
 }
 
 function updateMapTransform() {
-    const container = document.getElementById('map-container');
-    if (!container) return;
-    
-    // Using mapPos instead of offset
-    container.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
+    if(map) map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
 }
 
 // --- NAVIGATION HANDLERS ---
@@ -517,83 +528,81 @@ const CMSHS_SPATIAL_INDEX = {
     4: { name: "ADMINISTRATION BLDG", x: 1800, y: 1200 }
 };
 
-/* 🏛️ CAMPUS CONNECTIVITY GRAPH (Nodes & Edges) */
-const CAMPUS_GRAPH = {
-    "0": ["1"],           // Main Gate connects to Gym
-    "1": ["0", "2", "4"], // Gym connects to Gate, Science Lab, Admin
-    "2": ["1", "3"],      // Science Lab connects to Gym, Comp Lab
-    "3": ["2"],           // Comp Lab connects to Science Lab
-    "4": ["1"]            // Admin connects to Gym
-}; 
+/* 🏛️ CORE LOCALIZATION ENGINE */
+function executeIndoorLocalization(markerId) {
+    const landmark = CMSHS_SPATIAL_INDEX[markerId];
+    if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
 
-/* 👁 VISION ENGINE */
+    // 1. UPDATE REAL GLOBAL COORDINATES
+    // Ensure 'userPos' is declared at the top of your MAIN script
+    if (typeof userPos !== 'undefined') {
+        userPos.x = landmark.x;
+        userPos.y = landmark.y;
+    }
+
+    // 2. TRIGGER GPU-ACCELERATED RE-RENDER
+    // Call the real functions defined in your main map logic
+    if (typeof updateMapTransform === 'function') updateMapTransform();
+    if (typeof renderUserLocation === 'function') renderUserLocation();
+
+    // 3. CLEANUP HARDWARE
+    closeGhostModal();
+
+    // 4. TACTICAL HUD UPDATE
+    const statusSpan = document.getElementById('hazard-status');
+    if (statusSpan) {
+        statusSpan.innerText = `LOCATED: ${landmark.name}`;
+        statusSpan.style.color = "#00aaff";
+    }
+
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    console.log(`ORACLE: Snap-to-Room Successful: ${landmark.name}`);
+}
+
+/* 🏛️ VISION ENGINE (Integrated) */
+let stream = null;
+
 async function initiateGhostTag() {
-    const video = document.getElementById('scanner-video');
     const modal = document.getElementById('ghost-modal');
-    
-    if (!video || !modal) return console.error("ORACLE: Optical hardware missing from DOM.");
-
+    if (!modal) return;
     modal.style.display = 'flex';
-
+    modal.classList.add('active');
+    
     try {
-        // Initialize the stream safely
         stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "environment" } 
+            video: { facingMode: "environment", width: 640, height: 480 } 
         });
-        video.srcObject = stream;
-        console.log("ORACLE: Vision Link Established.");
+        document.getElementById('scanner-video').srcObject = stream;
+        startVisionLoop();
     } catch (err) {
-        console.error("ORACLE: Optical hardware access denied.", err);
-        document.getElementById('scanner-status').innerText = "ERROR: SENSOR BLOCKED";
+        document.getElementById('scanner-status').innerText = "HARDWARE BLOCKED";
     }
 }
-
-function closeGhostModal() {
-    const modal = document.getElementById('ghost-modal');
-    if (modal) modal.style.display = 'none';
-
-    // 🛡️ Safe shutdown check
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null; // Reset so it can be re-initialized
-        console.log("ORACLE: Optical sensors offline.");
-    }
-}
-
 
 function startVisionLoop() {
-    // 🛡️ Ensure the ArUco library (aruco.js) is loaded
-    if (typeof AR === 'undefined') {
-        console.error("ORACLE: ArUco Library not found! Check js/ folder.");
-        return;
-    }
-
+    if (typeof AR === 'undefined') return;
     const detector = new AR.Detector();
     const video = document.getElementById("scanner-video");
     const canvas = document.createElement("canvas");
     const context = canvas.getContext("2d");
+    let isDetected = false;
 
     function capture() {
-        // Only run if the modal is actually open
-        if (document.getElementById('ghost-modal').style.display === 'none') return;
+        if (!stream || isDetected || document.getElementById('ghost-modal').style.display === 'none') return;
 
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = 480; // Lower res = Faster scanning on S10
-            canvas.height = 360;
+            canvas.width = 640; canvas.height = 480;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // 🔎 THE CORE ENGINE CALL
-            const markers = detector.detect(context.getImageData(0, 0, canvas.width, canvas.height));
+            const markers = detector.detect(context.getImageData(0, 0, 640, 480));
 
             if (markers.length > 0) {
+                isDetected = true;
                 const detectedID = markers[0].id;
+                document.getElementById('aruco-id-input').value = detectedID;
+                document.getElementById('scanner-status').innerText = `LOCKED: ID ${detectedID}`;
                 
-                // 🏛️ TRIGGER THE SPATIAL HANDSHAKE
+                // EXECUTE REAL LOCALIZATION
                 executeIndoorLocalization(detectedID);
-                
-                // Auto-close after successful lock to save battery
-                closeGhostModal();
-                return; 
             }
         }
         requestAnimationFrame(capture);
@@ -601,128 +610,22 @@ function startVisionLoop() {
     capture();
 }
 
-/**
- * 🏛️ CORE LOCALIZATION & ROUTING ENGINE
- * Merged & Refined for CMSHS ORACLE
- */
-function executeIndoorLocalization(markerId) {
-    const landmark = CMSHS_SPATIAL_INDEX[markerId];
-    if (!landmark) return;
-
-    // 1. UPDATE STATE
-    currentMarkerId = markerId;
-    lastDetectedNode = markerId.toString(); // 🎯 FIX: Define this for the Reroute button
-
-    // 2. SNAP CAMERA
-    // Using mapPos to match the touch engine
-    mapPos.x = (window.innerWidth / 2) - (landmark.x * zoom);
-    mapPos.y = (window.innerHeight / 2) - (landmark.y * zoom);
-    
-    updateMapTransform();
-
-    // 3. ROUTE
-    const path = findSafestRoute(lastDetectedNode, "0");
-    renderEvacuationPath(path);
-
-    // 4. UI CLEANUP
-    closeGhostModal();
-    const status = document.getElementById('hazard-status');
-    if (status) status.innerText = `LOCATED: ${landmark.name}`;
-}
- 
-/**
- * 🧠 PATHFINDING ALGORITHM: Breadth-First Search (BFS)
- */
-function findSafestRoute(startNode, endNode) {
-    let queue = [[startNode]];
-    let visited = new Set([startNode]);
-
-    while (queue.length > 0) {
-        let path = queue.shift();
-        let node = path[path.length - 1];
-
-        if (node === endNode) return path;
-
-        const neighbors = CAMPUS_GRAPH[node] || [];
-        for (let neighbor of neighbors) {
-            // 🛑 CRITICAL: Algorithm "sees" hazards as walls and skips them
-            if (!visited.has(neighbor) && !activeHazards.has(neighbor)) {
-                visited.add(neighbor);
-                queue.push([...path, neighbor]);
-            }
-        }
+function closeGhostModal() {
+    if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
     }
-    return null; // No safe path possible
-}
-
-/**
- * 🖌️ RENDER PATH TO SVG LAYER
- */
-function renderEvacuationPath(path) {
-    const svg = document.getElementById('route-layer');
-    if (!svg) return;
-    svg.innerHTML = ""; 
-
-    if (!path) {
-        console.error("ORACLE: NO SAFE EVACUATION ROUTE FOUND!");
-        return;
+    const modal = document.getElementById('ghost-modal');
+    if (modal) {
+        modal.classList.remove('active');
+        setTimeout(() => { modal.style.display = 'none'; }, 300);
     }
-
-    let points = path.map(id => {
-        const coord = CMSHS_SPATIAL_INDEX[id];
-        return `${coord.x},${coord.y}`;
-    }).join(" ");
-
-    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-    polyline.setAttribute("points", points);
-    polyline.setAttribute("stroke", "#00ff66");
-    polyline.setAttribute("stroke-width", "10");
-    polyline.setAttribute("fill", "none");
-    polyline.setAttribute("stroke-dasharray", "20,10"); // Tactical dashed line
-    polyline.style.filter = "drop-shadow(0 0 8px #00ff66)";
-    
-    svg.appendChild(polyline);
-}
-
-/** 🟢 MISSION COMPLETE LOGIC */
-function confirmSafety() {
-    const svg = document.getElementById('route-layer');
-    const dot = document.getElementById('user-dot');
-    const status = document.getElementById('hazard-status');
-
-    if (svg) svg.innerHTML = "";
-    if (dot) dot.style.display = "none";
-    
-    // Safety check for the innerText error
-    if (status) {
-        status.innerText = "STATUS: USER SECURED";
-        status.style.color = "#00ff66";
-    }
-
-    currentMarkerId = null; // Reset location state
-    console.log("ORACLE: Evacuation Success confirmed.");
-    if (navigator.vibrate) navigator.vibrate([100, 50, 500]);
-}
-
-/** 🟠 DYNAMIC REROUTE LOGIC */
-function reportBlockedPath() {
-    // 🛡️ Guard: Don't reroute if we aren't even located yet
-    if (currentMarkerId === null) {
-        console.warn("ORACLE: Reroute failed - No active location.");
-        return; 
-    }
-
-    console.warn(`ORACLE: Rerouting from marker ${currentMarkerId}...`);
-    
-    // Logic: Find the first node in the current path that ISN'T the user's current node
-    // For now, let's just assume the Gym (ID 1) is blocked for the demo
-    activeHazards.add("1"); 
-    
-    // Re-run the localization to find a new path
-    executeIndoorLocalization(currentMarkerId);
 }
 
 // --- ⚠️ HAZARD COMMAND ENGINE ---
+let currentHazardMode = null;
+
+// 1. TACTICAL SIDEBAR REGISTRY
 function toggleSidebar() {
     const sidebar = document.getElementById('hazard-sidebar');
     if (!sidebar) return; // Safety check
@@ -1118,57 +1021,4 @@ window.updateTriage = updateTriage;
 window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
 window.importTacticalGrid = importTacticalGrid;
-
-// 🏛️ FORCE RECOVERY LOGIC
-window.addEventListener('load', () => {
-    console.log("ORACLE: Executing Visual Recovery...");
-
-    // 1. Force the container to be visible and correctly sized
-    const container = document.getElementById('map-container');
-    const viewport = document.getElementById('viewport');
-    
-    if (container && viewport) {
-        viewport.style.minHeight = "400px"; // Ensure there is room to see
-        container.style.display = "block";
-        container.style.visibility = "visible";
-        container.style.opacity = "1";
-    }
-
-    // 2. Reset coordinates to center if they are broken
-    if (typeof mapPos !== 'undefined') {
-        mapPos.x = 20; 
-        mapPos.y = 20;
-        zoom = 0.5; // Zoom out so you can see the edges
-        if (typeof updateMapTransform === 'function') updateMapTransform();
-    }
-
-    // 3. Asset Check
-    const mapImg = document.getElementById('map-img');
-    if (mapImg && mapImg.naturalWidth === 0) {
-        console.error("ORACLE: Map image failed to load. Check file path/case!");
-        document.getElementById('hazard-status').innerText = "ERROR: MAP ASSET 404";
-    }
-});
-
-// 🏛️ STOIC SHIELD: Wait for the DOM to be ready
-document.addEventListener('DOMContentLoaded', () => {
-    console.log("ORACLE: DOM fully loaded. Binding listeners...");
-
-    const viewport = document.getElementById('viewport');
-
-    // ONLY attach if the viewport actually exists
-    if (viewport) {
-        viewport.addEventListener('touchstart', e => {
-            if (e.touches.length === 1) {
-                isDraggingMobile = false;
-                touchStartPos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-                lastMouse = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-            }
-        }, { passive: true });
-
-        // Add your 'touchmove' and 'touchend' here inside the if(viewport) block
-        console.log("ORACLE: Touch Engine Active.");
-    } else {
-        console.error("ORACLE: Critical Failure - Viewport element not found!");
-    }
-});
+window.addEventListener('load', initializeSystem);

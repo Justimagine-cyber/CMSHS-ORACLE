@@ -12,12 +12,11 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     
     <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/js-aruco@0.1.0/src/aruco.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
-    <script src="sdrrm-events.js"></script>
     <script src="js/cv.js"></script>
     <script src="js/aruco.js"></script>
+    <script src="sdrrm-events.js" defer></script>
     
     <script>
         function forceKillVision() {
@@ -79,16 +78,6 @@
         <button class="hazard-select electric" onclick="setHazardType('electric')">⚡ SHOCK</button>
     </div>
 
-    <div class="safety-controls">
-    <button class="tactical-btn safe-btn" onclick="confirmSafety()">
-        ✅ I'M SAFE!
-    </button>
-
-    <button class="tactical-btn hazard-btn" onclick="reportBlockedPath(lastDetectedNode)">
-        ⚠️ PATH BLOCKED
-    </button>
-    </div>
-    
     <div class="sidebar-info" style="margin-top:20px; font-size:0.7em; color:#888;">
         <p>STATUS: <span id="hazard-status">WAITING FOR SELECTION</span></p>
     </div>
@@ -106,15 +95,7 @@
     </header>
 
     <div id="viewport">
-    <div id="map-container" style="position: absolute; transform-origin: 0 0;">
-        <img src="CMSHS-SDRRM-PLAN.png" id="map-img" style="display: block;">
-        
-        <svg id="route-layer" viewBox="0 0 2500 1800" 
-             style="position:absolute; top:0; left:0; width:2500px; height:1800px; pointer-events:none; z-index:998;">
-        </svg>
-
-        <div id="user-dot"></div>
-    </div>
+        <div id="map-img"></div>
         
         <div id="stats-hud">
             [ CASUALTY COUNTS ]<br>
@@ -190,42 +171,11 @@
         </div>
 
         <div class="modal-footer">
-            <button onclick="closeGhostModal()" class="close-btn">TERMINATE LINK</button>
+            <button onclick="closeGhostModal()">TERMINATE LINK</button>
         </div>
     </div>
 </div>
 
-    <script>
-window.addEventListener('load', () => {
-    console.log("ORACLE: Finalizing Boot Sequence...");
-    
-    // 1. Force remove the boot screen after 1.5s
-    setTimeout(() => {
-        const boot = document.getElementById('boot-overlay');
-        if (boot) {
-            boot.style.transition = "opacity 0.5s ease";
-            boot.style.opacity = "0";
-            setTimeout(() => boot.style.display = "none", 500);
-        }
-    }, 1500);
-
-    // 2. Critical: Initialize mapPos and zoom if they aren't set
-    // This prevents the "Cannot read property of undefined" plotting errors
-    if (typeof mapPos === 'undefined') window.mapPos = { x: 0, y: 0 };
-    if (typeof zoom === 'undefined') window.zoom = 0.5;
-
-    // 3. Ensure map visibility
-    const mapImg = document.getElementById('map-img');
-    if (mapImg) {
-        mapImg.onload = () => console.log("ORACLE: Tactical Map Loaded.");
-        mapImg.onerror = () => {
-            console.error("ORACLE: MAP LOAD FAILURE. Check filename case-sensitivity.");
-            alert("Tactical Map Asset Missing!");
-        };
-    }
-});
-    </script>
-    
 <script>
   // 🛡️ OFFLINE SHIELD REFINED
   if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
