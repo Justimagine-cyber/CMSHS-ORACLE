@@ -881,21 +881,52 @@ color: #000 !important;
     to { transform: translateY(-3px); }
 }
 
-#user-dot {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 15px;
-    height: 15px;
-    background: #00aaff;
-    border-radius: 50%;
-    box-shadow: 0 0 15px #00aaff;
-    will-change: transform; /* 🚀 Tells the GPU to pre-load this element */
-    transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1); /* Smooth snap */
-    z-index: 999;
+#evac-layer {
+    position:absolute;
+    top:0;
+    left:0;
+    width:2500px;
+    height:1800px;
+    pointer-events:none;
+    z-index:80;
+}
+
+.evac-node{
+    position:absolute;
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:#00ffff;
+    box-shadow:0 0 10px #00ffff;
+}
+
+.you-marker{
+    position:absolute;
+    width:18px;
+    height:18px;
+    background:rgb(0, 132, 255);
+    border-radius:50%;
+    box-shadow:0 0 15px red;
 }
 
 @keyframes ping {
     0% { transform: scale(1); opacity: 1; }
     100% { transform: scale(3); opacity: 0; }
+}
+
+#safeBtn{
+margin-top:10px;
+padding:12px;
+border:1px solid #00ff66;
+background:rgba(0,30,0,0.5);
+color:#00ff66;
+font-family:'Montserrat';
+font-weight:900;
+cursor:pointer;
+}
+
+#safeBtn:active{
+background:#00ff66;
+color:#000;
+box-shadow:0 0 15px #00ff66;
 }

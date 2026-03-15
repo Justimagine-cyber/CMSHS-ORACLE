@@ -678,7 +678,7 @@ dot.style.background="cyan"
 dot.style.borderRadius="50%"
 dot.style.boxShadow="0 0 10px cyan"
 dot.className="evac-node"
-document.getElementById("map-img").appendChild(dot)
+document.getElementById("evac-layer").appendChild(dot)
     })
 }
 
@@ -740,7 +740,7 @@ marker.style.boxShadow="0 0 10px red"
 marker.id="youMarker"
 const old=document.getElementById("youMarker")
 if(old) old.remove()
-document.getElementById("map-img").appendChild(marker)
+document.getElementById("evac-layer").appendChild(marker)
 }
 
 
