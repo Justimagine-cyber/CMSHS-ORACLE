@@ -258,16 +258,46 @@ function drawUserMarker(x, y) {
     marker.style.display = 'block';
 }
 
-function focusOnUser(x, y) {
-    if (!viewport) return;
-    const vWidth = viewport.offsetWidth / 2;
-    const vHeight = viewport.offsetHeight / 2;
-    mapPos.x = vWidth - (x * zoom);
-    mapPos.y = (vHeight - 100) - (y * zoom); 
-    updateMapTransform();
+function updateMapTransform() {
+    if(map) {
+        // GPU Accelerated transform for PC/Mobile
+        map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
+    }
 }
 
-// --- 📱 TOUCH ENGINE (OPTIMIZED) ---
+// --- 🖱️ PC MOUSE & POINTER CONTROLS ---
+viewport.addEventListener('wheel', e => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED;
+    zoom = Math.min(Math.max(0.4, zoom + delta), 4);
+    updateMapTransform();
+}, { passive: false });
+
+viewport.addEventListener('pointerdown', e => {
+    if (e.button !== 0 && e.pointerType === 'mouse') return;
+    isDragging = true;
+    lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+viewport.addEventListener('pointermove', e => {
+    if (!isDragging || e.pointerType === 'touch') return; 
+    mapPos.x += e.clientX - lastMouse.x;
+    mapPos.y += e.clientY - lastMouse.y;
+    updateMapTransform();
+    lastMouse = { x: e.clientX, y: e.clientY };
+});
+
+window.addEventListener('pointerup', () => { isDragging = false; });
+
+// 🖥️ PC DOUBLE CLICK LISTENER
+viewport.addEventListener('dblclick', e => {
+    // Only trigger if not on a mobile device (mobile handled by touchend)
+    if (window.matchMedia("(pointer: fine)").matches) {
+        handlePlotting(e.clientX, e.clientY);
+    }
+});
+
+// --- 📱 TOUCH ENGINE (OPTIMIZED FOR ALL MOBILE) ---
 viewport.addEventListener('touchstart', e => {
     if (e.touches.length === 1) {
         isDraggingMobile = false;
@@ -283,7 +313,8 @@ viewport.addEventListener('touchmove', e => {
     if (e.touches.length === 1 && !wasPinching) {
         const touch = e.touches[0];
         const moveDist = Math.hypot(touch.clientX - touchStartPos.x, touch.clientY - touchStartPos.y);
-        if (moveDist > 5) isDraggingMobile = true;
+        if (moveDist > 10) isDraggingMobile = true;
+        
         mapPos.x += touch.clientX - lastMouse.x;
         mapPos.y += touch.clientY - lastMouse.y;
         updateMapTransform();
@@ -302,13 +333,15 @@ viewport.addEventListener('touchmove', e => {
 
 viewport.addEventListener('touchend', (e) => {
     if (wasPinching && e.touches.length === 0) {
-        setTimeout(() => { wasPinching = false; }, 100);
+        setTimeout(() => { wasPinching = false; }, 200);
         initialPinchDist = -1;
         return;
     }
-    if (!isDraggingMobile && !wasPinching && e.touches.length === 0) {
+    
+    if (!isDraggingMobile && !wasPinching && e.changedTouches.length > 0) {
         const currentTime = new Date().getTime();
-        if (currentTime - lastTap < 300) {
+        const tapLength = currentTime - lastTap;
+        if (tapLength < 300 && tapLength > 0) {
             e.preventDefault(); 
             handlePlotting(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
         }
@@ -316,72 +349,46 @@ viewport.addEventListener('touchend', (e) => {
     }
 });
 
-// --- CORE PLOTTING LOGIC ---
+// --- 🏛️ CORE PLOTTING LOGIC (The ROOT Fix) ---
 async function handlePlotting(clientX, clientY) {
     if (!viewport) return;
     const rect = viewport.getBoundingClientRect();
     
-    // Calculate precise coordinates on the 2500x1800 grid
+    // Calculate precise coordinates relative to the zoomed/panned map
     const mouseX = (clientX - rect.left - mapPos.x) / zoom;
     const mouseY = (clientY - rect.top - mapPos.y) / zoom;
 
-    // ⚠️ THE HAZARD BYPASS
     if (currentHazardMode) {
-        // If a hazard is selected in the sidebar, we skip the name prompt
         createHazardMarker(`${mouseX}px`, `${mouseY}px`, currentHazardMode);
-        
-        // Stoic Reset: Clear the mode so you don't accidentally plot 10 fires
         currentHazardMode = null; 
         document.getElementById('hazard-status').innerText = "WAITING FOR SELECTION";
         return; 
     }
 
-    // --- ORIGINAL TRIAGE LOGIC BELOW ---
     let agentData = await tacticalPrompt("AGENT IDENTIFICATION", "ENTER NAME & SECTOR", true, "e.g. JUAN - GYM");
     if (agentData === null) return;
 
     const now = new Date();
     const time = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ", " + now.toLocaleTimeString();
     
-    // Create the standard Triage Dot
     createDot(`${mouseX - 8}px`, `${mouseY - 8}px`, currentType, agentData, time);
 }
 
-function updateMapTransform() {
-    if(map) map.style.transform = `translate(${mapPos.x}px, ${mapPos.y}px) scale(${zoom})`;
-}
-
-// --- NAVIGATION HANDLERS ---
-viewport.addEventListener('wheel', e => {
-    e.preventDefault();
-    zoom = Math.min(Math.max(0.4, zoom + (e.deltaY > 0 ? -ZOOM_SPEED : ZOOM_SPEED)), 4);
-    updateMapTransform();
-}, { passive: false });
-
-viewport.addEventListener('pointerdown', e => {
-    if (e.button !== 0 && e.pointerType === 'mouse') return;
-    isDragging = true;
-    lastMouse = { x: e.clientX, y: e.clientY };
-});
-
-viewport.addEventListener('pointermove', e => {
-    if (!isDragging) return;
-    mapPos.x += e.clientX - lastMouse.x;
-    mapPos.y += e.clientY - lastMouse.y;
-    updateMapTransform();
-    lastMouse = { x: e.clientX, y: e.clientY };
-});
-
-window.addEventListener('pointerup', () => { isDragging = false; });
-
-// --- 💾 PERSISTENCE & DATA ENGINE ---
+// --- 💾 PERSISTENCE & DATA ---
 function saveState() {
     const dots = [];
     const newCounts = [0, 0, 0, 0];
     document.querySelectorAll('.triage-dot').forEach(d => {
         if (d.id === 'intel-overlay') return;
         const type = parseInt(d.dataset.type);
-        dots.push({ x: d.style.left, y: d.style.top, type, agent: d.dataset.agent, time: d.dataset.timestamp, uuid: d.dataset.uuid });
+        dots.push({ 
+            x: d.style.left, 
+            y: d.style.top, 
+            type, 
+            agent: d.dataset.agent, 
+            time: d.dataset.timestamp, 
+            uuid: d.dataset.uuid 
+        });
         if (!isNaN(type)) newCounts[type]++;
     });
     counts = newCounts; 
@@ -528,27 +535,26 @@ const CMSHS_SPATIAL_INDEX = {
     4: { name: "ADMINISTRATION BLDG", x: 1800, y: 1200 }
 };
 
-/* 🏛️ CORE LOCALIZATION ENGINE */
+/* 🏛️ CORE LOCALIZATION ENGINE - INTEGRATED */
 function executeIndoorLocalization(markerId) {
     const landmark = CMSHS_SPATIAL_INDEX[markerId];
     if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
 
-    // 1. UPDATE REAL GLOBAL COORDINATES
-    // Ensure 'userPos' is declared at the top of your MAIN script
-    if (typeof userPos !== 'undefined') {
-        userPos.x = landmark.x;
-        userPos.y = landmark.y;
-    }
+    // 1. UPDATE COORDINATES
+    // We use the pixel coordinates defined in your CMSHS_SPATIAL_INDEX
+    const targetX = landmark.x;
+    const targetY = landmark.y;
 
-    // 2. TRIGGER GPU-ACCELERATED RE-RENDER
-    // Call the real functions defined in your main map logic
-    if (typeof updateMapTransform === 'function') updateMapTransform();
-    if (typeof renderUserLocation === 'function') renderUserLocation();
+    // 2. THE UNIFIED BLUE DOT 🛰️
+    // We call your existing function so the marker appears exactly like a GPS fix
+    drawUserMarker(targetX, targetY);
 
-    // 3. CLEANUP HARDWARE
+    // 3. TRIGGER GPU-ACCELERATED PAN
+    // Centers the camera on your new indoor position
+    focusOnUser(targetX, targetY);
+
+    // 4. CLEANUP & HUD
     closeGhostModal();
-
-    // 4. TACTICAL HUD UPDATE
     const statusSpan = document.getElementById('hazard-status');
     if (statusSpan) {
         statusSpan.innerText = `LOCATED: ${landmark.name}`;
@@ -611,10 +617,16 @@ function startVisionLoop() {
 }
 
 function closeGhostModal() {
+    // 📳 Tactical Haptic Feedback
+    if (navigator.vibrate) navigator.vibrate([50, 30, 50]); 
+    
+    console.log("ORACLE: Terminating Vision Link...");
+    
     if (stream) {
         stream.getTracks().forEach(t => t.stop());
         stream = null;
     }
+    
     const modal = document.getElementById('ghost-modal');
     if (modal) {
         modal.classList.remove('active');
