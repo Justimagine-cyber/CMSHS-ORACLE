@@ -526,44 +526,249 @@ async function deleteAgent() {
     }
 }
 
-/* 🏛️ ORACLE SPATIAL ATLAS: COORDINATE DICTIONARY */
+/***************************************************
+ CMSHS ORACLE – Indoor Evacuation Engine
+ Version: Prototype Routing Layer
+***************************************************/
+
+/* ================================
+   SPATIAL INDEX (Map Coordinates)
+================================ */
+
 const CMSHS_SPATIAL_INDEX = {
-    0: { name: "MAIN GATE / DEPOT", x: 200, y: 1500 },
-    1: { name: "CMSHS GYMNASIUM", x: 1200, y: 850 },
-    2: { name: "SCIENCE LAB", x: 450, y: 320 },
-    3: { name: "COMPUTER LAB", x: 2100, y: 400 },
-    4: { name: "ADMINISTRATION BLDG", x: 1800, y: 1200 }
+0:{name:"MAIN EXIT",x:200,y:1500,type:"exit"},
+1:{name:"GYM CENTER",x:1200,y:850,type:"landmark"},
+
+10:{name:"SHS HALLWAY WEST",x:850,y:1100,type:"hallway"},
+11:{name:"SHS ROOM 1",x:950,y:1100,type:"room"},
+12:{name:"SHS ROOM 2",x:1050,y:1100,type:"room"},
+13:{name:"SHS ROOM 3",x:1150,y:1100,type:"room"},
+
+20:{name:"JHS CORRIDOR WEST",x:600,y:400,type:"hallway"},
+21:{name:"JHS CORRIDOR MID",x:900,y:400,type:"hallway"},
+22:{name:"JHS CORRIDOR EAST",x:1200,y:400,type:"hallway"},
+
+30:{name:"BIOLOGY LAB",x:350,y:250,type:"lab"},
+31:{name:"CANTEEN",x:200,y:350,type:"facility"},
+
+40:{name:"EAST STAIRS",x:2100,y:650,type:"stairs"},
+41:{name:"WEST STAIRS",x:400,y:700,type:"stairs"}
 };
 
-/* 🏛️ CORE LOCALIZATION ENGINE - INTEGRATED */
-function executeIndoorLocalization(markerId) {
-    const landmark = CMSHS_SPATIAL_INDEX[markerId];
-    if (!landmark) return console.warn(`ORACLE: Unknown ID ${markerId}`);
+/* ================================
+   GRAPH CONNECTIONS
+================================ */
 
-    // 1. UPDATE COORDINATES
-    // We use the pixel coordinates defined in your CMSHS_SPATIAL_INDEX
-    const targetX = landmark.x;
-    const targetY = landmark.y;
+const CMSHS_GRAPH = {
+10:[11,21],
+11:[10,12],
+12:[11,13],
+13:[12,21],
+21:[10,13,20,22],
+20:[21,30],
+22:[21,40],
+30:[20,31],
+31:[30],
+40:[22,0],
+41:[20,0]
+};
 
-    // 2. THE UNIFIED BLUE DOT 🛰️
-    // We call your existing function so the marker appears exactly like a GPS fix
-    drawUserMarker(targetX, targetY);
 
-    // 3. TRIGGER GPU-ACCELERATED PAN
-    // Centers the camera on your new indoor position
-    focusOnUser(targetX, targetY);
+/* ================================
+   HAZARD DATABASE
+================================ */
 
-    // 4. CLEANUP & HUD
-    closeGhostModal();
-    const statusSpan = document.getElementById('hazard-status');
-    if (statusSpan) {
-        statusSpan.innerText = `LOCATED: ${landmark.name}`;
-        statusSpan.style.color = "#00aaff";
-    }
+let HAZARDS = new Set()
 
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-    console.log(`ORACLE: Snap-to-Room Successful: ${landmark.name}`);
+function reportHazard(nodeId){
+HAZARDS.add(nodeId)
+console.log("⚠ Hazard reported at:",CMSHS_SPATIAL_INDEX[nodeId].name)
+rerouteUsers()
 }
+
+/* ================================
+   SAFE REPORTING SYSTEM
+================================ */
+
+let SAFE_USERS = []
+
+function reportSafe(userId,nodeId){
+SAFE_USERS.push({
+user:userId,
+location:nodeId,
+time:new Date().toISOString()
+})
+
+console.log("✅ USER SAFE:",userId)
+displaySafeToast(userId)
+}
+
+
+function displaySafeToast(user){
+
+const msg=document.createElement("div")
+msg.innerText="✅ "+user+" REPORTED SAFE"
+
+msg.style.position="fixed"
+msg.style.bottom="20px"
+msg.style.left="20px"
+msg.style.padding="10px"
+msg.style.background="green"
+msg.style.color="white"
+msg.style.borderRadius="6px"
+
+document.body.appendChild(msg)
+setTimeout(()=>msg.remove(),4000)
+}
+
+
+/* ================================
+   SHORTEST PATH ALGORITHM
+================================ */
+
+function findShortestPath(start,goal){
+
+let queue=[start]
+let visited={}
+let parent={}
+
+visited[start]=true
+while(queue.length){
+let node=queue.shift()
+if(node==goal) break
+for(let next of CMSHS_GRAPH[node]||[]){
+if(HAZARDS.has(next)) continue
+if(!visited[next]){
+
+visited[next]=true
+parent[next]=node
+queue.push(next)
+        }
+    }
+}
+
+let path=[]
+let cur=goal
+
+while(cur!==undefined){
+path.unshift(cur)
+cur=parent[cur]
+}
+
+return path
+}
+
+
+/* ================================
+   EVACUATION PATH RENDERING
+================================ */
+
+function drawEvacuationPath(route){
+clearRoute()
+route.forEach(node=>{
+const point=CMSHS_SPATIAL_INDEX[node]
+const dot=document.createElement("div")
+
+dot.style.position="absolute"
+dot.style.left=point.x+"px"
+dot.style.top=point.y+"px"
+dot.style.width="12px"
+dot.style.height="12px"
+dot.style.background="cyan"
+dot.style.borderRadius="50%"
+dot.style.boxShadow="0 0 10px cyan"
+dot.className="evac-node"
+document.getElementById("map-img").appendChild(dot)
+    })
+}
+
+function clearRoute(){
+document.querySelectorAll(".evac-node").forEach(n=>n.remove())
+}
+
+
+/* ================================
+   REROUTING SYSTEM
+================================ */
+
+function rerouteUsers(){
+console.log("🔄 Rerouting all users due to hazard")
+if(currentUserNode!=null){
+let newRoute=findShortestPath(currentUserNode,0)
+drawEvacuationPath(newRoute)
+    }
+}
+
+
+/* ================================
+   INDOOR LOCALIZATION
+================================ */
+
+let currentUserNode=null
+function executeIndoorLocalization(markerId){
+
+currentUserNode=markerId
+const landmark=CMSHS_SPATIAL_INDEX[markerId]
+if(!landmark){
+console.log("Unknown marker:",markerId)
+return
+}
+
+console.log("📍 LOCATION:",landmark.name)
+let route=findShortestPath(markerId,0)
+drawEvacuationPath(route)
+showYouAreHere(markerId)
+}
+
+
+/* ================================
+   YOU ARE HERE MARKER
+================================ */
+
+function showYouAreHere(node){
+const p=CMSHS_SPATIAL_INDEX[node]
+const marker=document.createElement("div")
+
+marker.style.position="absolute"
+marker.style.left=p.x+"px"
+marker.style.top=p.y+"px"
+marker.style.width="16px"
+marker.style.height="16px"
+marker.style.background="red"
+marker.style.borderRadius="50%"
+marker.style.boxShadow="0 0 10px red"
+marker.id="youMarker"
+const old=document.getElementById("youMarker")
+if(old) old.remove()
+document.getElementById("map-img").appendChild(marker)
+}
+
+
+/* ================================
+   ARUCO CAMERA HOOK
+================================ */
+
+function detectMarkerFromCamera(markerId){
+executeIndoorLocalization(markerId)
+}
+
+
+/* ================================
+   USER SAFE BUTTON
+================================ */
+
+function userSafeButton(){
+if(currentUserNode==null) return
+const userId="User-"+Math.floor(Math.random()*9999)
+reportSafe(userId,currentUserNode)
+}
+
+
+/* ================================
+   UI BUTTONS
+================================ */
+
+document.getElementById("safeBtn")?.addEventListener("click",userSafeButton)
 
 /* 🏛️ VISION ENGINE (Integrated) */
 let stream = null;
