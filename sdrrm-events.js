@@ -157,6 +157,15 @@ async function locateUser() {
 
 function startRandomMockRoaming() {
     const btnText = document.getElementById('gps-text');
+    const mapImg = document.getElementById('map-img');
+
+    // 🛡️ GUARD: Don't start if the map asset isn't ready
+    if (!mapImg || mapImg.offsetWidth === 0) {
+        console.warn("ORACLE: Map not ready. Aborting simulation.");
+        tacticalPrompt("SYSTEM ERROR", "MAP ASSET NOT DETECTED. CANNOT INITIATE ROAMING.", false, "", true);
+        return;
+    }
+
     if(btnText) btnText.innerText = "📡 ROAMING";
 
     const mapConfig = { 
@@ -177,6 +186,7 @@ function startRandomMockRoaming() {
         targetLat = mapConfig.bottomLat + Math.random() * (mapConfig.topLat - mapConfig.bottomLat);
         targetLng = mapConfig.leftLong + Math.random() * (mapConfig.rightLong - mapConfig.leftLong);
         movements++;
+        console.log(`📡 ORACLE: New Target Acquired [${movements}/${MAX_MOVEMENTS}]`);
     }
 
     pickNewTarget();
@@ -184,6 +194,13 @@ function startRandomMockRoaming() {
     mockInterval = setInterval(() => {
         const step = 0.000015;
         
+        // 🛡️ GUARD: Ensure we have valid numbers before moving
+        if (isNaN(currentLat) || isNaN(currentLng)) {
+            clearInterval(mockInterval);
+            console.error("ORACLE: Coordinate corruption detected. Stopping.");
+            return;
+        }
+
         if (Math.abs(currentLat - targetLat) > step) {
             currentLat += currentLat < targetLat ? step : -step;
         }
@@ -191,6 +208,7 @@ function startRandomMockRoaming() {
             currentLng += currentLng < targetLng ? step : -step;
         }
 
+        // Call the processing engine
         processCoords(currentLat, currentLng);
 
         if (Math.abs(currentLat - targetLat) <= step && Math.abs(currentLng - targetLng) <= step) {
@@ -216,6 +234,14 @@ function stopTracking() {
 }
 
 function processCoords(lat, lng) {
+    const mapImg = document.getElementById('map-img');
+    
+    // 🛡️ SECURITY CHECK: Prevent crash if map isn't ready
+    if (!mapImg || mapImg.offsetWidth === 0 || mapImg.offsetHeight === 0) {
+        console.warn("ORACLE: Map not rendered yet. Postponing coordinate sync.");
+        return; 
+    }
+
     const mapConfig = { 
         topLat: CMSHS_CONFIG.centerLat + (CMSHS_CONFIG.latSpan / 2), 
         bottomLat: CMSHS_CONFIG.centerLat - (CMSHS_CONFIG.latSpan / 2), 
@@ -231,12 +257,12 @@ function processCoords(lat, lng) {
     pctX = Math.max(0, Math.min(1, pctX));
     pctY = Math.max(0, Math.min(1, pctY));
 
-    const mapImg = document.getElementById('map-img');
+    // Using clientWidth/Height is safer for layout calculations
     const pixelX = Math.round(mapImg.offsetWidth * pctX);
     const pixelY = Math.round(mapImg.offsetHeight * pctY);
     
     drawUserMarker(pixelX, pixelY);
-    focusOnUser(pixelX, pixelY);
+    if (typeof focusOnUser === 'function') focusOnUser(pixelX, pixelY);
 }
 
 function drawUserMarker(x, y) {
@@ -527,8 +553,7 @@ async function deleteAgent() {
 }
 
 /***************************************************
- CMSHS ORACLE – Indoor Evacuation Engine
- Version: Prototype Routing Layer
+ CMSHS ORACLE – Evacuation Engine
 ***************************************************/
 
 /* ================================
@@ -536,23 +561,25 @@ async function deleteAgent() {
 ================================ */
 
 const CMSHS_SPATIAL_INDEX = {
-0:{name:"MAIN EXIT",x:200,y:1500,type:"exit"},
-1:{name:"GYM CENTER",x:1200,y:850,type:"landmark"},
+0:{ name: "MAIN ENTRANCE/EXIT", x:2245, y:1590, type: "entry" },
+1:{name:"CMSHS GYMNASIUM",x:1127, y:895,type:"landmark"},
+2:{name:"CMSHS STAGE",x:1880, y:948,type: "stage"},
 
 10:{name:"SHS HALLWAY WEST",x:850,y:1100,type:"hallway"},
-11:{name:"SHS ROOM 1",x:950,y:1100,type:"room"},
-12:{name:"SHS ROOM 2",x:1050,y:1100,type:"room"},
-13:{name:"SHS ROOM 3",x:1150,y:1100,type:"room"},
+11:{name:"SHS ROOM 1",x:1363,y:1138,type:"room"},
+12:{name:"SHS ROOM 2",x:1140,y:1150,type:"room"},
+13:{name:"SHS ROOM 3",x:925,y:1155,type:"room"},
 
-20:{name:"JHS CORRIDOR WEST",x:600,y:400,type:"hallway"},
-21:{name:"JHS CORRIDOR MID",x:900,y:400,type:"hallway"},
-22:{name:"JHS CORRIDOR EAST",x:1200,y:400,type:"hallway"},
+20:{name:"JHS CORRIDOR WEST",x:223,y:398,type:"hallway"},
+21:{name:"JHS CORRIDOR MID",x:1008,y:380,type:"hallway"},
+22:{name:"JHS CORRIDOR EAST",x:2438,y:515,type:"hallway"},
 
-30:{name:"BIOLOGY LAB",x:350,y:250,type:"lab"},
-31:{name:"CANTEEN",x:200,y:350,type:"facility"},
+30:{name:"BIOLOGY LAB",x:125, y:285,type:"lab"},
+31:{name:"CANTEEN",x:422,y:1146,type:"facility"},
 
-40:{name:"EAST STAIRS",x:2100,y:650,type:"stairs"},
-41:{name:"WEST STAIRS",x:400,y:700,type:"stairs"}
+// 🪜 VERTICAL CIRCULATION (Stairs)
+    40: { name: "SHS EAST STAIRS", x: 1850, y: 1155, type: "stairs" },
+    41: { name: "SHS WEST STAIRS", x: 623, y: 1193, type: "stairs" },
 };
 
 /* ================================
@@ -560,19 +587,29 @@ const CMSHS_SPATIAL_INDEX = {
 ================================ */
 
 const CMSHS_GRAPH = {
-10:[11,21],
-11:[10,12],
-12:[11,13],
-13:[12,21],
-21:[10,13,20,22],
-20:[21,30],
-22:[21,40],
-30:[20,31],
-31:[30],
-40:[22,0],
-41:[20,0]
-};
+    // 🏫 SHS ROOMS (Bottom Row Logic)
+    11: [12, 41],         // Room 1 connects to Room 2 and West Stairs
+    12: [11, 13],         // Room 2 is the bridge between 1 and 3
+    13: [12, 41],         // Room 3 connects back to 2 and West Stairs
 
+    // 🪜 SHS STAIRS (The Life-Lines)
+    40: [0, 2],           // East Stairs -> Main Exit and Stage
+    41: [11, 13, 0, 1],   // West Stairs -> SHS Rooms, Exit, and Gym
+
+    // 🏢 JHS BUILDING (Top Row Logic)
+    20: [21, 30],         // West Corridor -> Mid Corridor and Bio Lab
+    21: [20, 22, 1],      // Mid Corridor -> West/East and Gym
+    22: [21, 40],         // East Corridor -> Mid and East Stairs
+
+    // 🏥 FACILITIES
+    30: [20, 31],         // Bio Lab -> Corridor West and Canteen
+    31: [30],             // Canteen (Terminal node in your current mapping)
+
+    // 🏛️ LANDMARKS & EXIT
+    1: [21, 41],          // Gym connects JHS Mid and SHS West Stairs
+    2: [40],              // Stage connects to East Stairs
+    0: [40, 41]           // MAIN EXIT connects from both major stairwells
+};
 
 /* ================================
    HAZARD DATABASE
@@ -587,22 +624,65 @@ rerouteUsers()
 }
 
 /* ================================
-   SAFE REPORTING SYSTEM
+    SAFE REPORTING SYSTEM (V2)
 ================================ */
 
-let SAFE_USERS = []
+function reportSafe(userId, nodeId) {
+    const locationName = CMSHS_SPATIAL_INDEX[nodeId]?.name || "Unknown Sector";
+    
+    SAFE_USERS.push({
+        user: userId,
+        location: nodeId,
+        time: new Date().toISOString()
+    });
 
-function reportSafe(userId,nodeId){
-SAFE_USERS.push({
-user:userId,
-location:nodeId,
-time:new Date().toISOString()
-})
-
-console.log("✅ USER SAFE:",userId)
-displaySafeToast(userId)
+    console.log(`✅ PROTOCOL: ${userId} SECURED AT ${locationName}`);
+    triggerProtocolSuccess(userId, locationName);
 }
 
+function triggerProtocolSuccess(user, loc) {
+    // 📳 Haptic Sequence: Success Pulse
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
+
+    // Create overlay if it doesn't exist
+    let overlay = document.getElementById('safe-protocol-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'safe-protocol-overlay';
+        overlay.innerHTML = `
+            <div class="protocol-box">
+                <h2>STATUS: SECURED</h2>
+                <p id="protocol-details"></p>
+                <div style="margin-top:20px; color:#00ff66; font-size:10px;">DATA SYNCED TO COMMAND</div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+    }
+
+    document.getElementById('protocol-details').innerText = `ID: ${user} | LOC: ${loc}`;
+    overlay.style.display = 'flex';
+
+    // Auto-clear route because mission is accomplished
+    clearRoute();
+
+    // Auto-hide after 3 seconds
+    setTimeout(() => {
+        overlay.style.display = 'none';
+    }, 3000);
+}
+
+function userSafeButton() {
+    if (currentUserNode == null) {
+        // Fallback: if not indoors, check if GPS has a position
+        console.warn("ORACLE: Cannot report safe without location lock.");
+        alert("🚨 ERROR: SCAN LOCATION TAG BEFORE REPORTING SAFE");
+        return;
+    }
+    
+    // Generate a tactical ID (e.g., ORC-1234)
+    const tacticalId = "ORC-" + Math.floor(Math.random() * 8999 + 1000);
+    reportSafe(tacticalId, currentUserNode);
+}
 
 function displaySafeToast(user){
 
@@ -621,43 +701,41 @@ document.body.appendChild(msg)
 setTimeout(()=>msg.remove(),4000)
 }
 
-
 /* ================================
-   SHORTEST PATH ALGORITHM
+   4. BFS PATH RECONSTRUCTION (Refinement)
 ================================ */
 
-function findShortestPath(start,goal){
+function findShortestPath(start, goal) {
+    let queue = [start];
+    let visited = {};
+    let parent = {};
 
-let queue=[start]
-let visited={}
-let parent={}
+    visited[start] = true;
+    while (queue.length) {
+        let node = queue.shift();
+        if (node == goal) break;
 
-visited[start]=true
-while(queue.length){
-let node=queue.shift()
-if(node==goal) break
-for(let next of CMSHS_GRAPH[node]||[]){
-if(HAZARDS.has(next)) continue
-if(!visited[next]){
+        for (let next of CMSHS_GRAPH[node] || []) {
+            // THE HAZARD SHIELD: Skip nodes marked as dangerous
+            if (HAZARDS.has(next)) continue;
 
-visited[next]=true
-parent[next]=node
-queue.push(next)
+            if (!visited[next]) {
+                visited[next] = true;
+                parent[next] = node;
+                queue.push(next);
+            }
         }
     }
+
+    let path = [];
+    let cur = goal;
+    while (cur !== undefined) {
+        path.unshift(cur);
+        cur = parent[cur];
+    }
+    // If the path is only 1 node and it's not the goal, no path exists
+    return (path.length > 0 && path[0] === start) ? path : [];
 }
-
-let path=[]
-let cur=goal
-
-while(cur!==undefined){
-path.unshift(cur)
-cur=parent[cur]
-}
-
-return path
-}
-
 
 /* ================================
    EVACUATION PATH RENDERING
@@ -686,7 +764,6 @@ function clearRoute(){
 document.querySelectorAll(".evac-node").forEach(n=>n.remove())
 }
 
-
 /* ================================
    REROUTING SYSTEM
 ================================ */
@@ -699,27 +776,48 @@ drawEvacuationPath(newRoute)
     }
 }
 
+/* ================================
+   GLOBAL TRACKING STATE
+================================ */
+let currentUserNode = null; // 🚀 CRITICAL: Track where the user is for the BFS
 
 /* ================================
-   INDOOR LOCALIZATION
+   REFINED INDOOR LOCALIZATION
 ================================ */
+function executeIndoorLocalization(markerId) {
+    const id = Number(markerId);
+    const landmark = CMSHS_SPATIAL_INDEX[id];
+    
+    if (!landmark) {
+        console.warn(`ORACLE: Unknown ID ${id}`);
+        return;
+    }
 
-let currentUserNode=null
-function executeIndoorLocalization(markerId){
+    // A. UPDATE GLOBAL STATE 🚀
+    currentUserNode = id; 
 
-currentUserNode=markerId
-const landmark=CMSHS_SPATIAL_INDEX[markerId]
-if(!landmark){
-console.log("Unknown marker:",markerId)
-return
+    // B. POSITION THE BLUE DOT & CAMERA
+    drawUserMarker(landmark.x, landmark.y);
+    if (typeof focusOnUser === 'function') focusOnUser(landmark.x, landmark.y);
+
+    // C. BFS EVACUATION ROUTING 🏃‍♂️
+    // Triggers BFS to find the path from your current node to the Exit (0)
+    const escapeRoute = findShortestPath(currentUserNode, 0);
+    drawEvacuationPathWithEdges(escapeRoute);
+
+    // D. HUD SYNC
+    const statusSpan = document.getElementById('hazard-status');
+    if (statusSpan) {
+        statusSpan.innerText = `LOCATED: ${landmark.name}`;
+        statusSpan.style.color = "#00ff66";
+    }
+
+    // E. HAPTICS & UI CLEANUP
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    closeGhostModal();
+    
+    console.log(`📍 ORACLE: Relocated to ${landmark.name}. Route Calculated.`);
 }
-
-console.log("📍 LOCATION:",landmark.name)
-let route=findShortestPath(markerId,0)
-drawEvacuationPath(route)
-showYouAreHere(markerId)
-}
-
 
 /* ================================
    YOU ARE HERE MARKER
@@ -740,7 +838,7 @@ marker.style.boxShadow="0 0 10px red"
 marker.id="youMarker"
 const old=document.getElementById("youMarker")
 if(old) old.remove()
-document.getElementById("evac-layer").appendChild(marker)
+document.getElementById("map-img").appendChild(marker)
 }
 
 
@@ -748,27 +846,76 @@ document.getElementById("evac-layer").appendChild(marker)
    ARUCO CAMERA HOOK
 ================================ */
 
-function detectMarkerFromCamera(markerId){
-executeIndoorLocalization(markerId)
+function handleManualAruco(markerId) {
+    const id = Number(markerId);
+
+    // Validate the marker ID
+    if (isNaN(id) || !(id in CMSHS_SPATIAL_INDEX)) {
+        console.warn("Invalid marker ID entered:", markerId);
+        return;
+    }
+    console.log("📍 Manual Aruco Input Detected:", id, CMSHS_SPATIAL_INDEX[id].name);
+    executeIndoorLocalization(markerId);  // Uses your existing routing + "You Are Here" logic
 }
-
-
-/* ================================
-   USER SAFE BUTTON
-================================ */
-
-function userSafeButton(){
-if(currentUserNode==null) return
-const userId="User-"+Math.floor(Math.random()*9999)
-reportSafe(userId,currentUserNode)
-}
-
 
 /* ================================
    UI BUTTONS
 ================================ */
 
 document.getElementById("safeBtn")?.addEventListener("click",userSafeButton)
+
+function drawEvacuationPathWithEdges(route) {
+    clearRoute();
+    const svg = document.getElementById("evac-layer-svg") || (() => {
+        const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
+        s.setAttribute("id","evac-layer-svg");
+        s.style.position = "absolute";
+        s.style.top = "0";
+        s.style.left = "0";
+        s.style.width = "100%";
+        s.style.height = "100%";
+        s.style.pointerEvents = "none";
+        document.getElementById("map-img").appendChild(s);
+        return s;
+    })();
+
+    for(let i=0; i<route.length; i++){
+        const point = CMSHS_SPATIAL_INDEX[route[i]];
+
+        // Draw node
+        const dot = document.createElement("div");
+        dot.style.position="absolute";
+        dot.style.left=point.x+"px";
+        dot.style.top=point.y+"px";
+        dot.style.width="12px";
+        dot.style.height="12px";
+        dot.style.background="cyan";
+        dot.style.borderRadius="50%";
+        dot.style.boxShadow="0 0 10px cyan";
+        dot.className="evac-node";
+        document.getElementById("map-img").appendChild(dot);
+
+        // Draw edge to next node
+        if(i<route.length-1){
+            const next = CMSHS_SPATIAL_INDEX[route[i+1]];
+            const line = document.createElementNS("http://www.w3.org/2000/svg","line");
+            line.setAttribute("x1", point.x+6); // center of dot
+            line.setAttribute("y1", point.y+6);
+            line.setAttribute("x2", next.x+6);
+            line.setAttribute("y2", next.y+6);
+            line.setAttribute("stroke","#0ff");
+            line.setAttribute("stroke-width","3");
+            line.setAttribute("stroke-linecap","round");
+            svg.appendChild(line);
+        }
+    }
+}
+
+function clearRoute(){
+    document.querySelectorAll(".evac-node").forEach(n=>n.remove());
+    const oldSvg=document.getElementById("evac-layer-svg");
+    if(oldSvg) oldSvg.remove();
+}
 
 /* 🏛️ VISION ENGINE (Integrated) */
 let stream = null;
@@ -790,8 +937,15 @@ async function initiateGhostTag() {
     }
 }
 
+/* ================================
+   REFINED VISION ENGINE (The Detection Logic)
+================================ */
 function startVisionLoop() {
-    if (typeof AR === 'undefined') return;
+    if (typeof AR === 'undefined') {
+        console.error("ORACLE: Aruco.js not loaded!");
+        return;
+    }
+    
     const detector = new AR.Detector();
     const video = document.getElementById("scanner-video");
     const canvas = document.createElement("canvas");
@@ -799,20 +953,29 @@ function startVisionLoop() {
     let isDetected = false;
 
     function capture() {
-        if (!stream || isDetected || document.getElementById('ghost-modal').style.display === 'none') return;
+        // Stop loop if modal closed or tag already found
+        const modal = document.getElementById('ghost-modal');
+        if (!stream || isDetected || (modal && modal.style.display === 'none')) return;
 
         if (video.readyState === video.HAVE_ENOUGH_DATA) {
-            canvas.width = 640; canvas.height = 480;
+            canvas.width = 640; 
+            canvas.height = 480;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            const markers = detector.detect(context.getImageData(0, 0, 640, 480));
+            
+            // 🔎 THE DETECTION CORE
+            const imageData = context.getImageData(0, 0, 640, 480);
+            const markers = detector.detect(imageData);
 
             if (markers.length > 0) {
-                isDetected = true;
+                // LOCK ACQUIRED 🎯
+                isDetected = true; 
                 const detectedID = markers[0].id;
-                document.getElementById('aruco-id-input').value = detectedID;
-                document.getElementById('scanner-status').innerText = `LOCKED: ID ${detectedID}`;
                 
-                // EXECUTE REAL LOCALIZATION
+                // Update UI Input
+                const idInput = document.getElementById('aruco-id-input');
+                if(idInput) idInput.value = detectedID;
+
+                // Fire the unified localization
                 executeIndoorLocalization(detectedID);
             }
         }

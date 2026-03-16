@@ -914,19 +914,48 @@ color: #000 !important;
     100% { transform: scale(3); opacity: 0; }
 }
 
-#safeBtn{
-margin-top:10px;
-padding:12px;
-border:1px solid #00ff66;
-background:rgba(0,30,0,0.5);
-color:#00ff66;
-font-family:'Montserrat';
-font-weight:900;
-cursor:pointer;
+/* 🛡️ PROTOCOL SUCCESS OVERLAY */
+#safe-protocol-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    background: rgba(0, 255, 102, 0.15);
+    backdrop-filter: blur(8px);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20000;
+    border: 4px solid #00ff66;
+    animation: protocolFade 0.5s ease;
 }
 
-#safeBtn:active{
-background:#00ff66;
-color:#000;
-box-shadow:0 0 15px #00ff66;
+.protocol-box {
+    background: #000;
+    border: 2px solid #00ff66;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 0 50px rgba(0, 255, 102, 0.3);
+    clip-path: polygon(5% 0, 100% 0, 95% 100%, 0% 100%);
+}
+
+.protocol-box h2 {
+    color: #00ff66;
+    font-family: 'Montserrat', sans-serif;
+    letter-spacing: 5px;
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.protocol-box p {
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.8rem;
+    margin-top: 10px;
+    opacity: 0.8;
+}
+
+@keyframes protocolFade {
+    from { opacity: 0; transform: scale(1.1); }
+    to { opacity: 1; transform: scale(1); }
 }

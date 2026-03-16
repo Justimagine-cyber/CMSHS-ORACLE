@@ -80,7 +80,11 @@
 
     <div class="sidebar-info" style="margin-top:20px; font-size:0.7em; color:#888;">
         <p>STATUS: <span id="hazard-status">WAITING FOR SELECTION</span></p>
-        <button id="safeBtn">I'M SAFE!</button>
+        <button id="safeBtn" class="hazard-select" 
+        style="border-left-color: #00ff66; color: #00ff66; margin-top: auto;"
+        onclick="userSafeButton()">
+    REPORT SAFE STATUS
+</button>
     </div>
 </div>
 
@@ -168,7 +172,7 @@
                 id="aruco-id-input" 
                 inputmode="numeric" 
                 placeholder="ID #" 
-                oninput="handleManualAruco()"
+                oninput="handleManualAruco(this.value)"
             >
         </div>
 
