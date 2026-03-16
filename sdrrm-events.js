@@ -817,15 +817,6 @@ document.getElementById("evac-layer").appendChild(dot)
     })
 }
 
-function clearRoute(){
-document.querySelectorAll(".evac-node").forEach(n=>n.remove())
-}
-
-/* ================================
-   GLOBAL TRACKING STATE
-================================ */
-let currentUserNode = null; // 🚀 CRITICAL: Track where the user is for the BFS
-
 /* ================================
     REFINED CORE SYSTEMS
 ================================ */
@@ -1179,17 +1170,6 @@ function createHazardMarker(x, y, type, id = null, isSilent = false) {
     }
 }
 
-function loadHazards() {
-    try {
-        const savedHazards = JSON.parse(localStorage.getItem('ORACLE_HAZARD_DATA') || "[]");
-        savedHazards.forEach(h => createHazardMarker(h.x, h.y, h.type, h.id, true));
-        
-        // 🔥 Trigger ONE single reroute after ALL hazards are loaded
-        console.log("ORACLE: Bulk Hazards Loaded. Finalizing Tactical Route.");
-        rerouteUsers(); 
-    } catch (e) { console.error("Hazard Load Failed", e); }
-}
-
 // THE NEAREST NODE HELPER
 function findNearestNode(pixelX, pixelY) {
     let closestNode = null;
@@ -1288,6 +1268,10 @@ function loadHazards() {
     try {
         const savedHazards = JSON.parse(localStorage.getItem('ORACLE_HAZARD_DATA') || "[]");
         savedHazards.forEach(h => createHazardMarker(h.x, h.y, h.type, h.id, true));
+        
+        // 🔥 Trigger ONE single reroute after ALL hazards are loaded
+        console.log("ORACLE: Bulk Hazards Loaded. Finalizing Tactical Route.");
+        rerouteUsers(); 
     } catch (e) { console.error("Hazard Load Failed", e); }
 }
 
