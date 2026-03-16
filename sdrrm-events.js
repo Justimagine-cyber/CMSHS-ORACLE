@@ -581,107 +581,155 @@ const CMSHS_SPATIAL_INDEX = {
     40: { name: "SHS EAST STAIRS", x: 1850, y: 1155, type: "stairs" },
     41: { name: "SHS WEST STAIRS", x: 623, y: 1193, type: "stairs" },
 };
+/* ================================
+   1. GLOBAL TACTICAL STATE
+================================ */
+window.HAZARDS = window.HAZARDS || new Set();
+window.currentUserNode = window.currentUserNode || null;
+
+// The Graph is now a Global Object that can be modified mid-crisis
+window.CMSHS_GRAPH = {
+    11: [12, 41], 12: [11, 13], 13: [12, 41],
+    40: [0, 2], 41: [11, 13, 0, 1],
+    20: [21, 30], 21: [20, 22, 1], 22: [21, 40],
+    30: [20, 31], 31: [30],
+    1: [21, 41], 2: [40], 0: [40, 41]
+};
 
 /* ================================
-   GRAPH CONNECTIONS
+   2. DYNAMIC GRAPH MODIFICATION (The "Unexpected" Logic)
 ================================ */
 
-const CMSHS_GRAPH = {
-    // 🏫 SHS ROOMS (Bottom Row Logic)
-    11: [12, 41],         // Room 1 connects to Room 2 and West Stairs
-    12: [11, 13],         // Room 2 is the bridge between 1 and 3
-    13: [12, 41],         // Room 3 connects back to 2 and West Stairs
+// Use this if a structure is physically destroyed (removes connection)
+function severConnection(nodeA, nodeB) {
+    if (window.CMSHS_GRAPH[nodeA]) {
+        window.CMSHS_GRAPH[nodeA] = window.CMSHS_GRAPH[nodeA].filter(n => n !== nodeB);
+    }
+    if (window.CMSHS_GRAPH[nodeB]) {
+        window.CMSHS_GRAPH[nodeB] = window.CMSHS_GRAPH[nodeB].filter(n => n !== nodeA);
+    }
+    console.log(`🏗️ ORACLE: Connection severed between ${nodeA} and ${nodeB}`);
+    rerouteUsers();
+}
 
-    // 🪜 SHS STAIRS (The Life-Lines)
-    40: [0, 2],           // East Stairs -> Main Exit and Stage
-    41: [11, 13, 0, 1],   // West Stairs -> SHS Rooms, Exit, and Gym
-
-    // 🏢 JHS BUILDING (Top Row Logic)
-    20: [21, 30],         // West Corridor -> Mid Corridor and Bio Lab
-    21: [20, 22, 1],      // Mid Corridor -> West/East and Gym
-    22: [21, 40],         // East Corridor -> Mid and East Stairs
-
-    // 🏥 FACILITIES
-    30: [20, 31],         // Bio Lab -> Corridor West and Canteen
-    31: [30],             // Canteen (Terminal node in your current mapping)
-
-    // 🏛️ LANDMARKS & EXIT
-    1: [21, 41],          // Gym connects JHS Mid and SHS West Stairs
-    2: [40],              // Stage connects to East Stairs
-    0: [40, 41]           // MAIN EXIT connects from both major stairwells
-};
+// Use this if a new path is opened (e.g., a gate is unlocked)
+function bridgeNodes(nodeA, nodeB) {
+    if (!window.CMSHS_GRAPH[nodeA]) window.CMSHS_GRAPH[nodeA] = [];
+    if (!window.CMSHS_GRAPH[nodeB]) window.CMSHS_GRAPH[nodeB] = [];
+    
+    if (!window.CMSHS_GRAPH[nodeA].includes(nodeB)) window.CMSHS_GRAPH[nodeA].push(nodeB);
+    if (!window.CMSHS_GRAPH[nodeB].includes(nodeA)) window.CMSHS_GRAPH[nodeB].push(nodeA);
+    
+    console.log(`🔗 ORACLE: New tactical bridge between ${nodeA} and ${nodeB}`);
+    rerouteUsers();
+}
 
 /* ================================
    HAZARD DATABASE
 ================================ */
 
-let HAZARDS = new Set()
+function reportHazard(nodeId) {
+    HAZARDS.add(Number(nodeId));
+    console.log(`⚠️ AUTOMATION: Sector ${nodeId} compromised. Recalculating...`);
+    
+    // Automatically trigger visual update for all active users
+    rerouteUsers();
+    
+    // 📳 Haptic warning for hazard report
+    if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+}
 
-function reportHazard(nodeId){
-HAZARDS.add(nodeId)
-console.log("⚠ Hazard reported at:",CMSHS_SPATIAL_INDEX[nodeId].name)
-rerouteUsers()
+function rerouteUsers() {
+    if (window.currentUserNode !== null) {
+        const dynamicRoute = findShortestPath(window.currentUserNode, 0);
+        
+        // 1. Check if path is empty BEFORE calculating cost
+        if (!dynamicRoute || dynamicRoute.length === 0) {
+            console.error("🚨 CRITICAL: No evacuation route possible!");
+            drawEvacuationPathWithEdges([]); // Clear lines
+            tacticalPrompt("SYSTEM FAILURE", "NO SAFE EXIT FOUND. SEEK IMMEDIATE SHELTER.", false, "", true);
+            return;
+        }
+
+        // 2. Now it's safe to draw and calculate
+        drawEvacuationPathWithEdges(dynamicRoute);
+        
+        const cost = calculatePathCost(dynamicRoute);
+        if (cost > 500) {
+            console.warn("⚠️ High-Risk Route detected.");
+        }
+    }
+}
+
+function calculatePathCost(path) {
+    // 🛡️ Safety Check: If no path exists, return a "Max Danger" cost
+    if (!path || !Array.isArray(path) || path.length < 2) {
+        return 9999; 
+    }
+
+    let total = 0;
+    try {
+        for (let i = 0; i < path.length - 1; i++) {
+            const u = path[i];
+            const v = path[i + 1];
+            
+            // Use the weight logic we built earlier
+            total += getEdgeWeight(u, v);
+        }
+    } catch (err) {
+        console.error("ORACLE Error: Path calculation failed mid-loop.", err);
+        return 9999;
+    }
+    return total;
 }
 
 /* ================================
     SAFE REPORTING SYSTEM (V2)
 ================================ */
 
-function reportSafe(userId, nodeId) {
-    const locationName = CMSHS_SPATIAL_INDEX[nodeId]?.name || "Unknown Sector";
-    
-    SAFE_USERS.push({
-        user: userId,
-        location: nodeId,
-        time: new Date().toISOString()
-    });
+// Ensure SAFE_USERS exists globally
+window.SAFE_USERS = window.SAFE_USERS || [];
 
-    console.log(`✅ PROTOCOL: ${userId} SECURED AT ${locationName}`);
-    triggerProtocolSuccess(userId, locationName);
-}
+function reportSafe() {
+    console.log("🛡️ ORACLE: Finalizing safety report...");
 
-function triggerProtocolSuccess(user, loc) {
-    // 📳 Haptic Sequence: Success Pulse
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 300]);
-
-    // Create overlay if it doesn't exist
-    let overlay = document.getElementById('safe-protocol-overlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'safe-protocol-overlay';
-        overlay.innerHTML = `
-            <div class="protocol-box">
-                <h2>STATUS: SECURED</h2>
-                <p id="protocol-details"></p>
-                <div style="margin-top:20px; color:#00ff66; font-size:10px;">DATA SYNCED TO COMMAND</div>
-            </div>
-        `;
-        document.body.appendChild(overlay);
+    // 1. DATA CHECK: Ensure we have a location
+    if (!window.currentUserNode) {
+        // Instead of throwing a hard error, we log a warning and exit
+        console.warn("⚠️ REPORT_CANCELLED: User has not scanned an ArUco marker.");
+        return; 
     }
 
-    document.getElementById('protocol-details').innerText = `ID: ${user} | LOC: ${loc}`;
-    overlay.style.display = 'flex';
+    // 2. REGISTRY UPDATE
+    const safeData = {
+        node: window.currentUserNode,
+        time: new Date().toLocaleTimeString(),
+        id: `SECURE-${Math.floor(Math.random() * 9000) + 1000}`
+    };
 
-    // Auto-clear route because mission is accomplished
-    clearRoute();
+    window.SAFE_USERS = window.SAFE_USERS || [];
+    window.SAFE_USERS.push(safeData);
 
-    // Auto-hide after 3 seconds
-    setTimeout(() => {
-        overlay.style.display = 'none';
-    }, 3000);
-}
-
-function userSafeButton() {
-    if (currentUserNode == null) {
-        // Fallback: if not indoors, check if GPS has a position
-        console.warn("ORACLE: Cannot report safe without location lock.");
-        alert("🚨 ERROR: SCAN LOCATION TAG BEFORE REPORTING SAFE");
-        return;
+    // 3. UI UPDATE (The "Crash-Proof" Way)
+    // We check if the element exists before touching it
+    const counterEl = document.getElementById('safe-counter-display');
+    if (counterEl) {
+        counterEl.innerText = window.SAFE_USERS.length;
     }
+
+    const statusEl = document.getElementById('hazard-status');
+    if (statusEl) {
+        statusEl.innerText = "STATUS: SECURED";
+        statusEl.style.color = "#00ff66";
+    }
+
+    // 4. CLEANUP
+    if (typeof clearRoute === 'function') clearRoute();
     
-    // Generate a tactical ID (e.g., ORC-1234)
-    const tacticalId = "ORC-" + Math.floor(Math.random() * 8999 + 1000);
-    reportSafe(tacticalId, currentUserNode);
+    // 5. HAPTIC FEEDBACK (For the S10 vibe)
+    if (navigator.vibrate) navigator.vibrate([50, 50, 200]);
+
+    console.log(`✅ MISSION SUCCESS: Node ${window.currentUserNode} marked as SECURED.`);
 }
 
 function displaySafeToast(user){
@@ -702,39 +750,48 @@ setTimeout(()=>msg.remove(),4000)
 }
 
 /* ================================
-   4. BFS PATH RECONSTRUCTION (Refinement)
+   3. WEIGHTED DIJKSTRA (Global-Safe)
 ================================ */
 
 function findShortestPath(start, goal) {
-    let queue = [start];
-    let visited = {};
-    let parent = {};
+    // We use window.CMSHS_GRAPH to ensure we are looking at the latest dynamic state
+    const graph = window.CMSHS_GRAPH;
+    let distances = {};
+    let prev = {};
+    let pq = Object.keys(graph);
 
-    visited[start] = true;
-    while (queue.length) {
-        let node = queue.shift();
-        if (node == goal) break;
+    pq.forEach(node => {
+        distances[node] = Infinity;
+        prev[node] = null;
+    });
 
-        for (let next of CMSHS_GRAPH[node] || []) {
-            // THE HAZARD SHIELD: Skip nodes marked as dangerous
-            if (HAZARDS.has(next)) continue;
+    distances[start] = 0;
 
-            if (!visited[next]) {
-                visited[next] = true;
-                parent[next] = node;
-                queue.push(next);
+    while (pq.length > 0) {
+        pq.sort((a, b) => distances[a] - distances[b]);
+        let curr = pq.shift();
+
+        if (distances[curr] === Infinity || curr == goal) break;
+
+        for (let next of graph[curr] || []) {
+            // Dynamic Weighting: Hazards are "heavy"
+            let weight = window.HAZARDS.has(Number(next)) ? 999 : 1;
+            let alt = distances[curr] + weight;
+
+            if (alt < distances[next]) {
+                distances[next] = alt;
+                prev[next] = curr;
             }
         }
     }
 
     let path = [];
-    let cur = goal;
-    while (cur !== undefined) {
-        path.unshift(cur);
-        cur = parent[cur];
+    let u = goal;
+    while (u !== null) {
+        path.unshift(Number(u));
+        u = prev[u];
     }
-    // If the path is only 1 node and it's not the goal, no path exists
-    return (path.length > 0 && path[0] === start) ? path : [];
+    return (path[0] === start) ? path : [];
 }
 
 /* ================================
@@ -765,58 +822,44 @@ document.querySelectorAll(".evac-node").forEach(n=>n.remove())
 }
 
 /* ================================
-   REROUTING SYSTEM
-================================ */
-
-function rerouteUsers(){
-console.log("🔄 Rerouting all users due to hazard")
-if(currentUserNode!=null){
-let newRoute=findShortestPath(currentUserNode,0)
-drawEvacuationPath(newRoute)
-    }
-}
-
-/* ================================
    GLOBAL TRACKING STATE
 ================================ */
 let currentUserNode = null; // 🚀 CRITICAL: Track where the user is for the BFS
 
 /* ================================
-   REFINED INDOOR LOCALIZATION
+    REFINED CORE SYSTEMS
 ================================ */
+
 function executeIndoorLocalization(markerId) {
     const id = Number(markerId);
     const landmark = CMSHS_SPATIAL_INDEX[id];
-    
-    if (!landmark) {
-        console.warn(`ORACLE: Unknown ID ${id}`);
-        return;
-    }
+    if (!landmark) return;
 
-    // A. UPDATE GLOBAL STATE 🚀
     currentUserNode = id; 
 
-    // B. POSITION THE BLUE DOT & CAMERA
+    // Move Blue Dot & Pan Camera
     drawUserMarker(landmark.x, landmark.y);
     if (typeof focusOnUser === 'function') focusOnUser(landmark.x, landmark.y);
 
-    // C. BFS EVACUATION ROUTING 🏃‍♂️
-    // Triggers BFS to find the path from your current node to the Exit (0)
+    // 🔥 DYNAMIC ROUTING
     const escapeRoute = findShortestPath(currentUserNode, 0);
     drawEvacuationPathWithEdges(escapeRoute);
 
-    // D. HUD SYNC
+    // Update HUD
     const statusSpan = document.getElementById('hazard-status');
-    if (statusSpan) {
-        statusSpan.innerText = `LOCATED: ${landmark.name}`;
-        statusSpan.style.color = "#00ff66";
-    }
+    if (statusSpan) statusSpan.innerText = `LOCATED: ${landmark.name}`;
 
-    // E. HAPTICS & UI CLEANUP
-    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     closeGhostModal();
-    
-    console.log(`📍 ORACLE: Relocated to ${landmark.name}. Route Calculated.`);
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+}
+
+function userSafeButton() {
+    if (currentUserNode == null) {
+        alert("🚨 ERROR: SCAN LOCATION TAG BEFORE REPORTING SAFE");
+        return;
+    }
+    const tacticalId = "ORC-" + Math.floor(Math.random() * 8999 + 1000);
+    reportSafe(tacticalId, currentUserNode);
 }
 
 /* ================================
@@ -866,49 +909,75 @@ document.getElementById("safeBtn")?.addEventListener("click",userSafeButton)
 
 function drawEvacuationPathWithEdges(route) {
     clearRoute();
+    if (!route || route.length === 0) return;
+
+    const map = document.getElementById("map-img");
     const svg = document.getElementById("evac-layer-svg") || (() => {
-        const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
-        s.setAttribute("id","evac-layer-svg");
-        s.style.position = "absolute";
-        s.style.top = "0";
-        s.style.left = "0";
-        s.style.width = "100%";
-        s.style.height = "100%";
-        s.style.pointerEvents = "none";
-        document.getElementById("map-img").appendChild(s);
+        const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        s.setAttribute("id", "evac-layer-svg");
+        s.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index: 5;";
+        map.appendChild(s);
         return s;
     })();
 
-    for(let i=0; i<route.length; i++){
-        const point = CMSHS_SPATIAL_INDEX[route[i]];
+    route.forEach((nodeId, i) => {
+        const point = CMSHS_SPATIAL_INDEX[nodeId];
+        
+        // 1. DETERMINE SEGMENT COLOR LOGIC
+        let segmentColor = "#00ffff"; // Default: Safe Cyan
+        let isCaution = false;
 
-        // Draw node
+        if (i < route.length - 1) {
+            const nextNodeId = route[i + 1];
+            
+            // Check if the nodes themselves are hazards (Crimson)
+            if (window.HAZARDS.has(Number(nodeId)) || window.HAZARDS.has(Number(nextNodeId))) {
+                segmentColor = "#ff003c"; 
+            } else {
+                // PROXIMITY CHECK: Are neighbors of these nodes on fire?
+                const neighborsA = window.CMSHS_GRAPH[nodeId] || [];
+                const neighborsB = window.CMSHS_GRAPH[nextNodeId] || [];
+                const combined = [...new Set([...neighborsA, ...neighborsB])];
+                
+                if (combined.some(n => window.HAZARDS.has(Number(n)))) {
+                    segmentColor = "#ffcc00"; // Caution Gold
+                    isCaution = true;
+                }
+            }
+        }
+
+        // 2. Create Tactical Node (Dot)
         const dot = document.createElement("div");
-        dot.style.position="absolute";
-        dot.style.left=point.x+"px";
-        dot.style.top=point.y+"px";
-        dot.style.width="12px";
-        dot.style.height="12px";
-        dot.style.background="cyan";
-        dot.style.borderRadius="50%";
-        dot.style.boxShadow="0 0 10px cyan";
-        dot.className="evac-node";
-        document.getElementById("map-img").appendChild(dot);
+        dot.className = "evac-node" + (isCaution ? " caution-pulse" : "");
+        dot.style.cssText = `
+            position:absolute; left:${point.x}px; top:${point.y}px; 
+            width:12px; height:12px; 
+            background:${segmentColor}; 
+            border-radius:50%; 
+            box-shadow:0 0 15px ${segmentColor}; 
+            transform:translate(-50%, -50%);
+            transition: background 0.3s, box-shadow 0.3s;
+            z-index: 6;
+        `;
+        map.appendChild(dot);
 
-        // Draw edge to next node
-        if(i<route.length-1){
+        // 3. Draw "Elastic" Edge (Line)
+        if (i < route.length - 1) {
             const next = CMSHS_SPATIAL_INDEX[route[i+1]];
-            const line = document.createElementNS("http://www.w3.org/2000/svg","line");
-            line.setAttribute("x1", point.x+6); // center of dot
-            line.setAttribute("y1", point.y+6);
-            line.setAttribute("x2", next.x+6);
-            line.setAttribute("y2", next.y+6);
-            line.setAttribute("stroke","#0ff");
-            line.setAttribute("stroke-width","3");
-            line.setAttribute("stroke-linecap","round");
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", point.x);
+            line.setAttribute("y1", point.y);
+            line.setAttribute("x2", next.x);
+            line.setAttribute("y2", next.y);
+            line.setAttribute("stroke", segmentColor);
+            line.setAttribute("stroke-width", isCaution ? "5" : "3");
+            line.setAttribute("stroke-dasharray", isCaution ? "none" : "5,5"); 
+            
+            // Add a glow filter for the line
+            line.style.filter = `drop-shadow(0 0 5px ${segmentColor})`;
             svg.appendChild(line);
         }
-    }
+    });
 }
 
 function clearRoute(){
@@ -936,10 +1005,6 @@ async function initiateGhostTag() {
         document.getElementById('scanner-status').innerText = "HARDWARE BLOCKED";
     }
 }
-
-/* ================================
-   REFINED VISION ENGINE (The Detection Logic)
-================================ */
 function startVisionLoop() {
     if (typeof AR === 'undefined') {
         console.error("ORACLE: Aruco.js not loaded!");
@@ -1071,27 +1136,74 @@ function setHazardType(type) {
 function createHazardMarker(x, y, type, id = null, isSilent = false) {
     const hazardId = id || `HAZARD-${Date.now()}`;
     const hazard = document.createElement('div');
+    
+    // Clean coordinates (Ensure they are strings with px for CSS)
+    const posX = typeof x === 'number' ? `${x}px` : x;
+    const posY = typeof y === 'number' ? `${y}px` : y;
+
     hazard.className = `hazard-marker hazard-${type}`;
     hazard.id = hazardId;
-    hazard.style.left = x;
-    hazard.style.top = y;
+    hazard.style.left = posX;
+    hazard.style.top = posY;
     hazard.dataset.type = type;
 
     const icons = { fire: '🔥', flood: '🌊', bio: '☣️', structure: '🏗️', electric: '⚡' };
     hazard.innerHTML = `<div class="hazard-icon">${icons[type]}</div>`;
 
-    // UPDATE & DELETE (The CRUD menu for Hazards)
     hazard.onclick = (e) => {
         e.stopPropagation();
         showHazardIntel(hazardId, type);
     };
 
+    // 🔗 SPATIAL LINKING
+    // Extract numbers from "123px" to find the nearest node
+    const cleanX = parseInt(posX);
+    const cleanY = parseInt(posY);
+    const nodeId = findNearestNode(cleanX, cleanY);
+
+    if (nodeId !== null) {
+        hazard.dataset.nodeId = nodeId;
+        
+        // 🛡️ Logic Check: Don't just report, actually add to the set
+        window.HAZARDS.add(Number(nodeId)); 
+        
+        // Only reroute if this isn't part of a bulk load
+        if (!isSilent) rerouteUsers(); 
+    }
+
     document.getElementById('map-img').appendChild(hazard);
     
     if (!isSilent) {
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        saveOperationalData(); // Custom save that includes hazards
+        saveOperationalData();
     }
+}
+
+function loadHazards() {
+    try {
+        const savedHazards = JSON.parse(localStorage.getItem('ORACLE_HAZARD_DATA') || "[]");
+        savedHazards.forEach(h => createHazardMarker(h.x, h.y, h.type, h.id, true));
+        
+        // 🔥 Trigger ONE single reroute after ALL hazards are loaded
+        console.log("ORACLE: Bulk Hazards Loaded. Finalizing Tactical Route.");
+        rerouteUsers(); 
+    } catch (e) { console.error("Hazard Load Failed", e); }
+}
+
+// THE NEAREST NODE HELPER
+function findNearestNode(pixelX, pixelY) {
+    let closestNode = null;
+    let minDistance = 100; // Only snap if within 100 pixels
+
+    for (let id in CMSHS_SPATIAL_INDEX) {
+        const node = CMSHS_SPATIAL_INDEX[id];
+        const dist = Math.hypot(node.x - pixelX, node.y - pixelY);
+        if (dist < minDistance) {
+            minDistance = dist;
+            closestNode = id;
+        }
+    }
+    return closestNode;
 }
 
 // --- 🛠️ HAZARD INTEL: UPDATE & DELETE LOGIC ---
@@ -1111,10 +1223,14 @@ async function showHazardIntel(id, type) {
 
     // 🗑️ DELETE BRANCH
     if (action.toUpperCase() === 'DELETE') {
-        el.remove();
-        saveOperationalData();
-        if (navigator.vibrate) navigator.vibrate(100);
-        return;
+    const nodeId = el.dataset.nodeId;
+    if (nodeId) {
+        HAZARDS.delete(Number(nodeId)); // 🔓 UNBLOCKS THE PATH
+        rerouteUsers(); // Recalculate the clear path
+    }
+    el.remove();
+    saveOperationalData();
+    return;
     }
 
     // 🔄 UPDATE BRANCH
