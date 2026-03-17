@@ -570,9 +570,10 @@ const CMSHS_SPATIAL_INDEX = {
 12:{name:"SHS ROOM 2",x:1140,y:1150,type:"room"},
 13:{name:"SHS ROOM 3",x:925,y:1155,type:"room"},
 
-20:{name:"JHS CORRIDOR WEST",x:223,y:398,type:"hallway"},
-21:{name:"JHS CORRIDOR MID",x:1008,y:380,type:"hallway"},
-22:{name:"JHS CORRIDOR EAST",x:2438,y:515,type:"hallway"},
+20:{name:"JHS CORRIDOR WEST",x:229,y:644,type:"hallway"},
+21:{name:"JHS CORRIDOR MID",x:1001,y:638,type:"hallway"},
+22:{name:"JHS CORRIDOR EAST",x:2457,y:643,type:"hallway"},
+25:{name:"CONFERENCE ROOM",x:2005,y:570,type:"room"},
 
 30:{name:"BIOLOGY LAB",x:125, y:285,type:"lab"},
 31:{name:"CANTEEN",x:422,y:1146,type:"facility"},
@@ -589,11 +590,20 @@ window.currentUserNode = window.currentUserNode || null;
 
 // The Graph is now a Global Object that can be modified mid-crisis
 window.CMSHS_GRAPH = {
-    11: [12, 41], 12: [11, 13], 13: [12, 41],
-    40: [0, 2], 41: [11, 13, 0, 1],
-    20: [21, 30], 21: [20, 22, 1], 22: [21, 40],
-    30: [20, 31], 31: [30],
-    1: [21, 41], 2: [40], 0: [40, 41]
+ 11: [12, 41], 
+    12: [11, 13], 
+    13: [12, 41],
+    40: [0, 2, 22], // Added 22 so East Wing connects to the Exit path
+    41: [11, 13, 0, 1],
+    20: [21, 30], 
+    21: [20, 22, 1, 25], // Wired Node 25 (Conf Room) to the Corridor
+    22: [21, 40], 
+    25: [21],           // Conf Room can only exit via Node 21
+    30: [20, 31], 
+    31: [30],
+    1: [21, 41], 
+    2: [40], 
+    0: [40, 41]
 };
 
 /* ================================
@@ -687,20 +697,18 @@ function calculatePathCost(path) {
     SAFE REPORTING SYSTEM (V2)
 ================================ */
 
-// Ensure SAFE_USERS exists globally
-window.SAFE_USERS = window.SAFE_USERS || [];
-
+// 1. THE CORE LOGIC (Silent & Stable)
 function reportSafe() {
     console.log("🛡️ ORACLE: Finalizing safety report...");
 
-    // 1. DATA CHECK: Ensure we have a location
-    if (!window.currentUserNode) {
-        // Instead of throwing a hard error, we log a warning and exit
-        console.warn("⚠️ REPORT_CANCELLED: User has not scanned an ArUco marker.");
-        return; 
+    // 1. CRITICAL CHECK: Is the user actually at the Exit (Node 0)?
+    if (window.currentUserNode !== 0) {
+        // Log a specialized error for the UI to catch
+        console.warn("⚠️ REPORT_DENIED: User is not at the Extraction Point (ID 0).");
+        return "DENIED_LOCATION"; 
     }
 
-    // 2. REGISTRY UPDATE
+    // 2. DATA REGISTRY (Same as before)
     const safeData = {
         node: window.currentUserNode,
         time: new Date().toLocaleTimeString(),
@@ -710,26 +718,8 @@ function reportSafe() {
     window.SAFE_USERS = window.SAFE_USERS || [];
     window.SAFE_USERS.push(safeData);
 
-    // 3. UI UPDATE (The "Crash-Proof" Way)
-    // We check if the element exists before touching it
-    const counterEl = document.getElementById('safe-counter-display');
-    if (counterEl) {
-        counterEl.innerText = window.SAFE_USERS.length;
-    }
-
-    const statusEl = document.getElementById('hazard-status');
-    if (statusEl) {
-        statusEl.innerText = "STATUS: SECURED";
-        statusEl.style.color = "#00ff66";
-    }
-
-    // 4. CLEANUP
     if (typeof clearRoute === 'function') clearRoute();
-    
-    // 5. HAPTIC FEEDBACK (For the S10 vibe)
-    if (navigator.vibrate) navigator.vibrate([50, 50, 200]);
-
-    console.log(`✅ MISSION SUCCESS: Node ${window.currentUserNode} marked as SECURED.`);
+    return "SUCCESS";
 }
 
 function displaySafeToast(user){
@@ -828,53 +818,144 @@ function executeIndoorLocalization(markerId) {
 
     currentUserNode = id; 
 
-    // Move Blue Dot & Pan Camera
+    // 1. Move Blue Dot & Pan Camera
     drawUserMarker(landmark.x, landmark.y);
     if (typeof focusOnUser === 'function') focusOnUser(landmark.x, landmark.y);
 
-    // 🔥 DYNAMIC ROUTING
+    // 2. 🔥 DYNAMIC ROUTING
     const escapeRoute = findShortestPath(currentUserNode, 0);
     drawEvacuationPathWithEdges(escapeRoute);
 
-    // Update HUD
+    // 3. Update HUD
     const statusSpan = document.getElementById('hazard-status');
     if (statusSpan) statusSpan.innerText = `LOCATED: ${landmark.name}`;
 
+    // 4. 🛰️ TACTICAL HANDSHAKE (The "YOU ARE HERE" Label)
+    // We wait 100ms so the camera pan finishes before the label appears
+    setTimeout(() => {
+        showYouAreHere(id);
+    }, 100);
+
+    // 5. Cleanup & Haptics
     closeGhostModal();
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    
+    console.log(`🛡️ ORACLE: Sector ${id} Handshake Complete.`);
 }
 
+// 2. THE UI HANDLER (The "Announcer")
 function userSafeButton() {
-    if (currentUserNode == null) {
-        alert("🚨 ERROR: SCAN LOCATION TAG BEFORE REPORTING SAFE");
-        return;
+    const overlay = document.getElementById('safe-overlay');
+    const statusText = document.getElementById('overlay-status-text');
+
+    if (!overlay) return;
+
+    // 🛡️ FIRST GUARD: Check for the Blue Dot (Localization)
+    if (window.currentUserNode === null || window.currentUserNode === undefined) {
+        // 🚨 NO SCAN AT ALL
+        overlay.style.display = 'flex';
+        overlay.classList.add('active');
+        overlay.style.backgroundColor = "rgba(54, 1, 1, 0.95)"; // Red Error
+        if (statusText) statusText.innerText = "ERROR: SCAN LOCATION TAG FIRST";
+        if (navigator.vibrate) navigator.vibrate(500);
+
+        setTimeout(() => {
+            overlay.style.display = 'none';
+            overlay.classList.remove('active');
+        }, 3000);
+        return; // Kill execution here
     }
-    const tacticalId = "ORC-" + Math.floor(Math.random() * 8999 + 1000);
-    reportSafe(tacticalId, currentUserNode);
+
+    // 🛰️ SECOND GUARD: If localized, check if they are at the Exit
+    const status = reportSafe();
+    overlay.style.display = 'flex';
+    overlay.classList.add('active');
+
+    if (status === "SUCCESS") {
+        // ✅ EXTRACTION COMPLETE
+        overlay.style.backgroundColor = "rgba(0, 20, 20, 0.95)"; 
+        if (statusText) statusText.innerText = "MISSION SECURED: SECTOR CLEAR";
+        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+    } 
+    else if (status === "DENIED_LOCATION") {
+        // ❌ WRONG LOCATION
+        overlay.style.backgroundColor = "rgba(40, 20, 0, 0.95)"; // Orange/Amber Warning
+        if (statusText) statusText.innerText = "ERROR: NOT AT EXIT POINT";
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+    }
+
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        overlay.classList.remove('active');
+    }, 3000);
 }
+
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        overlay.classList.remove('active');
+    }, 3000);
 
 /* ================================
    YOU ARE HERE MARKER
 ================================ */
 
-function showYouAreHere(node){
-const p=CMSHS_SPATIAL_INDEX[node]
-const marker=document.createElement("div")
+function showYouAreHere(node) {
+    const p = CMSHS_SPATIAL_INDEX[node];
+    const map = document.getElementById("map-img");
+    
+    if (!p || !map) {
+        console.error("ORACLE: Cannot find Node or Map Container");
+        return;
+    }
 
-marker.style.position="absolute"
-marker.style.left=p.x+"px"
-marker.style.top=p.y+"px"
-marker.style.width="16px"
-marker.style.height="16px"
-marker.style.background="red"
-marker.style.borderRadius="50%"
-marker.style.boxShadow="0 0 10px red"
-marker.id="youMarker"
-const old=document.getElementById("youMarker")
-if(old) old.remove()
-document.getElementById("map-img").appendChild(marker)
+    // 1. CLEAR PREVIOUS
+    const oldLabel = document.getElementById("localization-label");
+    if (oldLabel) oldLabel.remove();
+
+    // 2. CREATE THE LABEL
+    const label = document.createElement("div");
+    label.id = "localization-label";
+    
+    label.innerHTML = `
+        <div style="font-size: 0.6em; letter-spacing: 1px; opacity: 0.8;">LOCATION ACQUIRED</div>
+        <div style="font-weight: bold;">YOU ARE HERE</div>
+        <div style="font-size: 0.5em; margin-top: 2px;">NODE: ${node}</div>
+    `;
+
+    // 3. APPLY STYLES (Enforced - Hyphens removed)
+    Object.assign(label.style, {
+        position: "absolute",
+        left: `${p.x}px`,
+        top: `${p.y - 45}px`,
+        transform: "translateX(-50%)",
+        backgroundColor: "rgba(0, 20, 30, 0.95)",
+        color: "#00ffff",
+        padding: "8px 12px",
+        borderRadius: "4px",
+        border: "1px solid #00ffff",
+        fontFamily: "'Courier New', monospace",
+        fontSize: "14px",
+        whiteSpace: "nowrap", // FIXED: Hyphen removed
+        zIndex: "9999",
+        pointerEvents: "none",
+        textAlign: "center",
+        boxShadow: "0 0 20px rgba(0, 255, 255, 0.4)",
+        transition: "opacity 1s ease"
+    });
+
+    // 4. ATTACH TO MAP
+    map.appendChild(label);
+    console.log(`📍 UI: Localization Label deployed at Node ${node}`);
+
+    // 5. AUTO-DESTRUCT AFTER 8 SECONDS
+    setTimeout(() => {
+        const currentLabel = document.getElementById("localization-label");
+        if (currentLabel) {
+            currentLabel.style.opacity = "0";
+            setTimeout(() => currentLabel.remove(), 1000);
+        }
+    }, 8000);
 }
-
 
 /* ================================
    ARUCO CAMERA HOOK
@@ -899,76 +980,113 @@ function handleManualAruco(markerId) {
 document.getElementById("safeBtn")?.addEventListener("click",userSafeButton)
 
 function drawEvacuationPathWithEdges(route) {
-    clearRoute();
+    clearRoute(); 
     if (!route || route.length === 0) return;
 
     const map = document.getElementById("map-img");
-    const svg = document.getElementById("evac-layer-svg") || (() => {
-        const s = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        s.setAttribute("id", "evac-layer-svg");
-        s.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index: 5;";
-        map.appendChild(s);
-        return s;
-    })();
+    let svg = document.getElementById("evac-layer-svg");
+    
+    if (!svg) {
+        svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("id", "evac-layer-svg");
+        svg.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index: 5;";
+        map.appendChild(svg);
+    } else {
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+    }
 
     route.forEach((nodeId, i) => {
         const point = CMSHS_SPATIAL_INDEX[nodeId];
-        
-        // 1. DETERMINE SEGMENT COLOR LOGIC
-        let segmentColor = "#00ffff"; // Default: Safe Cyan
+        if (!point) return;
+
+        let segmentColor = "#00ffff"; 
         let isCaution = false;
+        let statusLabel = "OPTIMAL";
+        let intelText = "Path is clear and verified.";
 
         if (i < route.length - 1) {
             const nextNodeId = route[i + 1];
             
-            // Check if the nodes themselves are hazards (Crimson)
             if (window.HAZARDS.has(Number(nodeId)) || window.HAZARDS.has(Number(nextNodeId))) {
                 segmentColor = "#ff003c"; 
+                statusLabel = "CRITICAL";
+                intelText = "Hazard directly on path. Reroute required.";
             } else {
-                // PROXIMITY CHECK: Are neighbors of these nodes on fire?
                 const neighborsA = window.CMSHS_GRAPH[nodeId] || [];
                 const neighborsB = window.CMSHS_GRAPH[nextNodeId] || [];
                 const combined = [...new Set([...neighborsA, ...neighborsB])];
                 
                 if (combined.some(n => window.HAZARDS.has(Number(n)))) {
-                    segmentColor = "#ffcc00"; // Caution Gold
+                    segmentColor = "#ffcc00"; 
                     isCaution = true;
+                    statusLabel = "CAUTION";
+                    intelText = "Hazard detected in adjacent sector. Move with care.";
                 }
             }
         }
 
-        // 2. Create Tactical Node (Dot)
+        // 2. CREATE DOT
         const dot = document.createElement("div");
         dot.className = "evac-node" + (isCaution ? " caution-pulse" : "");
-        dot.style.cssText = `
-            position:absolute; left:${point.x}px; top:${point.y}px; 
-            width:12px; height:12px; 
-            background:${segmentColor}; 
-            border-radius:50%; 
-            box-shadow:0 0 15px ${segmentColor}; 
-            transform:translate(-50%, -50%);
-            transition: background 0.3s, box-shadow 0.3s;
-            z-index: 6;
-        `;
+        dot.style.cssText = `position:absolute; left:${point.x}px; top:${point.y}px; width:12px; height:12px; background:${segmentColor}; border-radius:50%; box-shadow:0 0 15px ${segmentColor}; transform:translate(-50%, -50%); z-index: 6;`;
         map.appendChild(dot);
 
-        // 3. Draw "Elastic" Edge (Line)
+        // 3. DRAW LINE (Now with Popups!)
         if (i < route.length - 1) {
-            const next = CMSHS_SPATIAL_INDEX[route[i+1]];
-            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-            line.setAttribute("x1", point.x);
-            line.setAttribute("y1", point.y);
-            line.setAttribute("x2", next.x);
-            line.setAttribute("y2", next.y);
-            line.setAttribute("stroke", segmentColor);
-            line.setAttribute("stroke-width", isCaution ? "5" : "3");
-            line.setAttribute("stroke-dasharray", isCaution ? "none" : "5,5"); 
-            
-            // Add a glow filter for the line
-            line.style.filter = `drop-shadow(0 0 5px ${segmentColor})`;
-            svg.appendChild(line);
+            const next = CMSHS_SPATIAL_INDEX[route[i + 1]];
+            if (next) {
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", point.x);
+                line.setAttribute("y1", point.y);
+                line.setAttribute("x2", next.x);
+                line.setAttribute("y2", next.y);
+                line.setAttribute("stroke", segmentColor);
+                line.setAttribute("stroke-width", isCaution ? "7" : "5");
+
+                // Enable Interaction
+                line.style.pointerEvents = "auto"; 
+                line.style.cursor = "pointer";
+
+                if (segmentColor === "#00ffff") line.setAttribute("class", "path-moving");
+                else if (segmentColor === "#ffcc00") line.setAttribute("class", "path-moving-fast");
+                else line.setAttribute("stroke-dasharray", "none");
+
+                // CLICK EVENT FOR INTEL
+                line.onclick = (e) => {
+                    e.stopPropagation();
+                    // Using your existing Tactical Overlay logic
+                    showTacticalIntel(statusLabel, nodeId, route[i+1], intelText, segmentColor);
+                };
+                
+                line.style.filter = `drop-shadow(0 0 8px ${segmentColor})`;
+                svg.appendChild(line);
+            }
         }
     });
+}
+
+// 4. THE INTEL DISPLAY FUNCTION
+function showTacticalIntel(status, from, to, msg, color) {
+    const overlay = document.getElementById('safe-overlay');
+    const statusText = document.getElementById('overlay-status-text');
+    if (!overlay || !statusText) return;
+
+    overlay.style.display = 'flex';
+    overlay.style.backgroundColor = "rgba(0, 10, 15, 0.95)";
+    overlay.classList.add('active');
+
+    statusText.innerHTML = `
+        <div style="font-size: 0.5em; opacity: 0.6; margin-bottom: 5px;">SEGMENT: ${from} ➔ ${to}</div>
+        <div style="color: ${color}; text-shadow: 0 0 10px ${color};">${status}</div>
+        <div style="font-size: 0.4em; font-weight: normal; margin-top: 10px; color: #fff;">${msg}</div>
+    `;
+
+    if (navigator.vibrate) navigator.vibrate(50);
+
+    setTimeout(() => {
+        overlay.style.display = 'none';
+        overlay.classList.remove('active');
+    }, 2500);
 }
 
 function clearRoute(){
@@ -1023,16 +1141,22 @@ function startVisionLoop() {
             const markers = detector.detect(imageData);
 
             if (markers.length > 0) {
-                // LOCK ACQUIRED 🎯
                 isDetected = true; 
-                const detectedID = markers[0].id;
+                const detectedID = Number(markers[0].id);
                 
-                // Update UI Input
-                const idInput = document.getElementById('aruco-id-input');
-                if(idInput) idInput.value = detectedID;
-
-                // Fire the unified localization
+                // 1. Run the core logic first
                 executeIndoorLocalization(detectedID);
+
+                // 2. Add a tiny delay (50ms) to ensure the DOM is ready
+                // then fire the "YOU ARE HERE" label
+                setTimeout(() => {
+                    showYouAreHere(detectedID);
+                }, 50);
+
+                // 3. Close the scanner
+                setTimeout(() => {
+                    closeGhostScanner();
+                }, 1000);
             }
         }
         requestAnimationFrame(capture);
@@ -1126,16 +1250,15 @@ function setHazardType(type) {
 // CREATE & READ (Integrated into existing dot logic)
 function createHazardMarker(x, y, type, id = null, isSilent = false) {
     const hazardId = id || `HAZARD-${Date.now()}`;
-    const hazard = document.createElement('div');
     
-    // Clean coordinates (Ensure they are strings with px for CSS)
-    const posX = typeof x === 'number' ? `${x}px` : x;
-    const posY = typeof y === 'number' ? `${y}px` : y;
+    // 1. DUPLICATE CHECK: If this ID already exists on the map, don't add it again.
+    if (document.getElementById(hazardId)) return;
 
+    const hazard = document.createElement('div');
     hazard.className = `hazard-marker hazard-${type}`;
     hazard.id = hazardId;
-    hazard.style.left = posX;
-    hazard.style.top = posY;
+    hazard.style.left = x;
+    hazard.style.top = y;
     hazard.dataset.type = type;
 
     const icons = { fire: '🔥', flood: '🌊', bio: '☣️', structure: '🏗️', electric: '⚡' };
@@ -1146,27 +1269,20 @@ function createHazardMarker(x, y, type, id = null, isSilent = false) {
         showHazardIntel(hazardId, type);
     };
 
-    // 🔗 SPATIAL LINKING
-    // Extract numbers from "123px" to find the nearest node
-    const cleanX = parseInt(posX);
-    const cleanY = parseInt(posY);
-    const nodeId = findNearestNode(cleanX, cleanY);
-
+    // Link to node for Dijkstra
+    const nodeId = findNearestNode(parseInt(x), parseInt(y));
     if (nodeId !== null) {
         hazard.dataset.nodeId = nodeId;
-        
-        // 🛡️ Logic Check: Don't just report, actually add to the set
-        window.HAZARDS.add(Number(nodeId)); 
-        
-        // Only reroute if this isn't part of a bulk load
-        if (!isSilent) rerouteUsers(); 
+        window.HAZARDS.add(Number(nodeId));
     }
 
     document.getElementById('map-img').appendChild(hazard);
     
+    // 🛡️ THE CRITICAL GUARD: Only save if this is a NEW manual plot, not a reload.
     if (!isSilent) {
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-        saveOperationalData();
+        saveOperationalData(); 
+        rerouteUsers();
     }
 }
 
@@ -1194,7 +1310,7 @@ async function showHazardIntel(id, type) {
     // 1. INITIAL ACTION PROMPT
     const action = await tacticalPrompt(
         "HAZARD INTEL", 
-        `CURRENT: ${type.toUpperCase()}\n\n[DELETE] - PURGE MARKER\n[UPDATE] - CHANGE TYPE\n[ANY] - EXIT`, 
+        `CURRENT: ${type.toUpperCase()}\n\n[DELETE] - PURGE MARKER\n[UPDATE] - CHANGE TYPE`, 
         true, 
         "TYPE 'DELETE' OR 'UPDATE'"
     );
@@ -1266,13 +1382,26 @@ function saveOperationalData() {
 // LOAD HAZARDS (Run this in your initializeSystem or loadState)
 function loadHazards() {
     try {
-        const savedHazards = JSON.parse(localStorage.getItem('ORACLE_HAZARD_DATA') || "[]");
-        savedHazards.forEach(h => createHazardMarker(h.x, h.y, h.type, h.id, true));
+        const rawData = localStorage.getItem('ORACLE_HAZARD_DATA');
+        if (!rawData) return;
+
+        const savedHazards = JSON.parse(rawData);
         
-        // 🔥 Trigger ONE single reroute after ALL hazards are loaded
-        console.log("ORACLE: Bulk Hazards Loaded. Finalizing Tactical Route.");
-        rerouteUsers(); 
-    } catch (e) { console.error("Hazard Load Failed", e); }
+        // Use a Set to ensure we aren't processing duplicate IDs from a messy storage
+        const uniqueHazards = Array.from(new Set(savedHazards.map(h => h.id)))
+            .map(id => savedHazards.find(h => h.id === id));
+
+        uniqueHazards.forEach(h => {
+            // Passing 'true' for isSilent prevents the save-loop and multiple reroutes
+            createHazardMarker(h.x, h.y, h.type, h.id, true);
+        });
+
+        // Final single reroute once all are placed
+        rerouteUsers();
+        console.log("🛡️ ORACLE: Hazards restored without duplication.");
+    } catch (e) { 
+        console.error("Hazard Load Failed", e); 
+    }
 }
 
 // --- 🛑 MODIFIED RESET OPERATIONAL DATA ---
