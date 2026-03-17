@@ -980,3 +980,94 @@ color: #000 !important;
 .caution-pulse {
     animation: caution-glow 0.8s infinite ease-in-out !important;
 }
+
+#safe-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 10, 10, 0.95);
+    backdrop-filter: blur(10px);
+    z-index: 9999; /* HIGHEST PRIORITY */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #00ffff;
+    font-family: 'Courier New', monospace;
+    transition: opacity 0.4s ease;
+}
+
+.overlay-content {
+    text-align: center;
+    padding: 40px;
+    border: 2px solid #00ffff;
+    background: rgba(0, 255, 255, 0.05);
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
+    border-radius: 15px;
+}
+
+#overlay-icon {
+    font-size: 80px;
+    margin-bottom: 20px;
+    text-shadow: 0 0 20px #00ffff;
+}
+
+.glow-line {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #00ffff, transparent);
+    margin-top: 20px;
+    width: 100%;
+    animation: scan-line 2s infinite linear;
+}
+
+@keyframes scan-line {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+}
+
+#overlay-logo {
+    width: 120px; /* Adjust based on your logo's aspect ratio */
+    height: auto;
+    margin-bottom: 20px;
+    filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.8)); /* The Neon Glow */
+    animation: logo-pulse 2s infinite ease-in-out;
+}
+
+@keyframes logo-pulse {
+    0% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.8)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 25px rgba(0, 255, 255, 1)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.8)); }
+}
+
+/* THE KINETIC PATH ENGINE */
+@keyframes march {
+    to {
+        stroke-dashoffset: -20;
+    }
+}
+
+.path-moving {
+    /* 10px dash, 5px gap - looks more "high-tech" than 5,5 */
+    stroke-dasharray: 10, 5; 
+    animation: march 1.5s linear infinite;
+    stroke-linecap: round;
+}
+
+/* Fast-march for caution paths */
+.path-moving-fast {
+    stroke-dasharray: 8, 4;
+    animation: march 0.6s linear infinite;
+}
+
+@keyframes pulse-blue {
+    0% { box-shadow: 0 0 10px #00ffff; transform: translate(-50%, -50%) scale(1); }
+    50% { box-shadow: 0 0 25px #00ffff; transform: translate(-50%, -50%) scale(1.1); }
+    100% { box-shadow: 0 0 10px #00ffff; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes fade-in-up {
+    from { opacity: 0; transform: translate(-50%, -20px); }
+    to { opacity: 1; transform: translate(-50%, 0); }
+}
