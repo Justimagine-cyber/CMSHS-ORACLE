@@ -85,6 +85,24 @@
         onclick="userSafeButton()">
     REPORT SAFE STATUS
 </button>
+        <div class="oracle-sim-container">
+    <h3 class="sim-header">CMSHS SIMULATION</h3>
+    
+    <div class="sim-button-group">
+        <button class="sim-btn pulse-red" onclick="ORACLE_KINETIC.generateRandomScenario()">
+            <span class="icon">🎲</span> RANDOM DISASTER
+        </button>
+
+        <button class="sim-btn btn-extraction" onclick="ORACLE_KINETIC.startExtractionWalk()">
+            <span class="icon">🏃</span> COMMENCE EXIT
+        </button>
+
+        <button class="sim-btn btn-outline" onclick="ORACLE_SIM.clear(); rerouteUsers();">
+            <span class="icon">🔄</span> RESET
+        </button>
+    </div>
+    <p class="sim-footer">STATUS: <span id="sim-status">READY</span></p>
+</div>
     </div>
 </div>
 
@@ -166,7 +184,7 @@
         </div>
 
         <div class="input-section">
-            <label for="aruco-id-input">ENTER FIDUCIAL ID</label>
+            <label for="aruco-id-input">ENTER FIDUCIAL ID (0-11)</label>
             <input 
                 type="number" 
                 id="aruco-id-input" 
@@ -192,7 +210,7 @@
 
 <div id="safe-overlay" style="display: none;">
     <div class="overlay-content">
-        <img src="CMSHS_ORACLE.png" id="overlay-logo" alt="CMSHS ORACLE">
+        <img src="C:/Users/OVATION/my-project/CMSHS_ORACLE.png" id="overlay-logo" alt="CMSHS ORACLE">
         <h1 id="overlay-status-text">MISSION SECURED</h1>
         <div class="glow-line"></div>
     </div>
