@@ -1071,3 +1071,109 @@ color: #000 !important;
     from { opacity: 0; transform: translate(-50%, -20px); }
     to { opacity: 1; transform: translate(-50%, 0); }
 }
+
+/* ORACLE SIMULATION STYLING */
+.oracle-sim-container {
+    background: rgba(20, 20, 20, 0.95);
+    border: 1px solid #333;
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 8px;
+    font-family: 'Monaco', 'Consolas', monospace;
+}
+
+.sim-header {
+    color: #ff003c;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ff003c;
+    padding-bottom: 5px;
+}
+
+.sim-button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sim-btn {
+    background: #1a1a1a;
+    color: white;
+    border: 1px solid #444;
+    padding: 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.sim-btn:hover {
+    background: #333;
+    border-color: #00ffff;
+}
+
+.sim-btn .icon {
+    margin-right: 10px;
+    font-size: 1.2rem;
+}
+
+/* The Earthquake Button Visual */
+.pulse-red {
+    border-color: #ff003c;
+    box-shadow: 0 0 5px rgba(255, 0, 60, 0.3);
+    animation: sim-pulse 2s infinite;
+}
+
+@keyframes sim-pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 0, 60, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(255, 0, 60, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 0, 60, 0); }
+}
+
+.btn-outline {
+    background: transparent;
+    border: 1px dashed #666;
+    color: #aaa;
+}
+
+.sim-footer {
+    font-size: 0.7rem;
+    color: #666;
+    margin-top: 10px;
+}
+
+#sim-status {
+    color: #00ff00;
+}
+
+/* Style for the markers spawned on the map */
+.hazard-marker {
+    animation: hazard-blink 1s infinite alternate;
+}
+
+@keyframes hazard-blink {
+    from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+    to { opacity: 0.7; transform: translate(-50%, -50%) scale(1.1); }
+}
+
+.btn-extraction {
+    border-color: #00ffff;
+    background: rgba(0, 255, 255, 0.1);
+    color: #00ffff;
+    margin-top: 5px;
+}
+
+.btn-extraction:hover {
+    background: #00ffff;
+    color: black;
+}
+
+/* Make the Blue Dot pulse during the walk */
+#user-marker {
+    transition: all 1.1s linear; /* Smooth sliding between nodes */
+}
