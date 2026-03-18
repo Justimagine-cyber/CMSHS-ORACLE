@@ -552,208 +552,135 @@ async function deleteAgent() {
     }
 }
 
-/***************************************************
- CMSHS ORACLE – Evacuation Engine
-***************************************************/
-
-/* ================================
-   SPATIAL INDEX (Map Coordinates)
-================================ */
+/* ==========================================================
+   CMSHS ORACLE: THE OMNIBUS BUILD (V3.0 - THE CLOSER)
+   ========================================================== */
 
 const CMSHS_SPATIAL_INDEX = {
-0:{name: "MAIN ENTRANCE/EXIT", x:2245, y:1590, type: "entry" },
-1:{name:"CMSHS GYMNASIUM",x:1127, y:895,type:"landmark"},
-2:{name:"CMSHS STAGE",x:1880, y:948,type: "stage"},
-7:{name:"SHS ROOM 7",x:1647,y:1502,type: "room"},
-
-10:{name:"SHS HALLWAY WEST",x:850,y:1100,type:"hallway"},
-11:{name:"SHS ROOM 1",x:1363,y:1138,type:"room"},
-12:{name:"SHS ROOM 2",x:1140,y:1150,type:"room"},
-13:{name:"SHS ROOM 3",x:925,y:1155,type:"room"},
-
-20:{name:"JHS CORRIDOR WEST",x:229,y:644,type:"hallway"},
-21:{name:"JHS CORRIDOR MID",x:1001,y:638,type:"hallway"},
-22:{name:"JHS CORRIDOR EAST",x:2457,y:643,type:"hallway"},
-25:{name:"CONFERENCE ROOM",x:2005,y:570,type:"room"},
-
-30:{name:"BIOLOGY LAB",x:125, y:285,type:"lab"},
-31:{name:"CANTEEN",x:422,y:1146,type:"facility"},
-
-// 🪜 VERTICAL CIRCULATION (Stairs)
+    0: { name: "MAIN ENTRANCE/EXIT", x: 2245, y: 1590, type: "entry" },
+    1: { name: "CMSHS GYMNASIUM", x: 1127, y: 895, type: "landmark" },
+    2: { name: "CMSHS STAGE", x: 1880, y: 948, type: "stage" },
+    7: { name: "SHS ROOM 7", x: 1647, y: 1502, type: "room" },
+    10: { name: "SHS HALLWAY WEST", x: 850, y: 1100, type: "hallway" },
+    11: { name: "SHS ROOM 1", x: 1363, y: 1138, type: "room" },
+    12: { name: "SHS ROOM 2", x: 1140, y: 1150, type: "room" },
+    13: { name: "SHS ROOM 3", x: 925, y: 1155, type: "room" },
+    20: { name: "JHS CORRIDOR WEST", x: 229, y: 644, type: "hallway" },
+    21: { name: "JHS CORRIDOR MID", x: 1001, y: 638, type: "hallway" },
+    22: { name: "JHS CORRIDOR EAST", x: 2457, y: 643, type: "hallway" },
+    25: { name: "CONFERENCE ROOM", x: 2005, y: 570, type: "room" },
+    30: { name: "BIOLOGY LAB", x: 125, y: 285, type: "lab" },
+    31: { name: "CANTEEN", x: 422, y: 1146, type: "facility" },
     40: { name: "SHS EAST STAIRS", x: 1850, y: 1155, type: "stairs" },
     41: { name: "SHS WEST STAIRS", x: 623, y: 1193, type: "stairs" },
 };
+
 /* ================================
    1. GLOBAL TACTICAL STATE
 ================================ */
 window.HAZARDS = window.HAZARDS || new Set();
 window.currentUserNode = window.currentUserNode || null;
 
-// The Graph is now a Global Object that can be modified mid-crisis
 window.CMSHS_GRAPH = {
-    // 🚪 ROOM 7: Primary access to East Stairs
-    7: [40, 12],             
+    7: [40, 12], 
     40: [0, 2, 22, 11, 7], 
-
-    // 🏛️ THE NEW BYPASS BRIDGE (41 -> 2 -> 0)
-    41: [11, 13, 0, 1, 2], // Added 2 here
-    2: [40, 41, 0],        // Added 41 and 0 here for the bypass flow
-    
-    // 🏛️ CORRIDOR HUBS
-    11: [12, 41, 40],    
-    12: [11, 13],        
+    41: [11, 13, 0, 1, 2], 
+    2: [40, 41, 0], 
+    11: [12, 41, 40], 
+    12: [11, 13], 
     13: [12, 41],
-
-    // 🛰️ OTHER TRANSITIONS
     20: [21, 30], 
     21: [20, 22, 1, 25], 
     22: [21, 40], 
-    25: [21],           
+    25: [21], 
     30: [20, 31], 
     31: [30],
     1: [21, 41], 
-    0: [40, 41, 2]         // Added 2 as a final entry to the Exit
+    0: [40, 41, 2] 
 };
 
-/* ================================
-   2. DYNAMIC GRAPH MODIFICATION (The "Unexpected" Logic)
-================================ */
+/* ==========================================================
+   2. ORACLE_SIM: ENCAPSULATED SIMULATION MODULE
+   ========================================================== */
+const ORACLE_SIM = (function() {
+    const _blockedEdges = new Set();
+    const _getEdgeKey = (a, b) => [a, b].sort((x, y) => x - y).join("-");
 
-// Use this if a structure is physically destroyed (removes connection)
+    const SCENARIOS = {
+        "EARTHQUAKE_ALPHA": {
+            startNode: 7,
+            hazards: [{ node: 40, type: "COLLAPSE" }, { node: 12, type: "FIRE" }],
+            blockedEdges: [[7, 40], [11, 40]],
+            casualties: [{ node: 11, status: "TRAPPED", count: 2 }]
+        }
+    };
+
+    return {
+        isEdgeBlocked: (a, b) => _blockedEdges.has(_getEdgeKey(a, b)),
+        clear: function() {
+            _blockedEdges.clear();
+            window.HAZARDS.clear();
+            document.querySelectorAll('.sim-layer').forEach(el => el.remove());
+        },
+        start: function(name) {
+            const scenario = SCENARIOS[name];
+            if (!scenario) return;
+            this.clear();
+            const mapWrapper = document.getElementById('map-img').parentElement;
+            const fragment = document.createDocumentFragment();
+
+            scenario.blockedEdges.forEach(e => _blockedEdges.add(_getEdgeKey(e[0], e[1])));
+            scenario.hazards.forEach(h => {
+                window.HAZARDS.add(Number(h.node));
+                const p = CMSHS_SPATIAL_INDEX[h.node];
+                const el = document.createElement('div');
+                el.className = "sim-layer hazard-marker pulse-critical";
+                el.style.cssText = `position:absolute; left:${p.x}px; top:${p.y}px; transform:translate(-50%,-50%); z-index:100;`;
+                el.innerHTML = `<div style="font-size:20px;">⚠️</div><small>${h.type}</small>`;
+                fragment.appendChild(el);
+            });
+            scenario.casualties.forEach(c => {
+                const p = CMSHS_SPATIAL_INDEX[c.node];
+                const el = document.createElement('div');
+                el.className = "sim-layer casualty-marker";
+                el.style.cssText = `position:absolute; left:${p.x}px; top:${p.y}px; transform:translate(-50%,-150%); z-index:101; background:#ffcc00; padding:2px 5px; border-radius:4px; font-weight:bold; font-size:10px;`;
+                el.innerHTML = `🆘 ${c.status} (${c.count})`;
+                fragment.appendChild(el);
+            });
+            mapWrapper.appendChild(fragment);
+            executeIndoorLocalization(scenario.startNode);
+        }
+    };
+})();
+
+/* ==========================================================
+   3. CORE TACTICAL LOGIC & ROUTING
+   ========================================================== */
+
 function severConnection(nodeA, nodeB) {
-    if (window.CMSHS_GRAPH[nodeA]) {
-        window.CMSHS_GRAPH[nodeA] = window.CMSHS_GRAPH[nodeA].filter(n => n !== nodeB);
-    }
-    if (window.CMSHS_GRAPH[nodeB]) {
-        window.CMSHS_GRAPH[nodeB] = window.CMSHS_GRAPH[nodeB].filter(n => n !== nodeA);
-    }
+    if (window.CMSHS_GRAPH[nodeA]) window.CMSHS_GRAPH[nodeA] = window.CMSHS_GRAPH[nodeA].filter(n => n !== nodeB);
+    if (window.CMSHS_GRAPH[nodeB]) window.CMSHS_GRAPH[nodeB] = window.CMSHS_GRAPH[nodeB].filter(n => n !== nodeA);
     console.log(`🏗️ ORACLE: Connection severed between ${nodeA} and ${nodeB}`);
     rerouteUsers();
 }
 
-// Use this if a new path is opened (e.g., a gate is unlocked)
 function bridgeNodes(nodeA, nodeB) {
     if (!window.CMSHS_GRAPH[nodeA]) window.CMSHS_GRAPH[nodeA] = [];
     if (!window.CMSHS_GRAPH[nodeB]) window.CMSHS_GRAPH[nodeB] = [];
-    
     if (!window.CMSHS_GRAPH[nodeA].includes(nodeB)) window.CMSHS_GRAPH[nodeA].push(nodeB);
     if (!window.CMSHS_GRAPH[nodeB].includes(nodeA)) window.CMSHS_GRAPH[nodeB].push(nodeA);
-    
     console.log(`🔗 ORACLE: New tactical bridge between ${nodeA} and ${nodeB}`);
     rerouteUsers();
 }
 
-/* ================================
-   HAZARD DATABASE
-================================ */
-
 function reportHazard(nodeId) {
-    HAZARDS.add(Number(nodeId));
+    window.HAZARDS.add(Number(nodeId));
     console.log(`⚠️ AUTOMATION: Sector ${nodeId} compromised. Recalculating...`);
-    
-    // Automatically trigger visual update for all active users
     rerouteUsers();
-    
-    // 📳 Haptic warning for hazard report
     if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
 }
 
-function rerouteUsers() {
-    if (window.currentUserNode !== null) {
-        const dynamicRoute = findShortestPath(window.currentUserNode, 0);
-        
-        // 1. Check if path is empty BEFORE calculating cost
-        if (!dynamicRoute || dynamicRoute.length === 0) {
-            console.error("🚨 CRITICAL: No evacuation route possible!");
-            drawEvacuationPathWithEdges([]); // Clear lines
-            tacticalPrompt("SYSTEM FAILURE", "NO SAFE EXIT FOUND. SEEK IMMEDIATE SHELTER.", false, "", true);
-            return;
-        }
-
-        // 2. Now it's safe to draw and calculate
-        drawEvacuationPathWithEdges(dynamicRoute);
-        
-        const cost = calculatePathCost(dynamicRoute);
-        if (cost > 500) {
-            console.warn("⚠️ High-Risk Route detected.");
-        }
-    }
-}
-
-function calculatePathCost(path) {
-    // 🛡️ Safety Check: If no path exists, return a "Max Danger" cost
-    if (!path || !Array.isArray(path) || path.length < 2) {
-        return 9999; 
-    }
-
-    let total = 0;
-    try {
-        for (let i = 0; i < path.length - 1; i++) {
-            const u = path[i];
-            const v = path[i + 1];
-            
-            // Use the weight logic we built earlier
-            total += getEdgeWeight(u, v);
-        }
-    } catch (err) {
-        console.error("ORACLE Error: Path calculation failed mid-loop.", err);
-        return 9999;
-    }
-    return total;
-}
-
-/* ================================
-    SAFE REPORTING SYSTEM (V2)
-================================ */
-
-// 1. THE CORE LOGIC (Silent & Stable)
-function reportSafe() {
-    console.log("🛡️ ORACLE: Finalizing safety report...");
-
-    // 1. CRITICAL CHECK: Is the user actually at the Exit (Node 0)?
-    if (window.currentUserNode !== 0) {
-        // Log a specialized error for the UI to catch
-        console.warn("⚠️ REPORT_DENIED: User is not at the Extraction Point (ID 0).");
-        return "DENIED_LOCATION"; 
-    }
-
-    // 2. DATA REGISTRY (Same as before)
-    const safeData = {
-        node: window.currentUserNode,
-        time: new Date().toLocaleTimeString(),
-        id: `SECURE-${Math.floor(Math.random() * 9000) + 1000}`
-    };
-
-    window.SAFE_USERS = window.SAFE_USERS || [];
-    window.SAFE_USERS.push(safeData);
-
-    if (typeof clearRoute === 'function') clearRoute();
-    return "SUCCESS";
-}
-
-function displaySafeToast(user){
-
-const msg=document.createElement("div")
-msg.innerText="✅ "+user+" REPORTED SAFE"
-
-msg.style.position="fixed"
-msg.style.bottom="20px"
-msg.style.left="20px"
-msg.style.padding="10px"
-msg.style.background="green"
-msg.style.color="white"
-msg.style.borderRadius="6px"
-
-document.body.appendChild(msg)
-setTimeout(()=>msg.remove(),4000)
-}
-
-/* ================================
-   3. WEIGHTED DIJKSTRA (Global-Safe)
-================================ */
-
 function findShortestPath(start, goal) {
-    // We use window.CMSHS_GRAPH to ensure we are looking at the latest dynamic state
     const graph = window.CMSHS_GRAPH;
     let distances = {};
     let prev = {};
@@ -773,7 +700,9 @@ function findShortestPath(start, goal) {
         if (distances[curr] === Infinity || curr == goal) break;
 
         for (let next of graph[curr] || []) {
-            // Dynamic Weighting: Hazards are "heavy"
+            // 🛡️ MODULAR GUARD: Check Simulation Blocked Edges
+            if (ORACLE_SIM.isEdgeBlocked(curr, next)) continue;
+
             let weight = window.HAZARDS.has(Number(next)) ? 999 : 1;
             let alt = distances[curr] + weight;
 
@@ -792,6 +721,147 @@ function findShortestPath(start, goal) {
     }
     return (path[0] === start) ? path : [];
 }
+
+function executeIndoorLocalization(markerId) {
+    const id = Number(markerId);
+    const landmark = CMSHS_SPATIAL_INDEX[id];
+    if (!landmark) return;
+
+    window.currentUserNode = id;
+    if (typeof drawUserMarker === 'function') drawUserMarker(landmark.x, landmark.y);
+    
+    const dynamicRoute = findShortestPath(id, 0);
+    if (dynamicRoute && dynamicRoute.length > 0) {
+        drawEvacuationPathWithEdges(dynamicRoute);
+    }
+    
+    if (typeof closeGhostModal === 'function') closeGhostModal();
+    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+}
+
+function rerouteUsers() {
+    if (window.currentUserNode !== null) {
+        const dynamicRoute = findShortestPath(window.currentUserNode, 0);
+        if (!dynamicRoute || dynamicRoute.length === 0) {
+            console.error("🚨 CRITICAL: No evacuation route possible!");
+            if (typeof drawEvacuationPathWithEdges === 'function') drawEvacuationPathWithEdges([]);
+            return;
+        }
+        if (typeof drawEvacuationPathWithEdges === 'function') drawEvacuationPathWithEdges(dynamicRoute);
+    }
+}
+
+function reportSafe() {
+    if (window.currentUserNode !== 0) {
+        console.warn("⚠️ REPORT_DENIED: User is not at the Extraction Point (ID 0).");
+        return "DENIED_LOCATION"; 
+    }
+    const safeData = {
+        node: window.currentUserNode,
+        time: new Date().toLocaleTimeString(),
+        id: `SECURE-${Math.floor(Math.random() * 9000) + 1000}`
+    };
+    window.SAFE_USERS = window.SAFE_USERS || [];
+    window.SAFE_USERS.push(safeData);
+    if (typeof clearRoute === 'function') clearRoute();
+    return "SUCCESS";
+}
+
+/* ==========================================================
+   ORACLE TACTICAL BRIDGE: SIMULATION + HAZARD COMMAND
+   ========================================================== */
+
+const ORACLE_KINETIC = (function() {
+    let _walkInterval = null;
+
+    return {
+        // 🎲 GENERATE RANDOM CHAOS (Merged with Hazard Command)
+        generateRandomScenario: function() {
+            // 1. Clear previous simulation and manual hazards
+            this.resetSystem();
+            
+            const allNodes = Object.keys(CMSHS_SPATIAL_INDEX).map(Number);
+            // Exclude Exit (0) and potential start rooms from being blocked
+            const potentialNodes = allNodes.filter(n => ![0, 7, 25, 30].includes(n));
+            
+            // Randomly select 3 nodes to "hit"
+            const hits = potentialNodes.sort(() => 0.5 - Math.random()).slice(0, 3);
+            const hazardTypes = ['fire', 'structure', 'electric', 'bio'];
+
+            console.log("🎲 ORACLE: Deploying Simulated Hazards...");
+
+            hits.forEach((nodeId, index) => {
+                const node = CMSHS_SPATIAL_INDEX[nodeId];
+                const type = hazardTypes[Math.floor(Math.random() * hazardTypes.length)];
+                
+                // 🌉 THE BRIDGE: Using your existing Command Engine function
+                // We pass 'true' for isSilent to avoid redundant saves during the loop
+                createHazardMarker(
+                    `${node.x}px`, 
+                    `${node.y}px`, 
+                    type, 
+                    `SIM-HAZARD-${nodeId}`, 
+                    true 
+                );
+                
+                console.log(`⚠️ SIM: Sector ${node.name} (${nodeId}) compromised by ${type.toUpperCase()}`);
+            });
+
+            // Set a random start for the demo
+            const starts = [7, 25, 30];
+            const randomStart = starts[Math.floor(Math.random() * starts.length)];
+            
+            // Update HUD and Trigger Reroute
+            document.getElementById('hazard-status').innerText = "SIM: RANDOM DISASTER";
+            executeIndoorLocalization(randomStart);
+            
+            if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        },
+
+        // 🚶 GUIDED EXTRACTION WALK
+        startExtractionWalk: function() {
+            if (!window.currentUserNode) return;
+            const path = findShortestPath(window.currentUserNode, 0);
+            
+            if (!path || path.length < 2) {
+                tacticalPrompt("PATH BLOCKED", "No safe route found. Simulation aborted.", false, "", true);
+                return;
+            }
+
+            let step = 0;
+            if (_walkInterval) clearInterval(_walkInterval);
+
+            _walkInterval = setInterval(() => {
+                if (step >= path.length - 1) {
+                    clearInterval(_walkInterval);
+                    if (window.currentUserNode === 0) reportSafe();
+                    return;
+                }
+
+                step++;
+                executeIndoorLocalization(path[step]);
+                if (navigator.vibrate) navigator.vibrate(40);
+            }, 1200);
+        },
+
+        // 🔄 FULL RESET
+        resetSystem: function() {
+            if (_walkInterval) clearInterval(_walkInterval);
+            
+            // Clear the Set
+            window.HAZARDS.clear();
+            
+            // Remove all visual hazard markers (Manual & Sim)
+            document.querySelectorAll('.hazard-marker').forEach(m => m.remove());
+            
+            // Reset Sidebar Status
+            const status = document.getElementById('hazard-status');
+            if (status) status.innerText = "SYSTEM: STANDBY";
+            
+            console.log("🔄 ORACLE: Tactical reset complete.");
+        }
+    };
+})();
 
 /* ================================
    EVACUATION PATH RENDERING
