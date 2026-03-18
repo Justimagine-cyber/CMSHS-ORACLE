@@ -561,9 +561,10 @@ async function deleteAgent() {
 ================================ */
 
 const CMSHS_SPATIAL_INDEX = {
-0:{ name: "MAIN ENTRANCE/EXIT", x:2245, y:1590, type: "entry" },
+0:{name: "MAIN ENTRANCE/EXIT", x:2245, y:1590, type: "entry" },
 1:{name:"CMSHS GYMNASIUM",x:1127, y:895,type:"landmark"},
 2:{name:"CMSHS STAGE",x:1880, y:948,type: "stage"},
+7:{name:"SHS ROOM 7",x:1647,y:1502,type: "room"},
 
 10:{name:"SHS HALLWAY WEST",x:850,y:1100,type:"hallway"},
 11:{name:"SHS ROOM 1",x:1363,y:1138,type:"room"},
@@ -590,20 +591,28 @@ window.currentUserNode = window.currentUserNode || null;
 
 // The Graph is now a Global Object that can be modified mid-crisis
 window.CMSHS_GRAPH = {
- 11: [12, 41], 
-    12: [11, 13], 
+    // 🚪 ROOM 7: Primary access to East Stairs
+    7: [40, 12],             
+    40: [0, 2, 22, 11, 7], 
+
+    // 🏛️ THE NEW BYPASS BRIDGE (41 -> 2 -> 0)
+    41: [11, 13, 0, 1, 2], // Added 2 here
+    2: [40, 41, 0],        // Added 41 and 0 here for the bypass flow
+    
+    // 🏛️ CORRIDOR HUBS
+    11: [12, 41, 40],    
+    12: [11, 13],        
     13: [12, 41],
-    40: [0, 2, 22], // Added 22 so East Wing connects to the Exit path
-    41: [11, 13, 0, 1],
+
+    // 🛰️ OTHER TRANSITIONS
     20: [21, 30], 
-    21: [20, 22, 1, 25], // Wired Node 25 (Conf Room) to the Corridor
+    21: [20, 22, 1, 25], 
     22: [21, 40], 
-    25: [21],           // Conf Room can only exit via Node 21
+    25: [21],           
     30: [20, 31], 
     31: [30],
     1: [21, 41], 
-    2: [40], 
-    0: [40, 41]
+    0: [40, 41, 2]         // Added 2 as a final entry to the Exit
 };
 
 /* ================================
@@ -848,14 +857,18 @@ function userSafeButton() {
     const overlay = document.getElementById('safe-overlay');
     const statusText = document.getElementById('overlay-status-text');
 
-    if (!overlay) return;
+    if (!overlay) {
+        console.error("❌ ORACLE: Overlay element not found in DOM!");
+        return;
+    }
 
     // 🛡️ FIRST GUARD: Check for the Blue Dot (Localization)
     if (window.currentUserNode === null || window.currentUserNode === undefined) {
-        // 🚨 NO SCAN AT ALL
+        // 🚨 NO SCAN AT ALL - Trigger Red Error immediately
         overlay.style.display = 'flex';
         overlay.classList.add('active');
-        overlay.style.backgroundColor = "rgba(54, 1, 1, 0.95)"; // Red Error
+        overlay.style.backgroundColor = "rgba(54, 1, 1, 0.95)"; // Deep Crimson
+        
         if (statusText) statusText.innerText = "ERROR: SCAN LOCATION TAG FIRST";
         if (navigator.vibrate) navigator.vibrate(500);
 
@@ -863,37 +876,34 @@ function userSafeButton() {
             overlay.style.display = 'none';
             overlay.classList.remove('active');
         }, 3000);
-        return; // Kill execution here
+        
+        return; // 🛑 STOP! Don't proceed to reportSafe()
     }
 
-    // 🛰️ SECOND GUARD: If localized, check if they are at the Exit
+    // 🛰️ SECOND STEP: If localized, check the actual safety status
     const status = reportSafe();
     overlay.style.display = 'flex';
     overlay.classList.add('active');
 
     if (status === "SUCCESS") {
         // ✅ EXTRACTION COMPLETE
-        overlay.style.backgroundColor = "rgba(0, 20, 20, 0.95)"; 
+        overlay.style.backgroundColor = "rgba(0, 20, 20, 0.95)"; // Cyber Teal
         if (statusText) statusText.innerText = "MISSION SECURED: SECTOR CLEAR";
         if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
     } 
     else if (status === "DENIED_LOCATION") {
         // ❌ WRONG LOCATION
-        overlay.style.backgroundColor = "rgba(40, 20, 0, 0.95)"; // Orange/Amber Warning
+        overlay.style.backgroundColor = "rgba(40, 20, 0, 0.95)"; // Amber Warning
         if (statusText) statusText.innerText = "ERROR: NOT AT EXIT POINT";
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
     }
 
+    // Auto-hide for Success/Denied states
     setTimeout(() => {
         overlay.style.display = 'none';
         overlay.classList.remove('active');
     }, 3000);
 }
-
-    setTimeout(() => {
-        overlay.style.display = 'none';
-        overlay.classList.remove('active');
-    }, 3000);
 
 /* ================================
    YOU ARE HERE MARKER
