@@ -446,42 +446,55 @@ function createDot(x, y, type, agentData, timestamp, isSilent = false, existingU
     inner.style.cssText = `width:16px; height:16px; border-radius:50%; background:${colors[typeInt]}; box-shadow: 0 0 15px ${colors[typeInt]}; cursor:pointer;`;
     inner.onclick = (e) => { 
         e.stopPropagation(); 
-        showIntel(dot.dataset.uuid, dot.dataset.agent, ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][typeInt], dot.dataset.timestamp); 
+        showIntel(dot.dataset.uuid, dot.dataset.timestamp);
     };
     
     const lbl = document.createElement('div');
     lbl.className = 'triage-label';
     lbl.innerText = (agentData || "UNKNOWN").split(' - ')[0];
-
+    
     dot.appendChild(inner); dot.appendChild(lbl);
     document.getElementById('map-img').appendChild(dot);
     if (!isSilent) { counts[typeInt]++; updateHUD(); saveState(); }
 }
 
 // --- DYNAMIC AGENT MANAGEMENT ---
-function showIntel(id, name, status, time) {
+function showIntel(id, time) { // Only pass ID and Time
     currentSelectedAgentId = id; 
     const overlay = document.getElementById('intel-overlay');
     const targetDot = document.querySelector(`[data-uuid="${id}"]`);
 
     if (!targetDot) return;
 
+    // 🔥 THE FIX: Always pull the LATEST data from the dot's dataset
+    const statusNames = ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"];
+    const colorsList = ['#0f6', '#ff0', '#f33', '#888'];
+    
+    const currentType = parseInt(targetDot.dataset.type) || 0;
+    const currentName = targetDot.dataset.agent || "UNKNOWN";
+    const currentStatus = statusNames[currentType];
+    const currentColor = colorsList[currentType];
+
     overlay.className = 'speech-bubble'; 
     document.getElementById('map-img').appendChild(overlay);
-
     overlay.style.left = targetDot.style.left;
     overlay.style.top = targetDot.style.top;
     overlay.style.display = 'block';
     
     overlay.innerHTML = `
         <h3 style="font-family:'Cinzel', serif; color:#0f6; margin-bottom:10px; letter-spacing:2px; font-size:1rem; text-align:center;">AGENT PROFILE</h3>
-        <div style="text-align:left; margin-bottom:12px;">
-            <label style="font-size:0.6rem; color:#888; display:block; margin-bottom:5px;">IDENTIFICATION</label>
-            <input type="text" id="edit-agent-name" value="${name}" placeholder="e.g. JUAN - GYM"
-                style="width:100%; background:rgba(0,0,0,0.5); border:1px solid #333; color:#0f6; padding:8px; font-family:'Montserrat', sans-serif; font-size:0.8rem; outline:none;">
+        <div style="margin-bottom:15px;">
+            <label style="font-size:0.6rem; color:#888; display:block; margin-bottom:5px; letter-spacing:1px;">IDENTIFICATION</label>
+            <input type="text" 
+       id="edit-agent-name" 
+       value="${currentName || ''}" 
+       placeholder="e.g. JUAN - GYM" 
+       oninput="this.value = this.value.toUpperCase()" 
+       style="width:100%; background:rgba(0,0,0,0.5); border:1px solid #333; color:#0f6; padding:8px; font-family:'Montserrat', sans-serif; font-size:0.8rem; outline:none; text-transform: uppercase;">
         </div>
         <p style="text-align:left; font-size:0.75em; line-height:1.4; margin-bottom:10px;">
-            <span style="color:#888;">STATUS:</span> <span id="status-display" style="color:#0f6; font-weight:bold;">${status}</span><br>
+            <span style="color:#888;">STATUS:</span> 
+            <span id="status-display" style="color:${currentColor}; font-weight:bold; text-transform:uppercase;">${currentStatus}</span><br>
             <span style="color:#888;">LAST SEEN:</span> ${time}
         </p>
         <h6 style="font-family:'Montserrat', sans-serif; color:#0f6; letter-spacing:1px; margin-bottom:10px; font-size:0.7rem; text-align:center;">RECLASSIFY AGENT</h6>
@@ -492,32 +505,66 @@ function showIntel(id, name, status, time) {
             <div class="status-block black" onclick="updateTriage(3)" style="border:1px solid #888; color:#888; padding:8px; cursor:pointer; font-size:0.6rem; text-align:center; font-weight:bold;">DECEASED</div>
         </div>
         <button onclick="updateAgentIdentity()" class="btn-save" style="font-family: 'Montserrat', sans-serif; border:1px solid #0f6; color:#0f6; background:rgba(0,255,102,0.1); width:100%; padding:10px; margin-bottom:6px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">SAVE IDENTITY</button>
-        <button onclick="deleteAgent()" class="btn-delete" style="font-family: 'Montserrat', sans-serif; border:1px solid #f33; color:#f33; background:rgba(255,51,51,0.1); width:100%; padding:10px; font-weight:bold; cursor:pointer; font-size:0.6rem; text-transform:uppercase;">DELETE AGENT</button>
+        <button onclick="deleteAgent()" class="btn-delete" style="...">DELETE AGENT</button>
     `;
 }
 
 function updateTriage(newType) {
     if (!currentSelectedAgentId) return;
-    const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
-    if (!dotContainer) return;
-    const classMap = ['green', 'yellow', 'red', 'black'];
-    dotContainer.classList.remove('green', 'yellow', 'red', 'black');
-    dotContainer.classList.add(classMap[newType]);
-    dotContainer.dataset.type = newType;
-    const dotInner = dotContainer.querySelector('div');
-    const colorsList = ['#0f6', '#ff0', '#f33', '#888'];
+
+    const colorsList = ['#00ff66', '#ffff00', '#ff3333', '#888888'];
+    const classNames = ['green', 'yellow', 'red', 'black'];
+    
     const newColor = colorsList[newType];
-    if (dotInner) {
-        dotInner.style.backgroundColor = newColor;
-        dotInner.style.boxShadow = `0 0 15px ${newColor}`;
+    const newClass = classNames[newType];
+
+    const dotContainer = document.querySelector(`[data-uuid="${currentSelectedAgentId}"]`);
+    
+    if (dotContainer) {
+        dotContainer.className = `triage-dot ${newClass}`;
+        dotContainer.dataset.type = newType;
+
+        const dotInner = dotContainer.querySelector('div');
+        const dotLabel = dotContainer.querySelector('.triage-label');
+        
+        if (dotInner) {
+            // 1. FORCE THE COLOR & BG
+            dotInner.style.backgroundColor = newColor;
+            dotInner.style.color = newColor; 
+
+            // 2. 🔥 THE "GLOW KILLER" FIX: 
+            // We manually overwrite the shadow to ensure it fades to the NEW color.
+            // This bypasses the 'currentColor' bug entirely.
+            dotInner.style.boxShadow = `0 0 15px ${newColor}, 0 0 30px ${newColor}`;
+
+            if (dotLabel) {
+                dotLabel.style.backgroundColor = newColor;
+                
+                // 🏷️ IMMEDIATE = BLACK TEXT (Your request)
+                // MINOR & DELAYED = BLACK TEXT (High Visibility)
+                if (newType === 2 || newType === 1 || newType === 0) {
+                    dotLabel.style.color = '#000'; 
+                } else {
+                    dotLabel.style.color = '#fff'; // White for Deceased
+                }
+            }
+        }
     }
+
+    // Standard UI Updates
     const statusDisplay = document.getElementById('status-display');
     if (statusDisplay) {
-        statusDisplay.innerText = ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"][newType];
+        const statusNames = ["MINOR", "DELAYED", "IMMEDIATE", "DECEASED"];
+        statusDisplay.innerText = statusNames[newType];
         statusDisplay.style.color = newColor;
     }
-    saveState(); 
-    setTimeout(() => { document.getElementById('intel-overlay').style.display = 'none'; }, 500);
+
+    saveState();
+    
+    setTimeout(() => { 
+        const overlay = document.getElementById('intel-overlay');
+        if (overlay) overlay.style.display = 'none'; 
+    }, 500);
 }
 
 function updateAgentIdentity() {
@@ -1658,48 +1705,204 @@ function showSystemData(type) {
     }
 
     staticBox.innerHTML = content + `<div class="close-intel" onclick="this.parentElement.style.display='none'" style="margin-top:10px; text-align:center; display:block; cursor:pointer; padding:15px; background:rgba(255,255,255,0.1);">DISMISS</div>`;
+}
 
-    if (type === 'DATALINK' && b64) {
-        setTimeout(() => {
-            const qrBox = document.getElementById('qr-static');
-            if (qrBox && typeof qrcode !== 'undefined') {
-                let qr = qrcode(0, 'L'); qr.addData(b64); qr.make();
-                qrBox.innerHTML = qr.createImgTag(3, 4);
+/* ==========================================================
+   ORACLE: BASE64 BYPASS EXPORT (V4.8)
+   ========================================================== */
+window.generateOracleSS = async function() {
+    console.log("📸 ORACLE: Executing Base64 Bypass...");
+
+    const mapImg = document.getElementById('map-img');
+    const target = mapImg.parentElement;
+    const scanner = document.getElementById('scanner-video');
+
+    // 1. SILENCE TAINTED ELEMENTS
+    if (scanner) scanner.style.display = 'none';
+
+    // 2. THE "CLEANER" - Converts local file to a safe DataURL
+    const getCleanDataUrl = (img) => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        return canvas.toDataURL("image/png");
+    };
+
+    // Swap original for a "Clean" version
+    const originalSrc = mapImg.src;
+    try {
+        mapImg.src = getCleanDataUrl(mapImg);
+    } catch(e) {
+        console.warn("⚠️ Snapshot might be blank due to file:/// restrictions.");
+    }
+
+    // 3. INJECT THE READINESS HEADER (Bottom Right)
+    const reportOverlay = document.createElement('div');
+    reportOverlay.id = "snap-overlay";
+    reportOverlay.style.cssText = `
+        position: absolute; bottom: 20px; right: 20px; z-index: 9999;
+        background: rgba(0, 20, 10, 0.9); border-right: 4px solid #0f6;
+        padding: 15px; display: flex; align-items: center; gap: 15px;
+        font-family: 'Courier New', monospace; color: #0f6;
+        box-shadow: -10px 0 20px rgba(0,0,0,0.5); border-radius: 5px 0 0 5px;
+    `;
+    
+    reportOverlay.innerHTML = `
+        <div style="text-align: right;">
+            <div style="font-weight: bold; font-size: 16px; letter-spacing: 2px;">CMSHS ORACLE</div>
+            <div style="font-size: 11px; color: #fff; letter-spacing: 1px;">OPERATIONAL READINESS</div>
+            <div style="font-size: 9px; opacity: 0.6; margin-top: 5px;">${new Date().toLocaleString()}</div>
+        </div>
+        <img src="CMSHS_LOGO.png" style="width: 45px; height: 45px; object-fit: contain;">
+    `;
+    target.appendChild(reportOverlay);
+
+    try {
+        const canvas = await html2canvas(target, {
+            useCORS: false, 
+            allowTaint: true, 
+            backgroundColor: "#000",
+            scale: 2,
+            ignoreElements: (el) => el.id === 'scanner-video'
+        });
+
+        // 4. RESTORE SYSTEM STATE
+        mapImg.src = originalSrc;
+        reportOverlay.remove();
+        if (scanner) scanner.style.display = 'block';
+
+        // 5. DOWNLOAD
+        const link = document.createElement('a');
+        link.download = `ORACLE_INTEL_${Date.now()}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+
+        console.log("✅ ORACLE: Intel Secure.");
+
+    } catch (err) {
+        mapImg.src = originalSrc;
+        if(document.getElementById('snap-overlay')) reportOverlay.remove();
+        if (scanner) scanner.style.display = 'block';
+        console.error("📸 CRITICAL TAINT:", err);
+        alert("VS Code Debugger is blocking the export. Try 'Live Server' extension!");
+    }
+};
+
+/* ==========================================================
+   ORACLE: TACTICAL FEEDBACK UI
+   ========================================================== */
+
+// 🏃 THE MISSION-AWARE EXTRACTION UI
+async function commenceExtractionUI() {
+    const btn = document.getElementById('btn-exit');
+    const originalContent = `<span class="icon">🏃</span> <span class="btn-text">COMMENCE EXIT</span>`;
+    
+    // 1. ENTER "MISSION IN PROGRESS" STATE
+    btn.disabled = true; 
+    btn.innerHTML = `<span class="icon">🛰️</span> <span class="btn-text">COMMENCING...</span>`;
+    btn.style.opacity = "0.6";
+    btn.style.cursor = "wait";
+    // Optional: add a pulsing orange glow to show it's active
+    btn.style.boxShadow = "0 0 20px rgba(255, 128, 0, 0.5)";
+
+    try {
+        // 🚀 Start the actual pathfinding/walking logic
+        await ORACLE_KINETIC.startExtractionWalk(); 
+
+        // 2. THE NODE WATCHER (Polling for Arrival at Node 0)
+        const missionWatcher = setInterval(() => {
+            // Logic: Check if the user's current position is Node 0
+            // Assuming your ORACLE_KINETIC or global state tracks 'currentUserNode'
+            const currentNode = window.currentUserNode; 
+
+            if (currentNode === 0) {
+                console.log("🎯 TARGET REACHED: Node 0 Locked.");
+                
+                // 3. RESET TO READY STATE
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+                btn.style.opacity = "1";
+                btn.style.cursor = "pointer";
+                btn.style.boxShadow = "none";
+                
+                // Kill the watcher
+                clearInterval(missionWatcher);
+                
+                // Alert the user (Optional)
+                console.log("SYSTEM: EXTRACTION COMPLETE. STANDING BY.");
             }
-        }, 50);
+        }, 300); // Fast 300ms check for high-precision tracking
+
+    } catch (error) {
+        console.error("Critical Extraction Error:", error);
+        // Emergency Reset
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+        btn.style.opacity = "1";
     }
 }
 
-async function importTacticalGrid() {
-    const code = await tacticalPrompt("IMPORT NEW DATA", "PASTE DATA STRING:", true, "PASTE STRING HERE...");
-    if (!code || code.trim() === "") return;
-    try {
-        const incomingData = JSON.parse(atob(code.trim()));
-        const masterDataRaw = localStorage.getItem('ORACLE_GRID_DATA');
-        let masterData = masterDataRaw ? JSON.parse(masterDataRaw) : [];
-        const masterUUIDs = new Set(masterData.map(dot => dot.uuid));
-        let integratedPlots = 0;
-        incomingData.forEach(dot => { if (!masterUUIDs.has(dot.uuid)) { masterData.push(dot); integratedPlots++; } });
-        if (integratedPlots > 0) {
-            localStorage.setItem('ORACLE_GRID_DATA', JSON.stringify(masterData));
-            const masterCounts = [0,0,0,0];
-            masterData.forEach(d => { const t = parseInt(d.type); if(!isNaN(t)) masterCounts[t]++; });
-            localStorage.setItem('ORACLE_STATS', JSON.stringify(masterCounts));
-            await tacticalPrompt("GRID UPDATED", `${integratedPlots} NEW PLOT(S) INTEGRATED.`, false, "", true);
-            sessionStorage.setItem('INITIAL_BOOT_COMPLETE', 'true');
-            location.reload(); 
-        } else {
-            await tacticalPrompt("DATA INTEGRATION", "NO NEW UNIQUE PLOTS DETECTED.", false, "", true);
-        }
-    } catch (e) { await tacticalPrompt("CRITICAL ERROR", "DATA STRING CORRUPT.", false, "", true); }
+// 📲 GENERATE REPORT -> GENERATING...
+async function generateReportUI() {
+    const btn = document.getElementById('btn-report');
+    btn.innerHTML = "📲 GENERATING...";
+    btn.classList.add('pulse-green'); // Add a visual pulse if you have one
+
+    // Trigger the Seamless V4.8 Snapshot
+    await window.generateOracleSS();
+
+    // Reset after export
+    setTimeout(() => {
+        btn.innerHTML = "📲 GENERATE REPORT";
+        btn.classList.remove('pulse-green');
+    }, 1500);
 }
 
-async function clearMap() {
-    if(await tacticalPrompt("DATA WIPE WARNING", "ERASE ALL DATA?", false)) { localStorage.clear(); location.reload(); }
+// 🔄 RESET -> RESETTING...
+function resetSystemUI() {
+    const btn = document.getElementById('btn-reset');
+    btn.innerHTML = "🔄 RESETTING...";
+    
+    // Trigger existing reset
+    ORACLE_KINETIC.resetSystem();
+
+    setTimeout(() => {
+        btn.innerHTML = "🔄 RESET";
+    }, 1000);
 }
+
+/* ==========================================================
+   ORACLE: UI STATE WRAPPER (NON-INVASIVE)
+   ========================================================== */
+window.wrapAction = async function(btnId, loadingText, originalFunction) {
+    const btn = document.getElementById(btnId);
+    const textSpan = btn.querySelector('.btn-text');
+    const originalContent = textSpan.innerHTML;
+
+    // 1. Enter Loading State
+    textSpan.innerHTML = loadingText.replace(/[^\w\s\.]/g, ''); // Removes emoji for text swap
+    btn.style.pointerEvents = "none"; // Prevent double-clicks
+    btn.style.opacity = "0.6";
+
+    try {
+        // 2. Execute your original code exactly as intended
+        await originalFunction(); 
+    } catch (err) {
+        console.error("ORACLE UI Error:", err);
+    } finally {
+        // 3. Restore original UI state after 1.5 seconds
+        setTimeout(() => {
+            textSpan.innerHTML = originalContent;
+            btn.style.pointerEvents = "auto";
+            btn.style.opacity = "1";
+        }, 1500);
+    }
+};
 
 // --- 🌉 ORACLE BRIDGE ---
-window.generateTacticalQR = generateTacticalQR;
+window.generateTacticalQR = function() { window.generateOracleSS(); };
 window.locateUser = locateUser;
 window.setStatus = setStatus;
 window.showIntelligenceReport = showIntelligenceReport;
@@ -1709,5 +1912,4 @@ window.clearMap = clearMap;
 window.updateTriage = updateTriage;
 window.deleteAgent = deleteAgent;
 window.updateAgentIdentity = updateAgentIdentity;
-window.importTacticalGrid = importTacticalGrid;
 window.addEventListener('load', initializeSystem);

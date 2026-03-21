@@ -11,11 +11,12 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     
-    <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
     <script>eruda.init();</script>
     <script src="js/cv.js"></script>
     <script src="js/aruco.js"></script>
+    <script src="js/html2canvas.min.js"></script>
     <script src="sdrrm-events.js" defer></script>
     
     <script>
@@ -66,42 +67,80 @@
 
 <div id="hazard-sidebar" class="sidebar">
     <div class="sidebar-header">
-        <h3 class="cinzel" style="color:#ff8000; margin:0;">HAZARD DEPOT</h3>
-        <button onclick="toggleSidebar()" class="close-sidebar" style="background:none; border:none; color:#ff8000; font-size:1.5rem;">×</button>
-    </div>
-    
-    <div class="hazard-grid">
-        <button class="hazard-select fire" onclick="setHazardType('fire')">🔥 FIRE</button>
-        <button class="hazard-select flood" onclick="setHazardType('flood')">🌊 FLOOD</button>
-        <button class="hazard-select bio" onclick="setHazardType('bio')">☣️ BIO</button>
-        <button class="hazard-select structure" onclick="setHazardType('structure')">🏗️ COLLAPSE</button>
-        <button class="hazard-select electric" onclick="setHazardType('electric')">⚡ SHOCK</button>
-    </div>
+    <button onclick="toggleSidebar()" class="sidebar-toggle-btn" 
+            style="background: rgba(255, 128, 0, 0.1); 
+                   border: 1px solid #ff8000; 
+                   color: #ff8000; 
+                   width: 40px; 
+                   height: 40px; 
+                   display: flex; 
+                   align-items: center; 
+                   justify-content: center; 
+                   border-radius: 4px; 
+                   cursor: pointer; 
+                   transition: all 0.3s ease;
+                   margin-left: 10px;">
+        <span style="font-size: 1.5rem; line-height: 0; margin-top: -2px;">×</span>
+    </button>
+</div>
 
-    <div class="sidebar-info" style="margin-top:20px; font-size:0.7em; color:#888;">
-        <p>STATUS: <span id="hazard-status">WAITING FOR SELECTION</span></p>
-        <button id="safeBtn" class="hazard-select" 
-        style="border-left-color: #00ff66; color: #00ff66; margin-top: auto;"
-        onclick="userSafeButton()">
-    REPORT SAFE STATUS
-</button>
-        <div class="oracle-sim-container">
-    <h3 class="sim-header">CMSHS SIMULATION</h3>
-    
+<div class="oracle-sim-container" style="padding-top:0;">
     <div class="sim-button-group">
-        <button class="sim-btn pulse-red" onclick="ORACLE_KINETIC.generateRandomScenario()">
-            <span class="icon">🎲</span> RANDOM DISASTER
+        <h3 class="sim-header" style="color:#ff8000; margin:0; border-bottom:none;">HAZARD DEPOT</h3>
+        <button class="sim-btn hazard-fire" onclick="setHazardType('fire')">
+            <span class="icon">🔥</span> <span class="btn-text">FIRE DISASTER</span>
         </button>
 
-        <button class="sim-btn btn-extraction" onclick="ORACLE_KINETIC.startExtractionWalk()">
-            <span class="icon">🏃</span> COMMENCE EXIT
+        <button class="sim-btn hazard-flood" onclick="setHazardType('flood')">
+            <span class="icon">🌊</span> <span class="btn-text">FLOOD ALERT</span>
         </button>
 
-        <button class="sim-btn btn-outline" onclick="ORACLE_SIM.clear(); rerouteUsers();">
-            <span class="icon">🔄</span> RESET
+        <button class="sim-btn hazard-bio" onclick="setHazardType('bio')">
+            <span class="icon">☣️</span> <span class="btn-text">BIOHAZARD</span>
+        </button>
+
+        <button class="sim-btn hazard-structure" onclick="setHazardType('structure')">
+            <span class="icon">🏗️</span> <span class="btn-text">STRUCTURAL FAILURE</span>
+        </button>
+
+        <button class="sim-btn hazard-electric" onclick="setHazardType('electric')">
+            <span class="icon">⚡</span> <span class="btn-text">ELECTRICAL SHOCK</span>
         </button>
     </div>
-    <p class="sim-footer">STATUS: <span id="sim-status">READY</span></p>
+
+    <div class="sidebar-info" style="margin-top:20px; font-size:0.7em; color:#888; text-transform: uppercase; letter-spacing: 1px;">
+        <p>CURRENT INTEL: <span id="hazard-status" style="color:#ff8000;">WAITING FOR SELECTION</span></p>
+    </div>
+
+    <button id="safeBtn" class="sim-btn btn-extraction" 
+            style="margin-top: 10px; border-color: #00ff66; color: #00ff66;"
+            onclick="userSafeButton()">
+        <span class="icon">🛡️</span> <span class="btn-text">REPORT SAFE STATUS</span>
+    </button>
+</div>
+
+        <div class="oracle-sim-container">
+<h3 class="sim-header">ORACLE SIMULATION</h3>
+
+<div class="sim-button-group">
+    <button id="btn-random" class="sim-btn pulse-red" onclick="ORACLE_KINETIC.generateRandomScenario()">
+        <span class="icon">🎲</span> <span class="btn-text">RANDOM DISASTER</span>
+    </button>
+
+    <button id="btn-exit" class="sim-btn btn-extraction" onclick="wrapAction('btn-exit', '🏃 COMMENCING...', () => ORACLE_KINETIC.startExtractionWalk())">
+        <span class="icon">🏃</span> <span class="btn-text">COMMENCE EXIT</span>
+    </button>
+    
+    <button id="btn-report" class="sim-btn btn-report" 
+            onclick="wrapAction('btn-report', '📲 GENERATING...', () => window.generateOracleSS())">
+        <span class="icon">📲</span> <span class="btn-text">GENERATE REPORT</span>
+    </button>
+
+    <button id="btn-reset" class="sim-btn btn-outline" onclick="wrapAction('btn-reset', '🔄 RESETTING...', () => { ORACLE_SIM.clear(); rerouteUsers(); })">
+        <span class="icon">🔄</span> <span class="btn-text">RESET</span>
+    </button>
+</div>
+    </div>
 </div>
     </div>
 </div>
@@ -137,8 +176,6 @@
         <button class="triage-btn black" onclick="setStatus(3)">DECEASED</button>
         <button class="triage-btn aruco-trigger" onclick="initiateGhostTag()"><span style="font-size: 1.2em;">👁️</span><br>VISION LINK</button>
         
-        <button class="triage-btn sync-qr" onclick="generateTacticalQR()">SHARE REPORT</button>
-        <button class="triage-btn" onclick="locateUser()" id="gps-btn" style="border-color: #0096ff; color: #0096ff;"><span id="gps-text">LOCATE ME</span></button>
         <button class="triage-btn intel-report" onclick="showIntelligenceReport()">SYSTEM UPDATES</button>
         <button class="triage-btn oracle-manual" onclick="showHelp()">ORACLE MANUAL</button>
         <button class="triage-btn about-btn" onclick="showAbout()" style="border-color: #8400ff; color: #8400ff;">ABOUT ORACLE</button>

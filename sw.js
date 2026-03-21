@@ -1,5 +1,5 @@
 /* 🏛️ CMSHS ORACLE: SERVICE WORKER - SHIELD */
-const CACHE_NAME = 'oracle-cache-v5.7';
+const CACHE_NAME = 'oracle-cache-v4.5';
 const ASSETS = [
   './',
   './index.html',
@@ -7,7 +7,8 @@ const ASSETS = [
   './sdrrm-events.js',
   './CMSHS_LOGO.png',
   './js/cv.js',    
-  './js/aruco.js'
+  './js/aruco.js',
+  './js/html2canvas.min.js',
 ];
 
 // 1. INSTALL: Force the new Service Worker to take over immediately
