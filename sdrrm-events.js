@@ -1684,31 +1684,59 @@ window.handleImage = function(input) {
     reader.readAsDataURL(file);
 };
 
-// 📡 2. MONITOR P2P CONNECTION STATUS
+// 📡 2. MONITOR P2P CONNECTION STATUS (REINFORCED)
 peer.on('open', (id) => {
     console.log("📡 SYSTEM: MESH ONLINE. ID:", id);
     
-    // 🏛️ UPDATE THE UI BADGE
+    // 🏛️ UPDATE THE UI IDENTITY BADGE
     const idDisplay = document.getElementById('agent-id-display');
     if (idDisplay) {
-        idDisplay.innerHTML = `📡 SYSTEM: MESH ONLINE. ID: <span style="color: #fff; font-weight: bold;">${id}</span>`;
-        idDisplay.style.borderColor = "#00ff66"; // Turn the border green when ready
+        idDisplay.innerHTML = `📡 SYSTEM: <span style="color: #00ff66;">MESH ONLINE</span>. ID: <span style="color: #fff; font-weight: bold; border-bottom: 1px solid #00ff66;">${id}</span>`;
+        idDisplay.style.borderColor = "#00ff66";
+        idDisplay.style.boxShadow = "0 0 10px rgba(0, 255, 102, 0.1)";
     }
 
-    // Existing logic to prepend status to the chat container
+    // Update the inner chat log
     const container = document.getElementById('chat-container');
     if (container) {
         const statusDiv = document.createElement('div');
-        statusDiv.style.cssText = "color: #00ffff; border-bottom: 1px solid #222; margin-bottom: 10px; font-size: 0.65rem;";
-        statusDiv.innerHTML = `[SYSTEM] P2P MESH ACTIVE | AGENT: ${id}`;
+        statusDiv.style.cssText = "color: #00ffff; border-bottom: 1px solid #222; margin-bottom: 10px; font-size: 0.65rem; padding-bottom: 5px;";
+        statusDiv.innerHTML = `[SYSTEM] P2P TUNNEL ESTABLISHED // AGENT_${id}`;
         container.prepend(statusDiv); 
     }
 });
 
+// 📡 MONITOR BROKER CONNECTION (The "Heartbeat")
+peer.on('disconnected', () => {
+    const idDisplay = document.getElementById('agent-id-display');
+    if (idDisplay) {
+        idDisplay.innerHTML = `📡 <span style="color: #ff3333;">SYSTEM: OFFLINE</span> [RE-LINKING...]`;
+        idDisplay.style.borderColor = "#ff3333";
+    }
+    console.warn("🛰️ ORACLE: BROKER LINK LOST. ATTEMPTING RECOVERY...");
+    
+    // Attempt to jump back on the mesh automatically
+    peer.reconnect();
+});
+
+// ❌ HANDLE CONNECTION FAILURES (The "Initializing" Killer)
 peer.on('error', (err) => {
     console.error("❌ P2P ERROR:", err);
-    if(err.type === 'id-taken') {
-        alert("ID ALREADY ACTIVE. PLEASE WAIT 10 SECONDS OR USE A NEW TAB.");
+    const idDisplay = document.getElementById('agent-id-display');
+    
+    if (idDisplay) {
+        idDisplay.style.borderColor = "#ff3333";
+        idDisplay.style.color = "#ff3333";
+        
+        if (err.type === 'browser-incompatible') {
+            idDisplay.innerHTML = `📡 SYSTEM: <span style="font-weight:bold;">INCOMPATIBLE BROWSER</span>`;
+        } else if (err.type === 'network') {
+            idDisplay.innerHTML = `📡 SYSTEM: <span style="font-weight:bold;">OFFLINE / NO SIGNAL</span>`;
+        } else if (err.type === 'id-taken') {
+            idDisplay.innerHTML = `📡 SYSTEM: <span style="font-weight:bold;">ID CONFLICT / ACTIVE</span>`;
+        } else {
+            idDisplay.innerHTML = `📡 SYSTEM: <span style="font-weight:bold;">MESH ERROR [${err.type}]</span>`;
+        }
     }
 });
 
