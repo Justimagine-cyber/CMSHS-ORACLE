@@ -1617,7 +1617,7 @@ window.renderOracleArchive = function() {
     container.scrollTop = container.scrollHeight;
 };
 
-// 📡 0. IDENTITY GENERATOR (Updated to use SessionStorage to prevent ID collisions in tabs)
+// 📡 0. IDENTITY GENERATOR (Keep this at the top)
 const callsigns = ["GHOST", "SPECTRE", "PHANTOM", "VIPER", "TITAN", "ECHO", "COBALT", "RAVEN", "ONYX"];
 if (!sessionStorage.getItem('oracle_user')) {
     const randomCallsign = callsigns[Math.floor(Math.random() * callsigns.length)];
@@ -1626,7 +1626,15 @@ if (!sessionStorage.getItem('oracle_user')) {
 }
 const currentUser = sessionStorage.getItem('oracle_user');
 
-// 📡 1. INITIALIZE PEER
+// 🚀 1. Update the UI immediately so they know their ID while waiting
+document.addEventListener('DOMContentLoaded', () => {
+    const idDisplay = document.getElementById('agent-id-display');
+    if (idDisplay) {
+        idDisplay.innerHTML = `📡 SYSTEM: <span style="color: #ff8000;">INITIALIZING...</span> | ID: <span style="color: #fff;">${currentUser}</span>`;
+    }
+});
+
+// 📡 2. INITIALIZE PEER
 const peer = new Peer(currentUser, {
     debug: 2, 
     config: {
@@ -1635,11 +1643,6 @@ const peer = new Peer(currentUser, {
             { url: 'stun:stun1.l.google.com:19302' }
         ]
     }
-});
-
-peer.on('disconnected', () => {
-    console.warn("📡 MESH DISCONNECTED. RE-LINKING TO BROKER...");
-    peer.reconnect();
 });
 
 // --- ✍️ SENDING TEXT ---
@@ -1804,7 +1807,6 @@ window.showInterface = function() {
 };
 
 // --- 📟 ORACLE DIALPAD LOGIC ---
-
 window.showDialPad = function() {
     document.getElementById('gate-start-view').style.display = 'none';
     document.getElementById('gate-dial-view').style.display = 'block';
