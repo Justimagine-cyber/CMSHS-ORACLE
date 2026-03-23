@@ -12,8 +12,25 @@
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700&family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-    <script>eruda.init();</script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <script>
+    console.log("🛠️ ORACLE: INTERNAL SCRIPT CHECK");
+    
+    // If your external file is failing, we force the function here
+    window.sendText = function() {
+        const input = document.getElementById('chat-input');
+        console.log("BUTTON PRESSED! Value:", input.value);
+        
+        if(input.value.trim() !== "") {
+            socket.emit('oracle-intel', {
+                user: "OPERATOR",
+                type: 'text',
+                content: input.value
+            });
+            input.value = "";
+        }
+    }
+    </script>
     <script src="js/cv.js"></script>
     <script src="js/aruco.js"></script>
     <script src="js/html2canvas.min.js"></script>
@@ -35,7 +52,7 @@
             // 2. Clear any session flags that might trigger it to reopen
             sessionStorage.removeItem('VISION_LINK_ACTIVE');
             
-            // 3. Tactile feedback for S10
+            // 3. Tactile feedback
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
 
             // 4. Stoic Reset: Refresh to clear the JS heap and show the Grid
@@ -65,87 +82,140 @@
     </div>
 </div>
 
-<div id="hazard-sidebar" class="sidebar">
-    <div class="sidebar-header">
-    <button onclick="toggleSidebar()" class="sidebar-toggle-btn" 
-            style="background: rgba(255, 128, 0, 0.1); 
-                   border: 1px solid #ff8000; 
-                   color: #ff8000; 
-                   width: 40px; 
-                   height: 40px; 
-                   display: flex; 
-                   align-items: center; 
-                   justify-content: center; 
-                   border-radius: 4px; 
-                   cursor: pointer; 
-                   transition: all 0.3s ease;
-                   margin-left: 10px;">
-        <span style="font-size: 1.5rem; line-height: 0; margin-top: -2px;">×</span>
-    </button>
+<div id="sidebar-tab" onclick="toggleSidebar()" 
+     style="position: fixed; top: 20px; right: 0; background: #ff8000; color: #000; padding: 10px; cursor: pointer; border-radius: 8px 0 0 8px; z-index: 1001; font-weight: bold; box-shadow: -2px 0 10px rgba(255,128,0,0.4); transition: all 0.3s ease;">
+    ⚠️ <span style="font-size: 0.7rem; margin-left: 5px;">DASHBOARD</span>
 </div>
 
-<div class="oracle-sim-container" style="padding-top:0;">
-    <div class="sim-button-group">
-        <h3 class="sim-header" style="color:#ff8000; margin:0; border-bottom:none;">HAZARD DEPOT</h3>
-        <button class="sim-btn hazard-fire" onclick="setHazardType('fire')">
-            <span class="icon">🔥</span> <span class="btn-text">FIRE DISASTER</span>
-        </button>
+<div id="hazard-sidebar" class="sidebar" 
+     style="height: 100vh; width: 320px; position: fixed; top: 0; right: 0; transform: translateX(100%); background: rgba(0,0,0,0.95); backdrop-filter: blur(10px); border-left: 1px solid #333; display: flex; flex-direction: column; z-index: 1002; transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: -10px 0 30px rgba(0,0,0,0.8);">
 
-        <button class="sim-btn hazard-flood" onclick="setHazardType('flood')">
-            <span class="icon">🌊</span> <span class="btn-text">FLOOD ALERT</span>
-        </button>
-
-        <button class="sim-btn hazard-bio" onclick="setHazardType('bio')">
-            <span class="icon">☣️</span> <span class="btn-text">BIOHAZARD</span>
-        </button>
-
-        <button class="sim-btn hazard-structure" onclick="setHazardType('structure')">
-            <span class="icon">🏗️</span> <span class="btn-text">STRUCTURAL FAILURE</span>
-        </button>
-
-        <button class="sim-btn hazard-electric" onclick="setHazardType('electric')">
-            <span class="icon">⚡</span> <span class="btn-text">ELECTRICAL SHOCK</span>
-        </button>
+    <div class="sidebar-header" style="padding: 20px; border-bottom: 1px solid rgba(255,128,0,0.3); display: flex; align-items: center; justify-content: space-between; background: rgba(255,128,0,0.05);">
+        <h3 style="color: #ff8000; font-size: 0.8rem; margin: 0; letter-spacing: 3px; font-weight: 900;">ORACLE DASHBOARD</h3>
+        <button onclick="toggleSidebar()" style="background: none; border: 1px solid #ff8000; color: #ff8000; width: 30px; height: 30px; cursor: pointer; border-radius: 4px; display: flex; align-items: center; justify-content: center;">×</button>
     </div>
 
-    <div class="sidebar-info" style="margin-top:20px; font-size:0.7em; color:#888; text-transform: uppercase; letter-spacing: 1px;">
-        <p>CURRENT INTEL: <span id="hazard-status" style="color:#ff8000;">WAITING FOR SELECTION</span></p>
-    </div>
+    <div class="sidebar-content-wrapper" 
+         style="flex: 1; overflow-y: auto; overflow-x: hidden; padding: 20px; padding-bottom: 190px; scrollbar-width: thin; scrollbar-color: #00ff66 #000;">
+        
+        <div class="oracle-sim-container" style="margin-bottom: 30px;">
+            <h3 class="sim-header" style="color:#ff8000; margin-bottom:15px; border-bottom:1px solid rgba(255,128,0,0.2); padding-bottom:5px; font-size: 0.7rem;">HAZARD DEPOT</h3>
+            <div class="sim-button-group">
+                <button class="sim-btn hazard-fire" onclick="setHazardType('fire')">🔥 FIRE DISASTER</button>
+                <button class="sim-btn hazard-flood" onclick="setHazardType('flood')">🌊 FLOOD ALERT</button>
+                <button class="sim-btn hazard-bio" onclick="setHazardType('bio')">☣️ BIOHAZARD</button>
+                <button class="sim-btn hazard-structure" onclick="setHazardType('structure')">🏗️ STRUCTURAL FAILURE</button>
+                <button class="sim-btn hazard-electric" onclick="setHazardType('electric')">⚡ ELECTRICAL SHOCK</button>
+            </div>
+            <div class="sidebar-info" style="margin-top:15px; font-size:0.6rem; color:#888;">
+                <p>STATUS: <span id="hazard-status" style="color:#ff8000;">WAITING...</span></p>
+            </div>
+            <button id="safeBtn" class="sim-btn btn-extraction" style="width: 100%; border-color: #00ff66; color: #00ff66;" onclick="userSafeButton()">🛡️ REPORT SAFE STATUS</button>
+        </div>
 
-    <button id="safeBtn" class="sim-btn btn-extraction" 
-            style="margin-top: 10px; border-color: #00ff66; color: #00ff66;"
-            onclick="userSafeButton()">
-        <span class="icon">🛡️</span> <span class="btn-text">REPORT SAFE STATUS</span>
-    </button>
-</div>
-
-        <div class="oracle-sim-container">
-<h3 class="sim-header">ORACLE SIMULATION</h3>
-
-<div class="sim-button-group">
-    <button id="btn-random" class="sim-btn pulse-red" onclick="ORACLE_KINETIC.generateRandomScenario()">
-        <span class="icon">🎲</span> <span class="btn-text">RANDOM DISASTER</span>
-    </button>
-
-    <button id="btn-exit" class="sim-btn btn-extraction" onclick="wrapAction('btn-exit', '🏃 COMMENCING...', () => ORACLE_KINETIC.startExtractionWalk())">
-        <span class="icon">🏃</span> <span class="btn-text">COMMENCE EXIT</span>
-    </button>
+        <div class="oracle-sim-container" style="border-top: 1px solid rgba(0, 255, 102, 0.2); padding-top: 20px; margin-bottom: 30px;">
     
-    <button id="btn-report" class="sim-btn btn-report" 
-            onclick="wrapAction('btn-report', '📲 GENERATING...', () => window.generateOracleSS())">
-        <span class="icon">📲</span> <span class="btn-text">GENERATE REPORT</span>
-    </button>
+    <div id="agent-id-display" style="color: #00ff66; font-family: monospace; font-size: 0.6rem; margin-bottom: 10px; border: 1px solid #222; padding: 5px; background: rgba(0,0,0,0.5); letter-spacing: 1px;">
+        📡 SYSTEM: INITIALIZING...
+    </div>
 
-    <button id="btn-reset" class="sim-btn btn-outline" onclick="wrapAction('btn-reset', '🔄 RESETTING...', () => { ORACLE_SIM.clear(); rerouteUsers(); })">
-        <span class="icon">🔄</span> <span class="btn-text">RESET</span>
-    </button>
-</div>
+    <h4 style="color:#00ff66; font-size: 0.65rem; letter-spacing: 2px; margin-bottom:10px; font-weight: 900;">ORACLE COMMS</h4>
+    
+    <div id="mesh-gatekeeper" style="padding: 20px; text-align: center; border: 1px dashed rgba(0, 255, 255, 0.3); background: rgba(0, 255, 255, 0.02); border-radius: 4px;">
+    
+    <div id="gate-start-view">
+        <p style="color: #00ffff; font-size: 0.55rem; margin-bottom: 15px; font-family: monospace; letter-spacing: 1px;">[ STATUS: P2P MESH DISCONNECTED ]</p>
+        <button class="sim-btn" onclick="window.showDialPad()" 
+                style="width: 100%; border: 1px solid #00ffff; color: #00ffff; background: rgba(0,255,255,0.1); font-family: monospace; font-size: 0.7rem; font-weight: 900; cursor: pointer; padding: 15px; text-transform: uppercase; letter-spacing: 2px;">
+            ⚡ INITIALIZE MESH LINK
+        </button>
+    </div>
+
+    <div id="gate-dial-view" style="display: none;">
+        <p style="color: #ff8000; font-size: 0.55rem; margin-bottom: 10px; font-family: monospace;">> ENTER REMOTE AGENT ID:</p>
+        <input type="text" id="dial-id-input" placeholder="AGENT-XXX" 
+           style="width: 100%; max-width: 200px; background: #000; border: 1px solid #ff8000; color: #ff8000; padding: 12px; font-family: monospace; font-size: 0.8rem; text-align: center; outline: none; margin-bottom: 10px; box-sizing: border-box; display: block;">
+        
+        <div id="dial-error-msg" style="color: #ff3333; font-size: 0.5rem; margin-bottom: 10px; display: none; font-family: monospace;">
+            [!] ACCESS DENIED: INVALID ID
+        </div>
+
+        <div style="display: flex; gap: 5px;">
+            <button onclick="window.deployComms()" style="flex: 2; background: #ff8000; color: #000; border: none; padding: 8px; font-family: monospace; font-size: 0.6rem; font-weight: bold; cursor: pointer;">ESTABLISH LINK</button>
+            <button onclick="window.resetGate()" style="flex: 1; background: transparent; border: 1px solid #444; color: #444; padding: 8px; font-family: monospace; font-size: 0.6rem; cursor: pointer;">CANCEL</button>
+        </div>
     </div>
 </div>
+
+    <div id="mesh-interface" style="display: none; flex-direction: column;">
+        <div id="chat-container" style="height: 220px; overflow-y: auto; background: rgba(0,0,0,0.8); border: 1px solid #333; padding: 10px; font-family: monospace; font-size: 0.7rem; margin-bottom: 10px; color: #00ff66; scrollbar-width: none;">
+            </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+            <input type="text" id="chat-input" placeholder="..." 
+                   style="width: 100%; background: #111; border: 1px solid #00ff66; color: #00ff66; padding: 12px; font-size: 0.75rem; outline: none; font-family: monospace; box-sizing: border-box;">
+            
+            <div style="display: flex; gap: 8px;">
+                <label class="sim-btn" 
+                       style="flex: 1; padding: 12px 5px; text-align: center; cursor: pointer; border: 1px solid #00ffff; color: #00ffff; font-size: 0.6rem; font-weight: 900; background: rgba(0,255,255,0.05); transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 1px;">
+                    🔗 ATTACH FILE
+                    <input type="file" id="image-input" accept="image/*" style="display: none;" onchange="handleImage(this)">
+                </label>
+
+                <button class="sim-btn" onclick="sendText()" 
+                        style="flex: 2; padding: 12px 5px; border: 1px solid #00ff66; color: #00ff66; background: rgba(0,255,102,0.1); font-size: 0.6rem; font-weight: 900; transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 1px;">
+                    📡 SEND MESSAGE
+                </button>
+            </div>
+            
+            <div style="margin-top: 15px; border-top: 1px solid #222; padding-top: 5px;">
+            <button type="button" onclick="window.connectToAgent()" 
+                    style="background: none; border: none; color: #444; font-family: monospace; font-size: 0.55rem; cursor: pointer; text-align: left; transition: color 0.2s;"
+                    onmouseover="this.style.color='#00ffff'" 
+                    onmouseout="this.style.color='#444'">
+                [+] BRIDGE ADDITIONAL AGENT
+            </button>
+            </div>
+        </div>
     </div>
 </div>
 
-<div id="sidebar-tab" onclick="toggleSidebar()">⚠️</div>
+        <div class="oracle-sim-container" style="border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 20px; padding-bottom: 40px;">
+            <h3 class="sim-header" style="font-size: 0.7rem; margin-bottom: 15px;">SIMULATION CONTROL</h3>
+            <div class="sim-button-group">
+                <button id="btn-random" class="sim-btn pulse-red" onclick="ORACLE_KINETIC.generateRandomScenario()">🎲 RANDOM DISASTER</button>
+                <button id="btn-exit" class="sim-btn btn-extraction" onclick="wrapAction('btn-exit', '🏃 COMMENCING...', () => ORACLE_KINETIC.startExtractionWalk())">🏃 COMMENCE EXIT</button>
+                <button id="btn-report" class="sim-btn btn-report" onclick="wrapAction('btn-report', '📲 GENERATING...', () => window.generateOracleSS())">📲 GENERATE REPORT</button>
+                <button id="btn-reset" class="sim-btn btn-outline" onclick="wrapAction('btn-reset', '🔄 RESETTING...', () => { ORACLE_SIM.clear(); rerouteUsers(); })">🔄 RESET SYSTEM</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* 🛰️ IMPROVED TACTICAL SCROLL */
+.sidebar-content-wrapper {
+    scroll-behavior: smooth;
+    /* Hide scrollbar for Chrome/Safari but keep functionality */
+    -webkit-overflow-scrolling: touch; 
+}
+
+/* Slick Neon Scrollbar (Updated Selector) */
+.sidebar-content-wrapper::-webkit-scrollbar { 
+    width: 4px; 
+}
+.sidebar-content-wrapper::-webkit-scrollbar-track { 
+    background: rgba(0,0,0,0.2); 
+}
+.sidebar-content-wrapper::-webkit-scrollbar-thumb { 
+    background: #00ff66; 
+    border-radius: 10px; 
+    box-shadow: 0 0 10px #00ff66; 
+}
+    
+    /* Ensure chat container scrolls but stays clean */
+    #chat-container::-webkit-scrollbar { width: 0px; }
+</style>
     
 <div id="app">
     <header>
@@ -153,7 +223,6 @@
             <img src="CMSHS_LOGO.png" class="header-logo" alt="LOGO">
             <div class="brand">CMSHS ORACLE: OPERATIONAL READINESS</div>
         </div>
-        <div class="status">STANDALONE MODE: SECURE</div>
     </header>
 
     <div id="viewport">
@@ -175,7 +244,7 @@
         <button class="triage-btn red" onclick="setStatus(2)">IMMEDIATE</button>
         <button class="triage-btn black" onclick="setStatus(3)">DECEASED</button>
         <button class="triage-btn aruco-trigger" onclick="initiateGhostTag()"><span style="font-size: 1.2em;">👁️</span><br>VISION LINK</button>
-        
+
         <button class="triage-btn intel-report" onclick="showIntelligenceReport()">SYSTEM UPDATES</button>
         <button class="triage-btn oracle-manual" onclick="showHelp()">ORACLE MANUAL</button>
         <button class="triage-btn about-btn" onclick="showAbout()" style="border-color: #8400ff; color: #8400ff;">ABOUT ORACLE</button>

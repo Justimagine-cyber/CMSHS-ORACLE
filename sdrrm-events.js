@@ -1313,17 +1313,57 @@ function closeGhostModal() {
 let currentHazardMode = null;
 
 // 1. TACTICAL SIDEBAR REGISTRY
-function toggleSidebar() {
+// Initialize the state at the top of your script
+let isOracleOpen = false; 
+
+window.toggleSidebar = function() {
     const sidebar = document.getElementById('hazard-sidebar');
-    if (!sidebar) return; // Safety check
-    
-    const isActive = sidebar.classList.toggle('active');
-    
-    // Save state for offline persistence
-    localStorage.setItem('ORACLE_SIDEBAR_STATUS', isActive ? "true" : "false");
-    
-    if (navigator.vibrate) navigator.vibrate(40);
-}
+    const tab = document.getElementById('sidebar-tab');
+
+    if (!sidebar || !tab) return;
+
+    if (isOracleOpen) {
+        // --- RETREAT COMMAND (Close) ---
+        sidebar.style.transform = 'translateX(100%)';
+        
+        // Bring the Tab back to the edge
+        tab.style.transform = 'translateX(0%)'; 
+        tab.style.opacity = "1";
+        tab.style.pointerEvents = "auto";
+        
+        isOracleOpen = false;
+        console.log("🛰️ HUD: RETREATED");
+    } else {
+        // --- DEPLOY COMMAND (Open) ---
+        sidebar.style.transform = 'translateX(0%)';
+        
+        // Push the Tab out with the sidebar
+        tab.style.transform = 'translateX(100%)';
+        tab.style.opacity = "0";
+        tab.style.pointerEvents = "none";
+        
+        isOracleOpen = true;
+        console.log("🛰️ HUD: DEPLOYED");
+    }
+};
+
+// 🛰️ GLOBAL CLICK LISTENER FOR AUTO-RETREAT
+document.addEventListener('click', function(event) {
+    const sidebar = document.getElementById('hazard-sidebar');
+    const tab = document.getElementById('sidebar-tab');
+
+    // Only run if the sidebar is currently open
+    if (isOracleOpen) {
+        // Check if the click was OUTSIDE the sidebar AND OUTSIDE the toggle tab
+        const clickedInsideSidebar = sidebar.contains(event.target);
+        const clickedInsideTab = tab.contains(event.target);
+
+        if (!clickedInsideSidebar && !clickedInsideTab) {
+            console.log("🗺️ MAP CLICK DETECTED: RETREATING ORACLE...");
+            toggleSidebar(); // This re-uses your working function to close it!
+        }
+    }
+});
 
 // 2. OFFLINE PERSISTENCE RESTORE
 function restoreSidebarState() {
@@ -1553,6 +1593,288 @@ function clearMap() {
         }
     });
 }
+
+// --- 💾 ORACLE PERSISTENCE LAYER ---
+let localOracleArchive = JSON.parse(localStorage.getItem('oracle_archive')) || [];
+
+// 🚀 1. GLOBAL STATE (CRITICAL: Moved to top so all functions see it)
+window.activeConnections = []; 
+
+window.renderOracleArchive = function() {
+    const container = document.getElementById('chat-container');
+    if (!container || localOracleArchive.length === 0) return;
+    container.innerHTML = `<div style="color: #444; font-size: 0.6rem;">[ARCHIVE LOADED] RECOVERING RECENT INTEL...</div>`;
+    localOracleArchive.forEach(msg => {
+        const msgDiv = document.createElement('div');
+        msgDiv.style.cssText = "margin-bottom: 12px; padding: 5px; border-left: 2px solid " + (msg.type === 'text' ? "#ff8000" : "#00ffff");
+        if (msg.type === 'text') {
+            msgDiv.innerHTML = `<span style="color: #00ff66; font-weight: bold; font-size: 0.6rem;">[${msg.user}]</span><br><span style="color: #ddd;">${msg.content}</span>`;
+        } else {
+            msgDiv.innerHTML = `<span style="color: #00ffff; font-weight: bold; font-size: 0.6rem;">[${msg.user}] SENT AN ATTACHMENT:</span><br><div style="margin-top: 5px; border: 1px solid #333; border-radius: 4px; overflow: hidden; background: #000; min-height: 50px; display: flex; align-items: center; justify-content: center;"><img src="${msg.content}" style="max-width: 100%; display: block; height: auto; max-height: 400px; object-fit: contain;"></div>`;
+        }
+        container.appendChild(msgDiv);
+    });
+    container.scrollTop = container.scrollHeight;
+};
+
+// 📡 0. IDENTITY GENERATOR (Updated to use SessionStorage to prevent ID collisions in tabs)
+const callsigns = ["GHOST", "SPECTRE", "PHANTOM", "VIPER", "TITAN", "ECHO", "COBALT", "RAVEN", "ONYX"];
+if (!sessionStorage.getItem('oracle_user')) {
+    const randomCallsign = callsigns[Math.floor(Math.random() * callsigns.length)];
+    const randomID = Math.floor(100 + Math.random() * 899);
+    sessionStorage.setItem('oracle_user', `${randomCallsign}-${randomID}`);
+}
+const currentUser = sessionStorage.getItem('oracle_user');
+
+// 📡 1. INITIALIZE PEER
+const peer = new Peer(currentUser, {
+    debug: 2, 
+    config: {
+        'iceServers': [
+            { url: 'stun:stun.l.google.com:19302' },
+            { url: 'stun:stun1.l.google.com:19302' }
+        ]
+    }
+});
+
+peer.on('disconnected', () => {
+    console.warn("📡 MESH DISCONNECTED. RE-LINKING TO BROKER...");
+    peer.reconnect();
+});
+
+// --- ✍️ SENDING TEXT ---
+window.sendText = function() {
+    const input = document.getElementById('chat-input');
+    if (!input) return;
+    const val = input.value.trim();
+    if (val === "") return;
+
+    const msg = { user: currentUser, type: 'text', content: val };
+    
+    // Safety check for active connections
+    window.activeConnections.forEach(conn => {
+        if(conn.open) conn.send(msg);
+    });
+    
+    handleIncomingIntel(msg);
+    input.value = "";
+};
+
+// --- 📸 SENDING IMAGES ---
+window.handleImage = function(input) {
+    const file = input.files[0];
+    if (!file) return;
+
+    const label = input.parentElement;
+    const originalText = label.innerHTML;
+    label.style.opacity = "0.5";
+
+    const reader = new FileReader();
+    reader.onloadend = function() {
+        if (reader.result) {
+            const msg = { user: currentUser, type: 'image', content: reader.result };
+            window.activeConnections.forEach(conn => {
+                if(conn.open) conn.send(msg);
+            });
+            handleIncomingIntel(msg);
+            label.innerHTML = originalText;
+            label.style.opacity = "1";
+        }
+    };
+    reader.readAsDataURL(file);
+};
+
+// 📡 2. MONITOR P2P CONNECTION STATUS
+peer.on('open', (id) => {
+    console.log("📡 SYSTEM: MESH ONLINE. ID:", id);
+    
+    // 🏛️ UPDATE THE UI BADGE
+    const idDisplay = document.getElementById('agent-id-display');
+    if (idDisplay) {
+        idDisplay.innerHTML = `📡 SYSTEM: MESH ONLINE. ID: <span style="color: #fff; font-weight: bold;">${id}</span>`;
+        idDisplay.style.borderColor = "#00ff66"; // Turn the border green when ready
+    }
+
+    // Existing logic to prepend status to the chat container
+    const container = document.getElementById('chat-container');
+    if (container) {
+        const statusDiv = document.createElement('div');
+        statusDiv.style.cssText = "color: #00ffff; border-bottom: 1px solid #222; margin-bottom: 10px; font-size: 0.65rem;";
+        statusDiv.innerHTML = `[SYSTEM] P2P MESH ACTIVE | AGENT: ${id}`;
+        container.prepend(statusDiv); 
+    }
+});
+
+peer.on('error', (err) => {
+    console.error("❌ P2P ERROR:", err);
+    if(err.type === 'id-taken') {
+        alert("ID ALREADY ACTIVE. PLEASE WAIT 10 SECONDS OR USE A NEW TAB.");
+    }
+});
+
+// 📥 3. RECEIVING INTEL
+peer.on('connection', (conn) => {
+    conn.on('open', () => {
+        if (!window.activeConnections.find(c => c.peer === conn.peer)) {
+            window.activeConnections.push(conn);
+        }
+        setupDataListener(conn);
+    });
+});
+
+function setupDataListener(conn) {
+    conn.on('data', (data) => {
+        handleIncomingIntel(data);
+    });
+}
+
+// 🚀 IMPROVED LINK FUNCTION
+window.connectToAgent = function() {
+    if (peer.disconnected) {
+        peer.reconnect();
+        setTimeout(() => window.connectToAgent(), 1000);
+        return;
+    }
+
+    const targetID = prompt("ENTER REMOTE AGENT ID:");
+    if (!targetID || targetID === currentUser) return;
+
+    console.log(`📡 DIALING: ${targetID}...`);
+
+    try {
+        const conn = peer.connect(targetID);
+        if (conn) {
+            conn.on('open', () => {
+                console.log("🛰️ LINK ESTABLISHED WITH " + targetID);
+                if (!window.activeConnections.find(c => c.peer === conn.peer)) {
+                    window.activeConnections.push(conn);
+                }
+                
+                conn.on('data', (data) => {
+                    handleIncomingIntel(data);
+                });
+            });
+
+            conn.on('error', (err) => {
+                console.error("❌ LINK FAILED:", err);
+            });
+        }
+    } catch (err) {
+        console.error("❌ CRITICAL DIAL ERROR:", err);
+    }
+};
+
+// Function to JUST show the UI (Used for Auto-Open)
+window.showInterface = function() {
+    const gate = document.getElementById('mesh-gatekeeper');
+    const interface = document.getElementById('mesh-interface');
+    if (gate && interface) {
+        gate.style.display = 'none';
+        interface.style.display = 'flex';
+        window.renderOracleArchive();
+    }
+};
+
+// --- 📟 ORACLE DIALPAD LOGIC ---
+
+window.showDialPad = function() {
+    document.getElementById('gate-start-view').style.display = 'none';
+    document.getElementById('gate-dial-view').style.display = 'block';
+    document.getElementById('dial-id-input').focus();
+};
+
+window.resetGate = function() {
+    document.getElementById('gate-start-view').style.display = 'block';
+    document.getElementById('gate-dial-view').style.display = 'none';
+    document.getElementById('dial-error-msg').style.display = 'none';
+    document.getElementById('dial-id-input').value = "";
+};
+
+window.deployComms = function() {
+    const input = document.getElementById('dial-id-input');
+    const error = document.getElementById('dial-error-msg');
+    const targetID = input.value.trim();
+
+    // 🛡️ VALIDATION LOGIC
+    if (targetID && targetID !== "" && targetID !== currentUser) {
+        
+        // 1. Dial through the P2P Mesh
+        console.log(`📡 DIALING: ${targetID}...`);
+        const conn = peer.connect(targetID);
+
+        // 2. UNLOCK INTERFACE
+        document.getElementById('mesh-gatekeeper').style.display = 'none';
+        document.getElementById('mesh-interface').style.display = 'flex';
+        window.renderOracleArchive();
+
+        // 3. Connect listeners
+        conn.on('open', () => {
+            if (!window.activeConnections.find(c => c.peer === conn.peer)) {
+                window.activeConnections.push(conn);
+            }
+            conn.on('data', (data) => handleIncomingIntel(data));
+        });
+
+    } else {
+        // ❌ SHOW ACCESS DENIED IN UI
+        error.style.display = 'block';
+        input.style.borderColor = "#ff3333";
+        input.value = "";
+        
+        // Shake animation effect (Optional but cool)
+        input.parentElement.animate([
+            { transform: 'translateX(-5px)' },
+            { transform: 'translateX(5px)' }
+        ], { duration: 100, iterations: 3 });
+    }
+};
+
+// Add Enter Key support for the Dial Pad
+document.addEventListener('DOMContentLoaded', () => {
+    const dialInput = document.getElementById('dial-id-input');
+    if (dialInput) {
+        dialInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') window.deployComms();
+        });
+    }
+});
+
+function handleIncomingIntel(msg) {
+    const container = document.getElementById('chat-container');
+    if(!container) return;
+    
+    const msgDiv = document.createElement('div');
+    msgDiv.style.cssText = "margin-bottom: 12px; padding: 5px; border-left: 2px solid " + (msg.type === 'text' ? "#ff8000" : "#00ffff");
+
+    if (msg.type === 'text') {
+        msgDiv.innerHTML = `<span style="color: #00ff66; font-weight: bold; font-size: 0.6rem;">[${msg.user}]</span><br><span style="color: #ddd;">${msg.content}</span>`;
+    } else {
+        msgDiv.innerHTML = `<span style="color: #00ffff; font-weight: bold; font-size: 0.6rem;">[${msg.user}] SENT AN ATTACHMENT:</span><br><div style="margin-top: 5px; border: 1px solid #333; border-radius: 4px; overflow: hidden; background: #000; min-height: 50px; display: flex; align-items: center; justify-content: center;"><img src="${msg.content}" onload="this.parentElement.style.background='none'" style="max-width: 100%; display: block; height: auto; max-height: 400px; object-fit: contain; box-shadow: 0 0 15px rgba(0,255,255,0.2);"></div>`;
+    }
+
+    container.appendChild(msgDiv);
+    container.scrollTop = container.scrollHeight;
+
+    localOracleArchive.push(msg);
+    if(localOracleArchive.length > 50) localOracleArchive.shift();
+    localStorage.setItem('oracle_archive', JSON.stringify(localOracleArchive));
+}
+
+// ⚡️ 4. AUTO-ARM INPUT & AUTO-DEPLOY
+document.addEventListener('DOMContentLoaded', () => {
+    window.renderOracleArchive();
+
+    const chatInput = document.getElementById('chat-input');
+    if (chatInput) {
+        chatInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                window.sendText();
+            }
+        });
+    }
+});
 
 // --- 🏛️ SYSTEM OVERLAYS & UTILITIES ---
 function updateHUD() { ['g-c', 'y-c', 'r-c', 'b-c'].forEach((id, i) => { if(document.getElementById(id)) document.getElementById(id).innerText = counts[i]; }); }
@@ -1876,29 +2198,37 @@ function resetSystemUI() {
 /* ==========================================================
    ORACLE: UI STATE WRAPPER (NON-INVASIVE)
    ========================================================== */
-window.wrapAction = async function(btnId, loadingText, originalFunction) {
+// ⚡️ THE ACTION WRAPPER (Powering Simulation Control)
+window.wrapAction = function(btnId, loadingText, callback) {
     const btn = document.getElementById(btnId);
-    const textSpan = btn.querySelector('.btn-text');
-    const originalContent = textSpan.innerHTML;
+    if (!btn) return;
 
-    // 1. Enter Loading State
-    textSpan.innerHTML = loadingText.replace(/[^\w\s\.]/g, ''); // Removes emoji for text swap
-    btn.style.pointerEvents = "none"; // Prevent double-clicks
-    btn.style.opacity = "0.6";
+    // 1. Save original state
+    const originalText = btn.innerHTML;
+    const originalColor = btn.style.color;
 
+    // 2. Trigger "Armed/Loading" state
+    btn.innerHTML = loadingText;
+    btn.style.opacity = "0.7";
+    btn.disabled = true; // Prevent double-tapping during disaster
+    
+    console.log(`📡 SYSTEM: TRIGGERING ${btnId}...`);
+
+    // 3. Execute the mission logic
     try {
-        // 2. Execute your original code exactly as intended
-        await originalFunction(); 
+        if (typeof callback === 'function') {
+            callback();
+        }
     } catch (err) {
-        console.error("ORACLE UI Error:", err);
-    } finally {
-        // 3. Restore original UI state after 1.5 seconds
-        setTimeout(() => {
-            textSpan.innerHTML = originalContent;
-            btn.style.pointerEvents = "auto";
-            btn.style.opacity = "1";
-        }, 1500);
+        console.error(`❌ MISSION FAILURE IN ${btnId}:`, err);
     }
+
+    // 4. Reset the button after a short tactical delay (1.5s)
+    setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.style.opacity = "1";
+        btn.disabled = false;
+    }, 1500);
 };
 
 // --- 🌉 ORACLE BRIDGE ---
